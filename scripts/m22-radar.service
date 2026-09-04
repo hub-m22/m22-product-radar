@@ -1,0 +1,15 @@
+# systemd unit (Linux): sudo cp scripts/m22-radar.service /etc/systemd/system/ && sudo systemctl enable --now m22-radar
+[Unit]
+Description=M22 Product Radar
+After=network.target
+
+[Service]
+WorkingDirectory=/opt/m22-product-radar
+Environment=PYTHONUTF8=1
+ExecStart=/opt/m22-product-radar/.venv/bin/python -m radar serve
+Restart=on-failure
+RestartSec=10
+User=radar
+
+[Install]
+WantedBy=multi-user.target

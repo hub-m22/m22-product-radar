@@ -1,0 +1,9 @@
+{% extends "base.html" %}
+{% block title %}Отчёты — M22 Product Radar{% endblock %}
+{% block content %}
+<div class="topbar"><div><h1>Еженедельные управленческие отчёты</h1><div class="sub">Отчёт читается за 5–7 минут: пять главных изменений, товары M22, цены конкурентов, новые товары, спрос, пробелы, гипотезы, риски, решения собственника, действия на неделю.</div></div>
+<form method="post" action="/reports/generate" class="actions-row"><select name="days" style="width:auto"><option value="7">за 7 дней</option><option value="30">за 30 дней</option></select><button>Сформировать отчёт</button></form></div>
+<div class="card compact"><table><thead><tr><th>#</th><th>Период</th><th>Сформирован</th><th>Экспорт</th></tr></thead><tbody>
+{% for r in reps %}<tr><td><a href="/reports/{{ r.id }}">Отчёт #{{ r.id }}</a></td><td>{{ r.period_start }} — {{ r.period_end }}</td><td>{{ r.generated_at | dt }}</td><td><a href="/reports/{{ r.id }}/export.pdf">PDF</a> · <a href="/reports/{{ r.id }}/export.xlsx">XLSX</a> · <a href="/reports/{{ r.id }}/export.csv">CSV</a></td></tr>{% else %}<tr><td colspan="4" class="muted">Отчётов пока нет — нажмите «Сформировать отчёт».</td></tr>{% endfor %}
+</tbody></table></div>
+{% endblock %}

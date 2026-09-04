@@ -1,0 +1,31 @@
+{% extends "base.html" %}{% import "_macros.html" as m %}
+{% block title %}Источники — M22 Product Radar{% endblock %}
+{% block content %}
+<div class="topbar"><div><h1>Источники данных</h1><div class="sub">Страниц мониторинга: {{ pages_stats.total }} (работают {{ pages_stats.ok or 0 }}, с ошибками {{ pages_stats.failing or 0 }}, отключены {{ pages_stats.disabled or 0 }}). Ключ Wordstat: {{ 'задан' if has_wordstat_token else 'не задан' }}. Ключ AI: {{ 'задан' if has_ai_key else 'не задан (AI не используется)' }}.</div></div>
+<div class="actions-row">
+  <form method="post" action="/sources/run/m22" class="inline"><button class="sec small">Собрать M22 + RadioSync</button></form>
+  <form method="post" action="/sources/run/competitors" class="inline"><button class="sec small">Собрать конкурентов</button></form>
+  <form method="post" action="/sources/run/demand" class="inline"><button class="sec small">Собрать спрос</button></form>
+  <form method="post" action="/sources/run/analyze" class="inline"><button class="small">Пересчитать анализ</button></form>
+  <a class="btn sec small" href="/export/backup.sqlite3">Скачать резервную копию базы</a>
+</div></div>
+{% if last_import %}<div class="note ok-note">Последний импорт: {{ last_import }}</div>{% endif %}
+<div class="card compact tbl-wrap"><table><thead><tr><th>Источник</th><th>Статус</th><th>Пригодность для MVP</th><th>Данные</th><th>API / доступ</th><th>Стоимость / лимиты</th><th>Как подключить</th><th>Последний запуск</th></tr></thead><tbody>
+{% for s in srcs %}<tr>
+  <td><b>{{ s.name }}</b>{% if s.url %}<br><a class="small" href="{{ s.url }}" target="_blank" rel="noopener">{{ s.url[:40] }}</a>{% endif %}<br><span class="small muted">{{ s.kind }}</span></td>
+  <td><span class="badge src-{{ s.status }}">{{ SOURCE_STATUS.get(s.status, s.status) }}</span>{% if s.last_error %}<div class="small" style="color:var(--high)">{{ s.last_error[:120] }}</div>{% endif %}
+    <form method="post" action="/sources/{{ s.key }}/toggle" class="inline"><button class="sec small" style="margin-top:4px">{{ 'включить' if s.status == 'disabled' else 'отключить' }}</button></form></td>
+  <td class="small">{{ MVP_NAMES.get(s.mvp_suitability, s.mvp_suitability or '—') }}</td>
+  <td class="small">{{ (s.data_available or '')[:160] }}</td>
+  <td class="small">{{ (s.official_api or '')[:120] }}{% if s.needs_auth %}<br><b>нужна авторизация</b>{% endif %}</td>
+  <td class="small">{{ s.cost or '' }}{% if s.limits %}<br>{{ s.limits[:120] }}{% endif %}<br><span class="muted">{{ s.update_frequency or '' }} · {{ s.stability or '' }}</span></td>
+  <td class="small">{{ (s.how_to_connect or '')[:220] }}{% if s.risks %}<br><span class="muted">Риски: {{ s.risks[:100] }}</span>{% endif %}</td>
+  <td class="small nowrap">{{ s.last_run_at | dt }}<br><span class="muted">успех: {{ s.last_success_at | dt }}</span>{% if s.consecutive_failures %}<br><span class="badge sev-high">{{ s.consecutive_failures }} сбоев</span>{% endif %}</td>
+</tr>{% endfor %}</tbody></table></div>
+<div class="grid grid-2" style="margin-top:14px">
+  <div class="card"><h3>Планировщик</h3><table><thead><tr><th>Задача</th><th>Следующий запуск</th><th>Состояние</th></tr></thead><tbody>{% for j in jobs %}<tr><td>{{ j.id }}</td><td>{{ j.next_run or '—' }}</td><td class="small">{{ j.state or '' }}</td></tr>{% else %}<tr><td colspan="3" class="muted">Планировщик отключён (RADAR_SCHEDULE_ENABLED=0)</td></tr>{% endfor %}</tbody></table>
+    <h3>Последние запуски</h3><table><thead><tr><th>Источник</th><th>Начало</th><th>Статус</th><th>Итог</th></tr></thead><tbody>{% for r in runs %}<tr><td>{{ r.source_key }}</td><td class="nowrap small">{{ r.started_at }}</td><td><span class="badge src-{{ 'ok' if r.status in ('ok','partial') else ('error' if r.status == 'error' else 'unknown') }}">{{ r.status }}</span></td><td class="small">{{ r.message or '' }}</td></tr>{% endfor %}</tbody></table></div>
+  <div class="card"><h3>Страницы с проблемами</h3><table><thead><tr><th>Конкурент</th><th>URL</th><th>Статус</th><th>Ошибка</th></tr></thead><tbody>{% for p in pages %}<tr><td class="small"><a href="/competitors/{{ p.competitor_id }}">{{ p.cname[:25] }}</a></td><td class="small"><a href="{{ p.url }}" target="_blank" rel="noopener">{{ p.url[:50] }}</a></td><td class="small">{{ p.last_status or '—' }} ({{ p.fail_count }})</td><td class="small">{{ (p.last_error or '')[:90] }}</td></tr>{% else %}<tr><td colspan="4" class="muted">Все страницы в норме.</td></tr>{% endfor %}</tbody></table>
+    <h3>Журнал ошибок</h3><table><thead><tr><th>Время</th><th>Источник</th><th>Ошибка</th></tr></thead><tbody>{% for e in errors %}<tr><td class="small nowrap">{{ e.ts }}</td><td class="small">{{ e.source_key }}</td><td class="small">{{ e.error[:110] }}{% if e.url %} <a href="{{ e.url }}" target="_blank" rel="noopener">↗</a>{% endif %}</td></tr>{% endfor %}</tbody></table></div>
+</div>
+{% endblock %}

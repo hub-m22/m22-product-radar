@@ -1,0 +1,39 @@
+{% extends "base.html" %}{% import "_macros.html" as m %}
+{% block title %}{{ h.title }} — гипотеза{% endblock %}
+{% block content %}
+<a href="/opportunities">← Новые возможности</a>
+<h1>{{ h.title }} {{ m.status(h.decision_status) }}</h1>
+<div class="sub">{{ CATEGORY_NAMES.get(h.category_slug, h.category_slug or '—') }} · ответственный: {{ h.owner or '—' }} · создана {{ h.created_at }}</div>
+<div class="grid grid-2">
+  <div class="card"><dl class="kv">
+    <dt>Описание</dt><dd>{{ h.description or '—' }}</dd>
+    <dt>Источник обнаружения</dt><dd>{{ h.discovered_via or '—' }}</dd>
+    <dt>Подтверждение спроса</dt><dd>{{ h.demand_evidence or '—' }}</dd>
+    <dt>Конкуренты</dt><dd>{% for c in comps %}{% if c.website %}<a href="{{ c.website }}" target="_blank" rel="noopener">{{ c.name }}</a>{% else %}{{ c.name }}{% endif %}{% if not loop.last %}, {% endif %}{% else %}—{% endfor %}</dd>
+    <dt>Рыночные цены</dt><dd>{{ h.market_prices or '—' }}</dd>
+    <dt>Связь с матрицей M22</dt><dd>{{ h.m22_link or '—' }}</dd>
+    <dt>Целевой сегмент</dt><dd>{{ h.target_segment or '—' }}</dd>
+    <dt>Сценарий применения</dt><dd>{{ h.use_case or '—' }}</dd>
+    <dt>Аргументы за</dt><dd>{{ h.pros or '—' }}</dd>
+    <dt>Аргументы против</dt><dd>{{ h.cons or '—' }}</dd>
+    <dt>Риски</dt><dd>{{ h.risks or '—' }}</dd>
+    <dt>Недостающие данные</dt><dd>{{ h.missing_data or '—' }}</dd>
+    <dt>Следующий шаг</dt><dd><b>{{ h.next_step or '—' }}</b></dd>
+  </dl></div>
+  <div>
+    <div class="card"><h3>Решение</h3>
+      <form method="post" action="/opportunities/{{ h.id }}/update" class="actions-row">
+        <button name="decision_status" value="research" class="sec">Исследовать</button><button name="decision_status" value="approved">Одобрить</button><button name="decision_status" value="parked" class="sec">Отложить</button><button name="decision_status" value="rejected" class="danger">Отклонить</button></form>
+      <form method="post" action="/opportunities/{{ h.id }}/update" class="form-grid" style="margin-top:10px">
+        <label>Ответственный<select name="owner"><option value="">— не менять —</option>{% for o in owners %}<option value="{{ o }}" {% if o == h.owner %}selected{% endif %}>{{ o }}</option>{% endfor %}</select></label>
+        <label>Автор<input type="text" name="author"></label>
+        <label class="full">Следующий шаг<input type="text" name="next_step" placeholder="оставьте пустым, чтобы не менять"></label>
+        <label class="full">Недостающие данные<input type="text" name="missing_data" placeholder="оставьте пустым, чтобы не менять"></label>
+        <label class="full">Комментарий<textarea name="comment" rows="2"></textarea></label>
+        <div class="full"><button type="submit">Сохранить</button></div></form>
+      {% for c in comments %}<div class="comment"><div class="a">{{ c.author }} · {{ c.created_at }}</div>{{ c.text }}</div>{% endfor %}
+    </div>
+    <h3>Сигналы-основания</h3>{% for s in sigs %}{{ m.signal_card(s, compact=True) }}{% else %}<div class="muted">—</div>{% endfor %}
+  </div>
+</div>
+{% endblock %}

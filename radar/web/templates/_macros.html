@@ -1,0 +1,60 @@
+{% macro conf(v) -%}
+  {% if v is not none %}<span class="conf" title="Уверенность {{ (v*100)|round|int }}%"><i style="width:{{ (v*100)|round|int }}%"></i></span><span class="small">{{ (v*100)|round|int }}%</span>{% else %}<span class="muted small">—</span>{% endif %}
+{%- endmacro %}
+
+{% macro sev(s) -%}<span class="badge sev-{{ s }}">{{ SEV_NAMES.get(s, s) }}</span>{%- endmacro %}
+{% macro status(s) -%}<span class="badge st st-{{ s }}">{{ STATUS_NAMES.get(s, s) }}</span>{%- endmacro %}
+{% macro fact(k) -%}<span class="badge fk fk-{{ k }}">{{ FACT_NAMES.get(k, k) }}</span>{%- endmacro %}
+{% macro prio(p) -%}<span class="badge pr-{{ p }}">{{ p }}</span>{%- endmacro %}
+
+{% macro signal_card(s, compact=False) %}
+<div class="sig sev-{{ s.severity }}">
+  <div class="t"><a href="/signals/{{ s.id }}">{{ s.title }}</a></div>
+  {% if not compact %}<div class="w">{{ s.what_happened }}</div>{% endif %}
+  {% if s.why_matters %}<div class="why"><b>Почему важно для M22:</b> {{ s.why_matters }}</div>{% endif %}
+  {% if s.recommended_action %}<div class="act"><b>Действие:</b> {{ s.recommended_action }}</div>{% endif %}
+  <div class="m">
+    {{ sev(s.severity) }} {{ fact(s.fact_kind) }} {{ status(s.status) }}
+    <span>{{ conf(s.confidence) }}</span>
+    <span>{{ SIGNAL_TYPES.get(s.type, s.type) }}</span>
+    {% if s.category_slug %}<span>{{ CATEGORY_NAMES.get(s.category_slug, s.category_slug) }}</span>{% endif %}
+    {% if s.m22_name %}<span>M22: <a href="/matrix/{{ s.m22_product_id }}">{{ s.m22_name[:50] }}</a></span>{% endif %}
+    {% if s.competitor_name %}<span>Конкурент: <a href="/competitors/{{ s.competitor_id }}">{{ s.competitor_name[:40] }}</a></span>{% endif %}
+    {% if s.old_value or s.new_value %}<span>{{ s.old_value or '—' }} → {{ s.new_value or '—' }}</span>{% endif %}
+    {% if s.period %}<span>Период: {{ s.period }}</span>{% endif %}
+    <span>{{ s.observed_at | dt }}</span>
+    {% if s.source_url %}<a href="{{ s.source_url }}" target="_blank" rel="noopener">источник ↗</a>{% elif s.source %}<span>{{ s.source }}</span>{% endif %}
+  </div>
+</div>
+{% endmacro %}
+
+{% macro rec_row(r) %}
+<tr>
+  <td>{{ prio(r.priority) }}</td>
+  <td><a href="/actions/{{ r.id }}"><b>{{ r.title }}</b></a><div class="small">{{ r.action[:260] }}{% if r.action|length > 260 %}…{% endif %}</div></td>
+  <td class="small">{{ r.basis[:160] if r.basis else '' }}</td>
+  <td>{{ conf(r.confidence) }}</td>
+  <td class="nowrap small">{{ r.owner or '—' }}<br>{{ r.due_date or '' }}</td>
+  <td>{{ status(r.status) }}</td>
+</tr>
+{% endmacro %}
+
+{% macro comments_block(comments, post_url, entity_owner=None, owners=[], statuses=[], status_field='status', current_status=None) %}
+<div class="card">
+  <h3>Действия и комментарии</h3>
+  <form method="post" action="{{ post_url }}" class="form-grid">
+    {% if statuses %}
+    <label>Статус
+      <select name="{{ status_field }}"><option value="">— не менять —</option>
+        {% for v, n in statuses %}<option value="{{ v }}" {% if v == current_status %}selected{% endif %}>{{ n }}</option>{% endfor %}
+      </select></label>
+    {% endif %}
+    <label>Ответственный
+      <select name="owner"><option value="">— не менять —</option>{% for o in owners %}<option value="{{ o }}" {% if o == entity_owner %}selected{% endif %}>{{ o }}</option>{% endfor %}</select></label>
+    <label>Автор<input type="text" name="author" placeholder="Ваше имя"></label>
+    <label class="full">Комментарий<textarea name="comment" rows="2" placeholder="Например: проверили, цену оставляем — у нас гарантия 2 года"></textarea></label>
+    <div class="full actions-row"><button type="submit">Сохранить</button></div>
+  </form>
+  {% for c in comments %}<div class="comment"><div class="a">{{ c.author or 'пользователь' }} · {{ c.created_at }}</div>{{ c.text }}</div>{% endfor %}
+</div>
+{% endmacro %}

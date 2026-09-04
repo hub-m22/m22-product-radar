@@ -1,0 +1,22 @@
+{% extends "base.html" %}
+{% block title %}Настройки — M22 Product Radar{% endblock %}
+{% block content %}
+<h1>Настройки</h1>
+<div class="grid grid-2">
+  <div class="card"><h3>Ответственные</h3>
+    <form method="post" action="/settings/update" class="form-grid">
+      <label class="full">Список ответственных (через ;)<input type="text" name="owners" value="{{ settings.get('owners', '') }}"></label>
+      <label class="full">Ответственный по умолчанию<input type="text" name="owner_default" value="{{ settings.get('owner_default', '') }}"></label>
+      <div class="full"><button type="submit" class="small">Сохранить</button></div></form>
+    <h3>Пороги значимости (из .env)</h3><dl class="kv">{% for k, v in thresholds.items() %}<dt>{{ k }}</dt><dd>{{ v }}</dd>{% endfor %}</dl>
+    <p class="small muted">Пороги задаются переменными окружения RADAR_* в файле .env (см. README); изменение требует перезапуска.</p>
+    <h3>Расписание</h3><dl class="kv">{% for k, v in schedule.items() %}<dt>{{ k }}</dt><dd>{{ v }}</dd>{% endfor %}</dl>
+  </div>
+  <div class="card"><h3>Категории контура исследования</h3>
+    <table><tbody>{% for c in cats %}<tr><td>{{ c.name_ru }}</td><td class="small muted">{{ c.slug }}</td><td><form method="post" action="/settings/category/{{ c.slug }}/toggle" class="inline"><button class="sec small">{{ 'в контуре ✓' if c.in_scope else 'вне контура' }}</button></form></td></tr>{% endfor %}</tbody></table>
+    <h3>Система</h3><dl class="kv"><dt>База данных</dt><dd>{{ db_path }}</dd><dt>Резервные копии</dt><dd>{{ backup_dir }} ({{ counts.backups }} файлов)</dd><dt>Последний анализ</dt><dd>{{ settings.get('last_analysis_at', '—') }}</dd><dt>Базовая дата замера</dt><dd>{{ settings.get('baseline_date', '—') }}</dd></dl>
+    <div class="actions-row"><a class="btn sec small" href="/export/backup.sqlite3">Скачать резервную копию</a></div>
+    <h3>Секреты</h3><p class="small muted">Токены (Wordstat API, AI) хранятся только в .env и не показываются в интерфейсе.</p>
+  </div>
+</div>
+{% endblock %}

@@ -1,0 +1,35 @@
+{% extends "base.html" %}{% import "_macros.html" as m %}
+{% block title %}Поисковый спрос — M22 Product Radar{% endblock %}
+{% block content %}
+<div class="topbar"><div><h1>Поисковый спрос</h1><div class="sub">Семантическая карта: {{ qs|length }} запросов по фильтру. Google Trends — относительный индекс 0–100 (не абсолютный объём). Абсолютные объёмы — только из Wordstat (импорт или API).</div></div>
+<div class="actions-row"><a class="btn sec small" href="/export/queries.xlsx">XLSX запросы</a> <a class="btn sec small" href="/export/demand.csv">CSV наблюдения</a></div></div>
+<div class="grid grid-3">
+  <div class="card"><h3>Источники спроса</h3>{% for s in srcs %}<div class="small" style="margin-bottom:4px"><span class="badge src-{{ s.status }}">{{ SOURCE_STATUS.get(s.status, s.status) }}</span> <b>{{ s.name }}</b>{% if s.status != 'ok' %}<div class="muted">{{ s.how_to_connect }}</div>{% endif %}</div>{% endfor %}</div>
+  <div class="card"><h3>Запросы по категориям</h3><table><tbody>{% for c in by_cat %}<tr><td><a href="/demand?category={{ c.category_slug }}">{{ CATEGORY_NAMES.get(c.category_slug, c.category_slug or '—') }}</a></td><td class="num">{{ c.n }}</td><td class="num small muted">брендовых: {{ c.brands }}</td></tr>{% endfor %}</tbody></table></div>
+  <div class="card"><h3>Импорт спроса</h3>
+    <form method="post" action="/import" enctype="multipart/form-data" class="form-grid">
+      <label class="full">Формат<select name="kind"><option value="wordstat">Wordstat CSV/XLSX (query; impressions; period)</option><option value="trends">Google Trends CSV (выгрузка trends.google.com)</option><option value="queries">Список запросов (query; category; intent)</option></select></label>
+      <label>Период по умолчанию (для Wordstat)<input type="text" name="period" placeholder="2026-08"></label>
+      <label>Файл<input type="file" name="file" required></label>
+      <div class="full"><button type="submit" class="small">Импортировать</button></div>
+    </form>
+    {% if imports %}<div class="small muted" style="margin-top:6px">Последние импорты: {% for i in imports[:5] %}{{ i.kind }} {{ i.filename }} — {{ i.status }} ({{ i.message or i.rows }}); {% endfor %}</div>{% endif %}
+    <details><summary>Добавить запрос вручную</summary><form method="post" action="/demand/add" class="form-grid" style="margin-top:6px">
+      <label class="full">Запрос<input type="text" name="query" required></label>
+      <label>Категория<select name="category_slug"><option value="">авто</option>{% for k, v in CATEGORY_NAMES.items() %}<option value="{{ k }}">{{ v }}</option>{% endfor %}</select></label>
+      <label>Намерение<select name="intent">{% for v in ["commercial","informational","b2b","rental","purchase","application","brand","navigational"] %}<option>{{ v }}</option>{% endfor %}</select></label>
+      <label>Seed (отслеживать в Trends)<select name="is_seed"><option value="0">нет</option><option value="1">да</option></select></label>
+      <div class="full"><button type="submit" class="small">Добавить</button></div></form></details>
+  </div>
+</div>
+{% if series %}<h2>Динамика seed-запросов (Google Trends, RU, 5 лет, недели)</h2><div class="grid grid-4">{% for q, s in series.items() %}<div class="card compact"><div class="small"><b>{{ q }}</b></div><svg class="spark" width="260" height="44" data-series='{{ s | map(attribute=1) | list | tojson }}'></svg><div class="small muted">{{ s[0][0] }} → {{ s[-1][0] }}, последние 4 нед.: {{ (s[-4:] | map(attribute=1) | sum / 4) | round(1) }}</div></div>{% endfor %}</div>{% endif %}
+<h2>Запросы</h2>
+{% set types = [("commercial","коммерческий"),("informational","информационный"),("b2b","B2B"),("rental","аренда"),("purchase","покупка"),("application","применение"),("brand","бренд"),("navigational","навигационный")] %}{% set type_label = "Намерение" %}
+{% set show_product = False %}{% set show_competitor = False %}{% set show_conf = False %}
+{% include "_filters.html" %}
+<div class="card compact tbl-wrap"><table><thead><tr><th>Запрос</th><th>Категория</th><th>Намерение</th><th>Бренд/модель</th><th class="num">Trends: посл. 4 нед / пред. 4</th><th class="num">Wordstat</th><th>Источник</th></tr></thead><tbody>
+{% for q in qs %}<tr><td>{{ q.query }}{% if q.is_seed %} <span class="badge st-new">seed</span>{% endif %}</td><td class="small">{{ CATEGORY_NAMES.get(q.category_slug, q.category_slug or '—') }}</td><td class="small">{{ q.intent }}</td><td class="small">{{ q.brand_or_model or '' }}</td>
+  <td class="num small">{% if q.trends_n %}{{ q.tr_last4 | round(1) }} / {{ q.tr_prev4 | round(1) if q.tr_prev4 is not none else '—' }}{% else %}—{% endif %}</td>
+  <td class="num small">{% if q.ws_n %}{{ q.ws_last | int }}{% else %}—{% endif %}</td><td class="small muted">{{ q.added_by }}{% if q.notes %} · {{ q.notes[:50] }}{% endif %}</td></tr>{% endfor %}
+</tbody></table></div>
+{% endblock %}

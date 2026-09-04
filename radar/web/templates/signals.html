@@ -1,0 +1,11 @@
+{% extends "base.html" %}{% import "_macros.html" as m %}
+{% block title %}Сигналы — M22 Product Radar{% endblock %}
+{% block content %}
+<div class="topbar"><div><h1>Сигналы</h1><div class="sub">Найдено: {{ sigs|length }}. Каждый сигнал — факт, вывод или гипотеза с источником и уверенностью.</div></div>
+<div class="actions-row"><a class="btn sec small" href="/export/signals.csv">Экспорт CSV</a> <a class="btn sec small" href="/export/signals.xlsx">Экспорт XLSX</a></div></div>
+{% set types = SIGNAL_TYPES.items() | list %}
+{% set severities = [("high","Высокая"),("medium","Средняя"),("low","Низкая")] %}
+{% set statuses = [("new","Новый"),("in_research","На исследовании"),("accepted","Принято"),("rejected","Отклонено"),("done","Выполнено")] %}
+{% include "_filters.html" %}
+{% for s in sigs %}{{ m.signal_card(s) }}{% else %}<div class="card muted">По выбранным фильтрам сигналов нет.</div>{% endfor %}
+{% endblock %}

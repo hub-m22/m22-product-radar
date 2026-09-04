@@ -1,0 +1,71 @@
+{% extends "base.html" %}{% import "_macros.html" as m %}
+{% block title %}Главная — M22 Product Radar{% endblock %}
+{% block content %}
+<div class="topbar">
+  <div><h1>Что происходит на рынке экскурсионного оборудования</h1>
+  <div class="sub">Данные обновлены: <b>{{ last_update | dt }}</b> · Товаров M22 в контуре: {{ counts.m22 }} · Конкурентов: {{ counts.comp }} · Предложений конкурентов с ценой: {{ counts.cp }}</div></div>
+  <div class="actions-row no-print"><form method="post" action="/analyze" class="inline"><button class="sec small">Пересчитать сигналы</button></form> <a class="btn small" href="/reports">Отчёты</a></div>
+</div>
+
+{% set top1 = top[0] if top else None %}
+<div class="q-answer">
+  <div class="card"><div class="q">Что важного произошло?</div><div class="a">{% if top1 %}<a href="/signals/{{ top1.id }}">{{ top1.title }}</a>{% else %}Новых сигналов нет{% endif %}</div></div>
+  <div class="card"><div class="q">Почему это важно?</div><div class="a">{{ top1.why_matters if top1 else '—' }}</div></div>
+  <div class="card"><div class="q">Что делать?</div><div class="a">{% if recs %}<a href="/actions/{{ recs[0].id }}">{{ recs[0].title }}</a>{% else %}{{ top1.recommended_action if top1 else '—' }}{% endif %}</div></div>
+  <div class="card"><div class="q">Какой приоритет?</div><div class="a">{% if recs %}{{ m.prio(recs[0].priority) }} · срок {{ recs[0].due_date }}{% elif top1 %}{{ m.sev(top1.severity) }}{% else %}—{% endif %}</div></div>
+  <div class="card"><div class="q">Насколько можно доверять?</div><div class="a">{% if top1 %}{{ m.conf(top1.confidence) }} · {{ m.fact(top1.fact_kind) }}{% else %}—{% endif %}</div></div>
+</div>
+
+{% if limits.notes %}<div class="note"><b>Ограничения текущих данных:</b> {{ limits.notes | join(' ') }}</div>{% endif %}
+
+<div class="grid grid-4">
+  <div class="card kpi"><span class="v">{{ counts.signals_7 }}</span><span class="l">сигналов за 7 дней</span><span class="d">{{ counts.signals_30 }} за 30 дней</span></div>
+  <div class="card kpi"><span class="v">{{ counts.recs }}</span><span class="l">новых рекомендаций</span><span class="d"><a href="/actions">открыть список</a></span></div>
+  <div class="card kpi"><span class="v">{{ counts.gaps }}</span><span class="l">товарных пробелов M22</span><span class="d">{{ counts.hyps }} гипотез на рассмотрении</span></div>
+  <div class="card kpi"><span class="v">{{ counts.new_products_7 }}</span><span class="l">новых товаров конкурентов за 7 дней</span><span class="d">{{ counts.price_7 }} изменений цен за 7 дней</span></div>
+</div>
+
+<div class="grid grid-2" style="margin-top:14px">
+  <div>
+    <h2>Главные сигналы</h2>
+    {% for s in top %}{{ m.signal_card(s, compact=True) }}{% else %}<div class="card muted">Сигналов нет — запустите сбор и анализ.</div>{% endfor %}
+    <a href="/signals">Все сигналы →</a>
+  </div>
+  <div>
+    <h2>Рекомендуемые действия</h2>
+    <div class="card compact tbl-wrap"><table><thead><tr><th>Приоритет</th><th>Действие</th><th>Основание</th><th>Уверенность</th><th>Кто / срок</th><th>Статус</th></tr></thead>
+    <tbody>{% for r in recs %}{{ m.rec_row(r) }}{% else %}<tr><td colspan="6" class="muted">Рекомендаций пока нет.</td></tr>{% endfor %}</tbody></table></div>
+    <a href="/actions">Все действия →</a>
+
+    <h2>Категории: сигналы и спрос</h2>
+    <div class="card compact tbl-wrap"><table><thead><tr><th>Категория</th><th class="num">Сигналов</th><th class="num">Рост спроса</th><th class="num">Падение</th><th class="num">Запросов / точек Trends</th></tr></thead><tbody>
+      {% for c in cats %}<tr><td><a href="/signals?category={{ c.category_slug }}">{{ CATEGORY_NAMES.get(c.category_slug, c.category_slug) }}</a></td><td class="num">{{ c.n }}</td><td class="num">{{ c.up }}</td><td class="num">{{ c.down }}</td>
+        <td class="num">{{ cat_demand[c.category_slug].queries if c.category_slug in cat_demand else 0 }} / {{ cat_demand[c.category_slug].obs if c.category_slug in cat_demand else 0 }}</td></tr>{% endfor %}
+    </tbody></table></div>
+  </div>
+</div>
+
+<div class="grid grid-3" style="margin-top:14px">
+  <div class="card"><h2>Цены: M22 и конкуренты</h2>
+    {% for s in price_signals %}<div class="small" style="margin-bottom:8px">{{ m.sev(s.severity) }} <a href="/signals/{{ s.id }}">{{ s.title }}</a></div>{% else %}<div class="muted small">Ценовых сигналов нет.</div>{% endfor %}
+    <a class="small" href="/signals?type=m22_price_above_market">дороже рынка</a> · <a class="small" href="/signals?type=m22_price_below_market">дешевле рынка</a> · <a class="small" href="/signals?type=cross_site_discrepancy">расхождения сайтов</a></div>
+  <div class="card"><h2>Новые товары и решения конкурентов</h2>
+    {% for s in new_products %}<div class="small" style="margin-bottom:8px">{{ m.sev(s.severity) }} <a href="/signals/{{ s.id }}">{{ s.title }}</a></div>{% else %}<div class="muted small">Новых товаров с момента базового замера не обнаружено (нужен второй сбор).</div>{% endfor %}</div>
+  <div class="card"><h2>Товарные пробелы и гипотезы</h2>
+    {% for s in gaps %}<div class="small" style="margin-bottom:8px">{{ m.sev(s.severity) }} <a href="/signals/{{ s.id }}">{{ s.title }}</a></div>{% endfor %}
+    {% for h in hyps %}<div class="small" style="margin-bottom:6px">💡 <a href="/opportunities/{{ h.id }}">{{ h.title }}</a> {{ m.status(h.decision_status) }}</div>{% endfor %}
+    <a class="small" href="/opportunities">Все гипотезы →</a></div>
+</div>
+
+<div class="grid grid-2" style="margin-top:14px">
+  <div class="card"><h2>Источники с ошибками</h2>
+    {% if bad_sources or bad_pages %}
+      {% for s in bad_sources %}<div class="small">❌ <b>{{ s.name }}</b> — {{ s.last_error or 'ошибка' }} ({{ s.consecutive_failures }} подряд)</div>{% endfor %}
+      {% for p in bad_pages %}<div class="small">⚠ {{ p.cname }}: <a href="{{ p.url }}" target="_blank" rel="noopener">{{ p.url[:60] }}</a> — {{ p.last_status }} {{ (p.last_error or '')[:80] }}</div>{% endfor %}
+    {% else %}<div class="muted small">Все источники в норме.</div>{% endif %}
+    <a class="small" href="/sources">Раздел «Источники» →</a></div>
+  <div class="card"><h2>Последние сборы</h2><table><thead><tr><th>Источник</th><th>Завершён</th><th>Статус</th><th>Итог</th></tr></thead><tbody>
+    {% for r in runs %}<tr><td>{{ r.source_key }}</td><td class="nowrap">{{ r.finished_at | dt }}</td><td><span class="badge src-{{ 'ok' if r.status in ('ok','partial') else 'error' }}">{{ r.status }}</span></td><td class="small">{{ r.message or '' }}</td></tr>{% endfor %}
+  </tbody></table></div>
+</div>
+{% endblock %}

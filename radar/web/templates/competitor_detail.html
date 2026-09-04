@@ -1,0 +1,53 @@
+{% extends "base.html" %}{% import "_macros.html" as m %}
+{% block title %}{{ c.name }} — конкуренты{% endblock %}
+{% block content %}
+<a href="/competitors">← Конкуренты</a>
+<h1>{{ c.name }} {% if not c.is_active %}<span class="badge st">неактивен</span>{% endif %}</h1>
+<div class="sub"><a href="{{ c.website }}" target="_blank" rel="noopener">{{ c.website }}</a> · проверен {{ c.checked_at or '—' }} · добавлен: {{ c.added_by }} · доступность: {{ c.scrapable or '?' }}</div>
+<div class="grid grid-2">
+  <div class="card"><dl class="kv">
+    <dt>Типы</dt><dd>{% for t in types %}<span class="pill">{{ TYPE_NAMES.get(t, t) }}</span> {% endfor %}</dd>
+    <dt>География</dt><dd>{{ c.geography or '—' }}</dd>
+    <dt>Категории</dt><dd>{{ cats | join(', ') or '—' }}</dd>
+    <dt>Бренды</dt><dd>{{ brands | join(', ') or '—' }}</dd>
+    <dt>Аренда</dt><dd>{{ {'yes':'да','no':'нет'}.get(c.rental_available, 'неизвестно') }}</dd>
+    <dt>Преимущества / позиционирование</dt><dd>{{ c.advantages or '—' }}</dd>
+    <dt>Целевые сегменты</dt><dd>{{ c.target_segments or '—' }}</dd>
+    <dt>Новые товары и решения</dt><dd>{{ c.new_products or '—' }}</dd>
+    <dt>Заметки</dt><dd>{{ c.notes or '—' }}</dd>
+    <dt>Первоисточники</dt><dd>{% for s in src %}<a href="{{ s }}" target="_blank" rel="noopener">{{ s[:70] }}</a><br>{% else %}—{% endfor %}</dd>
+  </dl></div>
+  <div>
+    <div class="card"><h3>Страницы мониторинга</h3>
+      <table><thead><tr><th>URL</th><th>Тип</th><th>Статус</th><th>Проверена</th><th></th></tr></thead><tbody>
+      {% for p in pages %}<tr><td><a href="{{ p.url }}" target="_blank" rel="noopener">{{ p.url[:60] }}</a>{% if p.name %}<div class="small muted">{{ p.name[:60] }}</div>{% endif %}{% if p.last_error %}<div class="small" style="color:var(--high)">{{ p.last_error[:100] }}</div>{% endif %}</td>
+        <td class="small">{{ p.kind }}</td><td><span class="badge src-{{ 'ok' if p.last_status == 'ok' else ('error' if p.last_status else 'unknown') }}">{{ p.last_status or 'не проверялась' }}</span>{% if not p.is_active %} <span class="badge st">выкл</span>{% endif %}</td>
+        <td class="small nowrap">{{ p.last_checked_at | dt }}</td>
+        <td class="nowrap"><form method="post" action="/pages/{{ p.id }}/check" class="inline"><button class="sec small" title="Проверить сейчас">↻</button></form> <form method="post" action="/pages/{{ p.id }}/toggle" class="inline"><button class="sec small">{{ 'выкл' if p.is_active else 'вкл' }}</button></form></td></tr>{% endfor %}
+      </tbody></table>
+      <details style="margin-top:8px"><summary>Добавить страницу мониторинга</summary>
+      <form method="post" action="/competitors/{{ c.id }}/pages/add" class="form-grid" style="margin-top:8px">
+        <label class="full">URL<input type="url" name="url" required></label>
+        <label>Тип<select name="kind"><option value="product">товар</option><option value="catalog">каталог / список</option><option value="rent">аренда</option></select></label>
+        <label>Категория<select name="category_slug"><option value="">авто</option>{% for k, v in CATEGORY_NAMES.items() %}<option value="{{ k }}">{{ v }}</option>{% endfor %}</select></label>
+        <label>Название<input type="text" name="name"></label>
+        <label>CSS-селекторы (необязательно, JSON)<input type="text" name="parser_config" placeholder='{"items":".product","name":".title","price":".price"}'></label>
+        <div class="full"><button type="submit" class="small">Добавить страницу</button></div>
+      </form></details>
+    </div>
+  </div>
+</div>
+<h2>Товары конкурента ({{ products|length }})</h2>
+<div class="card compact tbl-wrap"><table><thead><tr><th>Товар</th><th>Категория</th><th>Модель</th><th class="num">Цена</th><th>Сопоставление с M22</th><th>Снято</th><th class="num">Замеров</th></tr></thead><tbody>
+{% for p in products %}<tr {% if not p.is_active %}style="opacity:.55"{% endif %}>
+  <td><a href="{{ p.url }}" target="_blank" rel="noopener">{{ p.name[:80] }}</a>{% if p.description %}<div class="small muted">{{ p.description[:120] }}</div>{% endif %}</td>
+  <td class="small">{{ CATEGORY_NAMES.get(p.category_slug, p.category_slug or '—') }}</td><td class="small">{{ p.model_key or '—' }}{% if p.capacity %} · {{ p.capacity }} чел.{% endif %}</td>
+  <td class="num">{{ p.price | money }}{% if p.currency != 'RUB' %} {{ p.currency }}{% endif %}</td>
+  <td class="small">{{ p.matches or '—' }}</td><td class="small nowrap">{{ p.fetched_at | dt }}</td><td class="num">{{ p.obs }}</td></tr>{% endfor %}
+</tbody></table></div>
+<div class="grid grid-2" style="margin-top:14px">
+  <div><h2>Сигналы по конкуренту</h2>{% for s in sigs %}{{ m.signal_card(s, compact=True) }}{% else %}<div class="muted">Сигналов нет.</div>{% endfor %}</div>
+  <div>{{ m.comments_block(comments, "/competitors/" ~ c.id ~ "/update", None, [], []) }}
+    <form method="post" action="/competitors/{{ c.id }}/update" class="inline" style="margin-top:8px"><input type="hidden" name="is_active" value="{{ 0 if c.is_active else 1 }}"><button class="sec small">{{ 'Деактивировать конкурента' if c.is_active else 'Активировать' }}</button></form></div>
+</div>
+{% endblock %}

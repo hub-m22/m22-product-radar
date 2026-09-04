@@ -1,0 +1,23 @@
+{% extends "base.html" %}{% import "_macros.html" as m %}
+{% block title %}Матрица M22 — M22 Product Radar{% endblock %}
+{% block content %}
+<div class="topbar"><div><h1>Товарная матрица M22</h1><div class="sub">{{ prods|length }} товаров (m22.ru + radiosync.ru), контур: экскурсионная деятельность и B2B-решения.</div></div>
+<div class="actions-row"><a class="btn sec small" href="/export/matrix.xlsx">XLSX</a> <a class="btn sec small" href="/export/matrix.csv">CSV</a></div></div>
+<form class="filters" method="get">
+  <label>Категория<select name="category"><option value="">все</option>{% for c in categories %}<option value="{{ c.slug }}" {% if f.category == c.slug %}selected{% endif %}>{{ c.name_ru }}</option>{% endfor %}</select></label>
+  <label>Сайт<select name="site"><option value="">оба</option><option value="m22.ru" {% if site == 'm22.ru' %}selected{% endif %}>m22.ru</option><option value="radiosync.ru" {% if site == 'radiosync.ru' %}selected{% endif %}>radiosync.ru</option></select></label>
+  <label>Контур<select name="scope"><option value="1" {% if scope == '1' %}selected{% endif %}>только в контуре</option><option value="0" {% if scope == '0' %}selected{% endif %}>все собранные</option></select></label>
+  <label>Поиск<input type="text" name="q" value="{{ f.q }}" placeholder="название, артикул, модель"></label>
+  <button class="small">Применить</button>
+</form>
+<div class="pill-list" style="margin-bottom:10px">{% for c in cat_stats %}<span class="pill">{{ CATEGORY_NAMES.get(c.category_slug, c.category_slug) }}: {{ c.n }} · {{ c.pmin | money }} – {{ c.pmax | money }}</span>{% endfor %}</div>
+<div class="card compact tbl-wrap"><table><thead><tr><th>Товар</th><th>Сайт</th><th>Категория</th><th>Модель / артикул</th><th class="num">Вмест.</th><th class="num">Цена</th><th>Наличие</th><th class="num">Сопост.</th><th class="num">Сигналы</th><th class="num">Замеры</th><th>Снято</th></tr></thead><tbody>
+{% for p in prods %}<tr {% if not p.in_scope %}style="opacity:.6"{% endif %}>
+  <td><a href="/matrix/{{ p.id }}">{{ p.name[:75] }}</a> <a class="small" href="{{ p.url }}" target="_blank" rel="noopener">↗</a></td>
+  <td class="small">{{ p.site }}</td><td class="small">{{ CATEGORY_NAMES.get(p.category_slug, p.category_slug or '—') }}</td>
+  <td class="small">{{ p.model_key or '—' }}{% if p.sku %} / {{ p.sku }}{% endif %}</td><td class="num">{{ p.capacity or '' }}</td>
+  <td class="num">{{ p.price | money }}{% if p.old_price %} <s class="muted">{{ p.old_price | money }}</s>{% endif %}</td>
+  <td class="small">{{ {'InStock':'в наличии','OutOfStock':'нет','PreOrder':'предзаказ'}.get(p.availability, p.availability or '—') }}</td>
+  <td class="num">{{ p.matches }}</td><td class="num">{{ p.signals }}</td><td class="num">{{ p.obs }}</td><td class="small nowrap">{{ p.fetched_at | dt }}</td></tr>{% endfor %}
+</tbody></table></div>
+{% endblock %}

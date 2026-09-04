@@ -1,0 +1,30 @@
+{% extends "base.html" %}{% import "_macros.html" as m %}
+{% block title %}Отчёт #{{ r.id }} — M22 Product Radar{% endblock %}
+{% block content %}
+<a href="/reports" class="no-print">← Отчёты</a>
+<div class="topbar"><div><h1>Еженедельный отчёт {{ rep.period_start }} — {{ rep.period_end }}</h1>
+<div class="sub">Сформирован {{ rep.generated_at | dt }} UTC · товаров M22: {{ rep.stats.m22_products }} · конкурентов: {{ rep.stats.competitors }} · предложений с ценой: {{ rep.stats.priced }} · сигналов: {{ rep.stats.signals_total }} (высокой важности {{ rep.stats.signals_high }}) · рекомендаций: {{ rep.stats.recommendations }}</div></div>
+<div class="actions-row no-print"><a class="btn small" href="/reports/{{ r.id }}/export.pdf">PDF</a> <a class="btn sec small" href="/reports/{{ r.id }}/export.xlsx">XLSX</a> <a class="btn sec small" href="/reports/{{ r.id }}/export.csv">CSV</a> <a class="btn sec small" href="/reports/{{ r.id }}/export.json">JSON</a></div></div>
+<div class="note"><b>Ограничения данных:</b> {{ rep.limits.notes | join(' ') }}</div>
+{% for key, title in sections %}
+<h2>{{ title }}</h2>
+{% set items = rep[key] %}
+{% if not items %}<div class="muted">Нет данных за период.</div>{% endif %}
+{% for it in items %}
+<div class="sig sev-{{ it.severity or ('high' if it.priority == 'P1' else ('medium' if it.priority == 'P2' else 'low')) }}">
+  <div class="t">{% if key in ('owner_decisions','next_week') %}<a href="/actions/{{ it.id }}">{{ it.title }}</a>{% elif key == 'hypotheses' %}<a href="/opportunities/{{ it.id }}">{{ it.title }}</a>{% else %}<a href="/signals/{{ it.id }}">{{ it.title }}</a>{% endif %}</div>
+  <div class="w">{{ it.what or it.description or it.action }}</div>
+  {% if it.why or it.basis %}<div class="why"><b>Почему важно / основание:</b> {{ it.why or it.basis }}</div>{% endif %}
+  {% if key not in ('owner_decisions','next_week') and (it.action or it.next_step) %}<div class="act"><b>Действие:</b> {{ it.action or it.next_step }}</div>{% endif %}
+  {% if it.expected_effect %}<div class="why"><b>Ожидаемый эффект:</b> {{ it.expected_effect }}</div>{% endif %}
+  <div class="m">{% if it.severity %}{{ m.sev(it.severity) }}{% endif %}{% if it.priority %}{{ m.prio(it.priority) }}{% endif %}{% if it.fact_kind %}{{ m.fact(it.fact_kind) }}{% endif %}
+    {% if it.confidence is not none and it.confidence is defined %}<span>{{ m.conf(it.confidence) }}</span>{% endif %}
+    {% if it.period %}<span>Период: {{ it.period }}</span>{% endif %}{% if it.due %}<span>Срок: {{ it.due }}</span>{% endif %}{% if it.owner %}<span>{{ it.owner }}</span>{% endif %}
+    {% if it.source %}<span>Источник: {{ it.source }}</span>{% endif %}{% if it.source_url %}<a href="{{ it.source_url }}" target="_blank" rel="noopener">↗</a>{% endif %}
+    {% if it.sources %}<span>Источники: {% for s in it.sources[:4] %}{% if s.url %}<a href="{{ s.url }}" target="_blank" rel="noopener">{{ s.name }}</a>{% else %}{{ s.name }}{% endif %}{% if not loop.last %}, {% endif %}{% endfor %}</span>{% endif %}
+  </div>
+</div>
+{% endfor %}
+{% endfor %}
+<h2>Что станет доступно после накопления истории</h2><ul>{% for n in rep.limits.what_after_history %}<li>{{ n }}</li>{% endfor %}</ul>
+{% endblock %}

@@ -1,0 +1,45 @@
+{% extends "base.html" %}{% import "_macros.html" as m %}
+{% block title %}Сигнал #{{ s.id }} — M22 Product Radar{% endblock %}
+{% block content %}
+<a href="/signals">← Сигналы</a>
+<h1>{{ s.title }}</h1>
+<div class="sub">{{ m.sev(s.severity) }} {{ m.fact(s.fact_kind) }} {{ m.status(s.status) }} · {{ SIGNAL_TYPES.get(s.type, s.type) }} · уверенность {{ m.conf(s.confidence) }}</div>
+<div class="grid grid-2">
+  <div class="card">
+    <h3>Что произошло</h3><p>{{ s.what_happened }}</p>
+    <dl class="kv">
+      <dt>Старое → новое значение</dt><dd>{{ s.old_value or '—' }} → {{ s.new_value or '—' }}</dd>
+      <dt>Дата наблюдения</dt><dd>{{ s.observed_at | dt }}</dd>
+      <dt>Период сравнения</dt><dd>{{ s.period or '—' }}</dd>
+      <dt>Категория</dt><dd>{{ CATEGORY_NAMES.get(s.category_slug, s.category_slug or '—') }}</dd>
+      <dt>Товар M22</dt><dd>{% if s.m22_product_id %}<a href="/matrix/{{ s.m22_product_id }}">{{ s.m22_name }}</a> · <a href="{{ s.m22_url }}" target="_blank" rel="noopener">на сайте ↗</a>{% else %}—{% endif %}</dd>
+      <dt>Конкурент</dt><dd>{% if s.competitor_id %}<a href="/competitors/{{ s.competitor_id }}">{{ s.competitor_name }}</a>{% else %}—{% endif %}</dd>
+      {% if cp %}<dt>Товар конкурента</dt><dd>{{ cp.name }} — {{ cp.price | money }} · <a href="{{ cp.url }}" target="_blank" rel="noopener">страница ↗</a> · снято {{ cp.fetched_at | dt }}</dd>{% endif %}
+      {% if s.query_text %}<dt>Запрос</dt><dd>{{ s.query_text }}</dd>{% endif %}
+      <dt>Источник</dt><dd>{{ s.source or '—' }} {% if s.source_url %}· <a href="{{ s.source_url }}" target="_blank" rel="noopener">{{ s.source_url[:80] }} ↗</a>{% endif %}</dd>
+      <dt>Ответственный</dt><dd>{{ s.owner or '—' }}</dd>
+      <dt>Создан</dt><dd>{{ s.created_at }}</dd>
+    </dl>
+  </div>
+  <div class="card">
+    <h3>Почему это важно для M22</h3><p>{{ s.why_matters or '—' }}</p>
+    <h3>Рекомендуемое действие</h3><p class="act" style="background:#f5f8fc;padding:8px;border-radius:6px">{{ s.recommended_action or '—' }}</p>
+    {% if recs %}<h3>Связанные рекомендации</h3>{% for r in recs %}<div>{{ m.prio(r.priority) }} <a href="/actions/{{ r.id }}">{{ r.title }}</a> {{ m.status(r.status) }}</div>{% endfor %}{% endif %}
+    {% if series %}<h3>Динамика запроса (Google Trends, индекс 0–100)</h3><svg class="spark" width="420" height="60" data-series='{{ series | map(attribute="value") | list | tojson }}'></svg><div class="small muted">{{ series[0].period_start }} — {{ series[-1].period_start }}, {{ series|length }} точек</div>{% endif %}
+  </div>
+</div>
+<div class="grid grid-2" style="margin-top:14px">
+  {{ m.comments_block(comments, "/signals/" ~ s.id ~ "/update", s.owner, owners, [("new","Новый"),("in_research","Отправить на исследование"),("accepted","Принять"),("rejected","Отклонить"),("done","Выполнено")], "status", s.status) }}
+  <div class="card"><h3>Подтверждающие данные</h3>
+    {% if evidence %}
+      {% if evidence.comparables %}<table><thead><tr><th>Конкурент</th><th>Товар</th><th class="num">Цена</th><th>Сопоставление</th><th>Уверенность</th></tr></thead><tbody>
+        {% for c in evidence.comparables %}<tr><td><a href="/competitors/{{ c.competitor_id }}">{{ c.competitor_name[:30] }}</a></td><td><a href="{{ c.url }}" target="_blank" rel="noopener">{{ c.name[:50] }}</a></td><td class="num">{{ c.price | money }}</td><td>{{ MATCH_NAMES.get(c.match_type, c.match_type) }}</td><td>{{ m.conf(c.confidence) }}</td></tr>{% endfor %}
+      </tbody></table><div class="small muted">Медиана: {{ evidence.median | money }}</div>
+      {% elif evidence.history %}<table><thead><tr><th>Дата</th><th class="num">Цена</th></tr></thead><tbody>{% for h in evidence.history %}<tr><td>{{ h.observed_at }}</td><td class="num">{{ h.price | money }}</td></tr>{% endfor %}</tbody></table>
+      {% elif evidence.series %}<table><thead><tr><th>Период</th><th class="num">Значение</th></tr></thead><tbody>{% for p in evidence.series %}<tr><td>{{ p[0] }}</td><td class="num">{{ p[1] }}</td></tr>{% endfor %}</tbody></table>
+      {% elif evidence['items'] %}<ul>{% for it in evidence['items'] %}<li>{{ it.competitor }}: <a href="{{ it.url }}" target="_blank" rel="noopener">{{ it.name }}</a></li>{% endfor %}</ul>
+      {% else %}<details><summary>JSON</summary><pre class="small">{{ evidence | tojson(indent=1) }}</pre></details>{% endif %}
+    {% else %}<span class="muted">Нет дополнительных данных.</span>{% endif %}
+  </div>
+</div>
+{% endblock %}

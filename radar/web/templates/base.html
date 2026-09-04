@@ -1,0 +1,32 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>{% block title %}M22 Product Radar{% endblock %}</title>
+<link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+<div class="layout">
+  <aside class="sidebar">
+    <div class="brand">M22 Product Radar<small>рыночная разведка · v{{ app_version }}</small></div>
+    <nav>
+      {% set items = [("/", "Главная"), ("/actions", "Рекомендуемые действия"), ("/signals", "Сигналы"), ("/competitors", "Конкуренты"), ("/matrix", "Матрица M22"),
+                      ("/demand", "Поисковый спрос"), ("/opportunities", "Новые возможности"), ("/sources", "Источники"), ("/reports", "Отчёты"), ("/settings", "Настройки")] %}
+      {% for href, label in items %}
+        <a href="{{ href }}" class="{% if (href == '/' and path == '/') or (href != '/' and path.startswith(href)) %}active{% endif %}">{{ label }}</a>
+      {% endfor %}
+    </nav>
+    <div class="meta">
+      Последнее обновление данных:<br><b>{{ last_update | dt }}</b><br>
+      {% if source_errors %}<span class="warn">Источников с ошибками: {{ source_errors }}</span><br>{% endif %}
+      <span>Сейчас: {{ now }}</span>
+    </div>
+  </aside>
+  <main>
+    {% block content %}{% endblock %}
+  </main>
+</div>
+<script src="/static/app.js"></script>
+</body>
+</html>

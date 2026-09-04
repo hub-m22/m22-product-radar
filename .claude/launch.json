@@ -1,0 +1,12 @@
+{
+  "version": "0.0.1",
+  "configurations": [
+    {
+      "name": "m22-product-radar",
+      "runtimeExecutable": "C:\\Users\\Adm\\AppData\\Local\\Programs\\Python\\Python312\\python.exe",
+      "runtimeArgs": ["-m", "radar", "serve", "--port", "8022"],
+      "port": 8022,
+      "env": { "PYTHONUTF8": "1" }
+    }
+  ]
+}

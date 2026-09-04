@@ -1,0 +1,17 @@
+{% extends "base.html" %}{% import "_macros.html" as m %}
+{% block title %}Сопоставления — M22 Product Radar{% endblock %}
+{% block content %}
+<a href="/competitors">← Конкуренты</a>
+<h1>Сопоставление товаров конкурентов с матрицей M22</h1>
+<div class="tabs"><a href="/matches?review=1" class="{% if only_review %}active{% endif %}">На ручной проверке</a><a href="/matches?review=0" class="{% if not only_review %}active{% endif %}">Все</a> <a class="btn sec small" href="/export/matches.xlsx">XLSX</a></div>
+<div class="card compact tbl-wrap"><table><thead><tr><th>Товар конкурента</th><th>Товар M22</th><th>Тип</th><th>Уверенность</th><th>Причины</th><th>Решение</th></tr></thead><tbody>
+{% for r in rows %}<tr>
+  <td><b>{{ r.competitor_name[:30] }}</b><br><a href="{{ r.cp_url }}" target="_blank" rel="noopener">{{ r.cp_name[:70] }}</a> · {{ r.cp_price | money }}</td>
+  <td>{% if r.m22_product_id %}<a href="/matrix/{{ r.m22_product_id }}">{{ r.m22_name[:70] }}</a> · {{ r.m22_price | money }}{% else %}<span class="muted">— (категория: {{ CATEGORY_NAMES.get(r.cp_cat, r.cp_cat or '—') }})</span>{% endif %}</td>
+  <td class="small">{{ MATCH_NAMES.get(r.match_type, r.match_type) }}<br><span class="badge st">{{ {'auto':'авто','confirmed':'подтверждено','rejected':'отклонено'}.get(r.review_status, r.review_status) }}</span></td>
+  <td>{{ m.conf(r.confidence) }}</td>
+  <td class="small">{{ (r.reasons_json | uj([])) | join('; ') }}{% if r.reviewer_note %}<br><i>{{ r.reviewer_note }}</i>{% endif %}</td>
+  <td class="nowrap"><form method="post" action="/matches/{{ r.id }}/review" class="inline"><select name="match_type" class="small" style="width:auto"><option value="">тип: как есть</option>{% for k, v in MATCH_NAMES.items() %}<option value="{{ k }}">{{ v }}</option>{% endfor %}</select> <button name="decision" value="confirm" class="small">✓</button> <button name="decision" value="reject" class="danger small">✕</button></form></td>
+</tr>{% else %}<tr><td colspan="6" class="muted">Нет сопоставлений.</td></tr>{% endfor %}
+</tbody></table></div>
+{% endblock %}

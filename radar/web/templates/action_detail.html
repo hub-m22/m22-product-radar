@@ -1,0 +1,38 @@
+{% extends "base.html" %}{% import "_macros.html" as m %}
+{% block title %}Действие #{{ r.id }} — M22 Product Radar{% endblock %}
+{% block content %}
+<a href="/actions">← Рекомендуемые действия</a>
+<h1>{{ m.prio(r.priority) }} {{ r.title }}</h1>
+<div class="sub">{{ m.status(r.status) }} · уверенность {{ m.conf(r.confidence) }} · ответственный: {{ r.owner or '—' }} · срок: {{ r.due_date or '—' }}</div>
+<div class="grid grid-2">
+  <div class="card">
+    <h3>Что именно сделать</h3><p>{{ r.action }}</p>
+    <h3>Фактическое основание</h3><p>{{ r.basis or '—' }}</p>
+    <h3>Ожидаемый эффект</h3><p>{{ r.expected_effect or '—' }}</p>
+    <dl class="kv"><dt>Категория</dt><dd>{{ CATEGORY_NAMES.get(r.category_slug, r.category_slug or '—') }}</dd>
+      <dt>Товар M22</dt><dd>{% if r.m22_product_id %}<a href="/matrix/{{ r.m22_product_id }}">{{ r.m22_name }}</a>{% else %}—{% endif %}</dd>
+      <dt>Создано</dt><dd>{{ r.created_at }}</dd><dt>Обновлено</dt><dd>{{ r.updated_at }}</dd></dl>
+    <h3>Источники</h3><ul>{% for s in sources %}<li>{{ s.name }}{% if s.price %} — {{ s.price | money }}{% endif %}{% if s.url %} · <a href="{{ s.url }}" target="_blank" rel="noopener">ссылка ↗</a>{% endif %}</li>{% else %}<li class="muted">—</li>{% endfor %}</ul>
+  </div>
+  <div>
+    <div class="card"><h3>Решение</h3>
+      <form method="post" action="/actions/{{ r.id }}/update" class="actions-row">
+        <button name="status" value="accepted">Принять</button>
+        <button name="status" value="in_progress" class="sec">В работу</button>
+        <button name="status" value="done" class="sec">Выполнено</button>
+        <button name="status" value="rejected" class="danger">Отклонить</button>
+      </form>
+      <form method="post" action="/actions/{{ r.id }}/update" class="form-grid" style="margin-top:10px">
+        <label>Ответственный<select name="owner"><option value="">— не менять —</option>{% for o in owners %}<option value="{{ o }}" {% if o == r.owner %}selected{% endif %}>{{ o }}</option>{% endfor %}</select></label>
+        <label>Срок<input type="date" name="due_date" value="{{ r.due_date or '' }}"></label>
+        <label>Автор<input type="text" name="author"></label>
+        <label class="full">Комментарий<textarea name="comment" rows="2"></textarea></label>
+        <div class="full"><button type="submit">Сохранить</button></div>
+      </form>
+      {% for c in comments %}<div class="comment"><div class="a">{{ c.author }} · {{ c.created_at }}</div>{{ c.text }}</div>{% endfor %}
+    </div>
+    <h3>Сигналы-основания</h3>
+    {% for s in sigs %}{{ m.signal_card(s, compact=True) }}{% else %}<div class="muted">—</div>{% endfor %}
+  </div>
+</div>
+{% endblock %}

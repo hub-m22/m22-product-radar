@@ -1,0 +1,52 @@
+2026-09-04 18:00:25,007 INFO radar.collectors.radiosync: radiosync.ru: 27 страниц товаров
+2026-09-04 18:01:10,830 INFO radar.collectors.m22: m22.ru: 126 страниц товаров в контуре
+2026-09-04 18:12:03,025 INFO radar.db: migration applied: 002_market_observations
+2026-09-04 18:14:27,929 WARNING radar.collectors.trends: Google Trends 429 — пауза 60 с
+2026-09-04 18:20:49,313 WARNING radar.collectors.trends: Google Trends 429 — пауза 60 с
+2026-09-04 21:34:22,106 INFO radar.collectors.wildberries: WB «радиогид»: 30 товаров, 30 релевантных
+2026-09-04 21:34:43,401 INFO radar.collectors.wildberries: WB «радиогид система для экскурсий»: 30 товаров, 30 релевантных
+2026-09-04 21:35:04,977 INFO radar.collectors.wildberries: WB «аудиогид для музея»: 30 товаров, 29 релевантных
+2026-09-04 21:35:45,931 INFO radar.collectors.wildberries: WB «одноразовые наушники для экскурсий»: 12 товаров, 12 релевантных
+2026-09-04 21:36:07,556 INFO radar.collectors.wildberries: WB «система синхронного перевода»: 30 товаров, 29 релевантных
+2026-09-04 21:36:28,701 INFO radar.collectors.wildberries: WB «приемник радиогид»: 30 товаров, 29 релевантных
+2026-09-04 21:36:29,234 WARNING radar.collectors.zakupki: zakupki.gov.ru: сертификат не распознан системой, повтор без проверки (только чтение)
+2026-09-04 21:36:31,653 INFO radar.collectors.zakupki: zakupki «радиогид»: 40 записей
+2026-09-04 21:37:33,171 WARNING radar.collectors.zakupki: zakupki.gov.ru: сертификат не распознан системой, повтор без проверки (только чтение)
+2026-09-04 21:37:38,252 INFO radar.collectors.zakupki: zakupki «аудиогид»: 40 записей
+2026-09-04 21:38:41,275 WARNING radar.collectors.zakupki: zakupki.gov.ru: сертификат не распознан системой, повтор без проверки (только чтение)
+2026-09-04 21:38:44,045 INFO radar.collectors.zakupki: zakupki «система синхронного перевода»: 40 записей
+2026-09-04 21:39:45,507 WARNING radar.collectors.zakupki: zakupki.gov.ru: сертификат не распознан системой, повтор без проверки (только чтение)
+2026-09-04 21:39:48,003 INFO radar.collectors.zakupki: zakupki «оборудование для экскурсий наушники»: 30 записей
+2026-09-04 21:40:52,846 INFO radar.signals: signals: {'competitor_price_change': 3, 'appear_disappear': 0, 'new_category': 0, 'new_competitor': 0, 'multi_competitor': 11, 'price_vs_market': 10, 'demand': 3, 'new_use_case': 1, 'cross_site': 17, 'source_errors': 0}
+2026-09-04 21:43:43,095 INFO radar.signals: signals: {'competitor_price_change': 0, 'appear_disappear': 0, 'new_category': 0, 'new_competitor': 0, 'multi_competitor': 11, 'price_vs_market': 0, 'demand': 1, 'new_use_case': 1, 'cross_site': 2, 'source_errors': 0}
+2026-09-04 21:44:47,172 INFO radar.signals: signals: {'competitor_price_change': 0, 'appear_disappear': 0, 'new_category': 0, 'new_competitor': 0, 'multi_competitor': 11, 'price_vs_market': 0, 'demand': 0, 'new_use_case': 1, 'cross_site': 2, 'source_errors': 0}
+2026-09-04 21:45:26,550 INFO radar.signals: signals: {'competitor_price_change': 0, 'appear_disappear': 0, 'new_category': 0, 'new_competitor': 0, 'multi_competitor': 11, 'price_vs_market': 5, 'demand': 0, 'new_use_case': 1, 'cross_site': 2, 'source_errors': 0}
+2026-09-04 21:45:31,438 INFO apscheduler.scheduler: Adding job tentatively -- it will be properly scheduled when the scheduler starts
+2026-09-04 21:45:31,438 INFO apscheduler.scheduler: Adding job tentatively -- it will be properly scheduled when the scheduler starts
+2026-09-04 21:45:31,438 INFO apscheduler.scheduler: Adding job tentatively -- it will be properly scheduled when the scheduler starts
+2026-09-04 21:45:31,438 INFO apscheduler.scheduler: Adding job tentatively -- it will be properly scheduled when the scheduler starts
+2026-09-04 21:45:31,438 INFO apscheduler.scheduler: Added job "_run_job" to job store "default"
+2026-09-04 21:45:31,438 INFO apscheduler.scheduler: Added job "_run_job" to job store "default"
+2026-09-04 21:45:31,438 INFO apscheduler.scheduler: Added job "_run_job" to job store "default"
+2026-09-04 21:45:31,438 INFO apscheduler.scheduler: Added job "_run_job" to job store "default"
+2026-09-04 21:45:31,438 INFO apscheduler.scheduler: Scheduler started
+2026-09-04 21:45:31,438 INFO radar.scheduler: scheduler started
+2026-09-04 21:46:42,508 INFO radar.signals: signals: {'competitor_price_change': 0, 'appear_disappear': 0, 'new_category': 0, 'new_competitor': 0, 'multi_competitor': 11, 'price_vs_market': 6, 'demand': 0, 'new_use_case': 1, 'cross_site': 2, 'source_errors': 0}
+2026-09-04 21:47:08,175 INFO radar.signals: signals: {'competitor_price_change': 0, 'appear_disappear': 0, 'new_category': 0, 'new_competitor': 0, 'multi_competitor': 11, 'price_vs_market': 11, 'demand': 0, 'new_use_case': 1, 'cross_site': 2, 'source_errors': 0}
+2026-09-04 21:47:37,112 INFO radar.signals: signals: {'competitor_price_change': 0, 'appear_disappear': 0, 'new_category': 0, 'new_competitor': 0, 'multi_competitor': 11, 'price_vs_market': 11, 'demand': 0, 'new_use_case': 1, 'cross_site': 2, 'source_errors': 0}
+2026-09-04 21:49:21,203 INFO radar.signals: signals: {'competitor_price_change': 0, 'appear_disappear': 0, 'new_category': 0, 'new_competitor': 0, 'multi_competitor': 0, 'price_vs_market': 10, 'demand': 0, 'new_use_case': 0, 'cross_site': 0, 'source_errors': 0}
+2026-09-04 21:50:16,706 INFO radar.signals: signals: {'competitor_price_change': 0, 'appear_disappear': 0, 'new_category': 0, 'new_competitor': 0, 'multi_competitor': 11, 'price_vs_market': 10, 'demand': 0, 'new_use_case': 1, 'cross_site': 2, 'source_errors': 0}
+2026-09-04 21:51:07,944 INFO radar.signals: signals: {'competitor_price_change': 0, 'appear_disappear': 0, 'new_category': 0, 'new_competitor': 0, 'multi_competitor': 11, 'price_vs_market': 10, 'demand': 0, 'new_use_case': 1, 'cross_site': 2, 'source_errors': 0}
+2026-09-04 21:51:12,216 INFO apscheduler.scheduler: Adding job tentatively -- it will be properly scheduled when the scheduler starts
+2026-09-04 21:51:12,216 INFO apscheduler.scheduler: Adding job tentatively -- it will be properly scheduled when the scheduler starts
+2026-09-04 21:51:12,216 INFO apscheduler.scheduler: Adding job tentatively -- it will be properly scheduled when the scheduler starts
+2026-09-04 21:51:12,216 INFO apscheduler.scheduler: Adding job tentatively -- it will be properly scheduled when the scheduler starts
+2026-09-04 21:51:12,216 INFO apscheduler.scheduler: Added job "_run_job" to job store "default"
+2026-09-04 21:51:12,216 INFO apscheduler.scheduler: Added job "_run_job" to job store "default"
+2026-09-04 21:51:12,216 INFO apscheduler.scheduler: Added job "_run_job" to job store "default"
+2026-09-04 21:51:12,226 INFO apscheduler.scheduler: Added job "_run_job" to job store "default"
+2026-09-04 21:51:12,226 INFO apscheduler.scheduler: Scheduler started
+2026-09-04 21:51:12,226 INFO radar.scheduler: scheduler started
+2026-09-04 21:52:31,542 INFO radar.signals: signals: {'competitor_price_change': 0, 'appear_disappear': 0, 'new_category': 0, 'new_competitor': 0, 'multi_competitor': 1, 'price_vs_market': 0, 'demand': 0, 'new_use_case': 0, 'cross_site': 0, 'source_errors': 0}
+2026-09-04 21:52:31,554 INFO radar.scheduler: job analyze: {'matching': {'competitor_products': 425, 'created': 2, 'updated': 752}, 'signals': {'competitor_price_change': 0, 'appear_disappear': 0, 'new_category': 0, 'new_competitor': 0, 'multi_competitor': 1, 'price_vs_market': 0, 'demand': 0, 'new_use_case': 0, 'cross_site': 0, 'source_errors': 0}, 'recommendations': 1, 'hypotheses': 0}
+2026-09-04 21:54:14,992 INFO radar.signals: signals: {'competitor_price_change': 0, 'appear_disappear': 0, 'new_category': 0, 'new_competitor': 0, 'multi_competitor': 11, 'price_vs_market': 11, 'demand': 0, 'new_use_case': 1, 'cross_site': 2, 'source_errors': 0}

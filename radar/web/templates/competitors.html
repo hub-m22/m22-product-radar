@@ -1,0 +1,39 @@
+{% extends "base.html" %}{% import "_macros.html" as m %}
+{% block title %}Конкуренты — M22 Product Radar{% endblock %}
+{% block content %}
+<div class="topbar"><div><h1>Конкуренты</h1><div class="sub">{{ comps|length }} компаний в реестре. {% if review %}<a href="/matches">Сопоставлений на ручной проверке: {{ review }}</a>{% endif %}</div></div>
+<div class="actions-row"><a class="btn sec small" href="/matches?review=0">Все сопоставления</a> <a class="btn sec small" href="/export/competitors.xlsx">XLSX реестр</a> <a class="btn sec small" href="/export/competitor_products.xlsx">XLSX товары</a> <a class="btn sec small" href="/export/price_history.csv">CSV история цен</a></div></div>
+{% set types = TYPE_NAMES.items() | list %}{% set show_product = False %}{% set show_competitor = False %}{% set show_conf = False %}
+{% include "_filters.html" %}
+<div class="card compact tbl-wrap"><table><thead><tr><th>Компания</th><th>Типы</th><th>География</th><th class="num">Товаров</th><th class="num">С ценой</th><th class="num">Страниц</th><th>Аренда</th><th>Последняя проверка</th></tr></thead><tbody>
+{% for c in comps %}<tr>
+  <td><a href="/competitors/{{ c.id }}"><b>{{ c.name }}</b></a><br><a class="small" href="{{ c.website }}" target="_blank" rel="noopener">{{ c.website }}</a></td>
+  <td class="small">{% for t in (c.types_json | uj([])) %}<span class="pill">{{ TYPE_NAMES.get(t, t) }}</span> {% endfor %}</td>
+  <td class="small">{{ (c.geography or '')[:50] }}</td>
+  <td class="num">{{ c.products }}</td><td class="num">{{ c.priced }}</td>
+  <td class="num">{{ c.pages }}{% if c.failing %} <span class="badge sev-medium" title="страниц с ошибками">{{ c.failing }}</span>{% endif %}</td>
+  <td>{{ {'yes':'да','no':'нет'}.get(c.rental_available, '?') }}</td>
+  <td class="small nowrap">{{ c.last_checked | dt }}</td>
+</tr>{% endfor %}</tbody></table></div>
+
+<div class="grid grid-2" style="margin-top:14px">
+<div class="card"><h2>Добавить конкурента</h2>
+<form method="post" action="/competitors/add" class="form-grid">
+  <label>Название<input type="text" name="name" required></label>
+  <label>Сайт<input type="url" name="website" placeholder="https://example.ru" required></label>
+  <label>География<input type="text" name="geography"></label>
+  <label>Типы (несколько)<select name="types" multiple size="5">{% for v, n in TYPE_NAMES.items() %}<option value="{{ v }}">{{ n }}</option>{% endfor %}</select></label>
+  <label>Страница мониторинга (URL товара или каталога)<input type="url" name="page_url"></label>
+  <label>Тип страницы<select name="page_kind"><option value="product">товар</option><option value="catalog">каталог / список</option><option value="rent">аренда</option></select></label>
+  <label class="full">Заметки<textarea name="notes" rows="2"></textarea></label>
+  <div class="full"><button type="submit">Добавить</button></div>
+</form></div>
+<div class="card"><h2>Импорт</h2>
+<form method="post" action="/import" enctype="multipart/form-data" class="form-grid">
+  <label>Что импортировать<select name="kind"><option value="competitors">Реестр конкурентов (CSV/XLSX: name; website; types; geography; product_url)</option><option value="competitor_prices">Цены конкурентов вручную (CSV/XLSX: competitor; url; name; price; currency; date)</option></select></label>
+  <label>Файл<input type="file" name="file" required></label>
+  <div class="full"><button type="submit">Импортировать</button></div>
+</form>
+<p class="small muted">Ручной импорт цен нужен для площадок, закрытых для автоматического сбора (Ozon, Яндекс Маркет, Alibaba, 1688). Данные получают источник «ручной импорт», дату и файл.</p></div>
+</div>
+{% endblock %}

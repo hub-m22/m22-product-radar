@@ -1,0 +1,29 @@
+{% extends "base.html" %}{% import "_macros.html" as m %}
+{% block title %}{{ p.name }} — матрица M22{% endblock %}
+{% block content %}
+<a href="/matrix">← Матрица M22</a>
+<h1>{{ p.name }}</h1>
+<div class="sub">{{ p.site }} · <a href="{{ p.url }}" target="_blank" rel="noopener">страница товара ↗</a> · {{ CATEGORY_NAMES.get(p.category_slug, p.category_slug or '—') }} · модель {{ p.model_key or '—' }} · артикул {{ p.sku or '—' }} · снято {{ p.fetched_at | dt }}</div>
+<div class="grid grid-3">
+  <div class="card kpi"><span class="v">{{ p.price | money }}</span><span class="l">цена M22{% if p.old_price %} (была {{ p.old_price | money }}){% endif %}</span><span class="d">{{ {'InStock':'в наличии','OutOfStock':'нет в наличии'}.get(p.availability, p.availability or '') }}</span></div>
+  <div class="card kpi"><span class="v">{{ median | money if median else '—' }}</span><span class="l">медиана {{ n_comp }} сопоставимых предложений конкурентов</span>
+    <span class="d">{% if median and p.price %}{% set gap = (p.price - median) / median * 100 %}M22 {{ 'дороже' if gap > 0 else 'дешевле' }} на {{ gap | abs | round(0) | int }}%{% elif n_comp < 3 %}меньше 3 сопоставимых — сравнение не делается{% endif %}</span></div>
+  <div class="card kpi"><span class="v">{{ hist|length }}</span><span class="l">замеров цены</span><span class="d">{% if hist|length >= 2 %}{{ hist[0].observed_at[:10] }} → {{ hist[-1].observed_at[:10] }}{% else %}история появится после следующего сбора{% endif %}</span></div>
+</div>
+<div class="grid grid-2" style="margin-top:14px">
+  <div class="card"><h3>Описание</h3><p class="small">{{ p.description or '—' }}</p>
+    {% if kit %}<h3>Комплектация</h3><dl class="kv">{% for k, v in kit.items() %}<dt>{{ k }}</dt><dd>{{ v }}</dd>{% endfor %}</dl>{% endif %}
+    {% if specs %}<h3>Характеристики</h3>{% for g, kv in specs.items() %}<b class="small">{{ g }}</b><dl class="kv">{% for k, v in kv.items() %}<dt>{{ k }}</dt><dd>{{ v }}</dd>{% endfor %}</dl>{% endfor %}{% endif %}
+  </div>
+  <div>
+    {% if twin %}<div class="card"><h3>Тот же товар на другом сайте</h3><table><thead><tr><th>Сайт</th><th>Название</th><th class="num">Цена</th></tr></thead><tbody>{% for t in twin %}<tr><td>{{ t.site }}</td><td><a href="/matrix/{{ t.id }}">{{ t.name[:60] }}</a></td><td class="num" {% if t.price != p.price %}style="color:var(--high);font-weight:600"{% endif %}>{{ t.price | money }}</td></tr>{% endfor %}</tbody></table></div>{% endif %}
+    {% if variants %}<div class="card" style="margin-top:14px"><h3>Варианты (SKU)</h3><table><tbody>{% for v in variants %}<tr><td>{{ v.name[:70] }}</td><td>{{ v.sku }}</td><td class="num">{{ v.price | money }}</td></tr>{% endfor %}</tbody></table></div>{% endif %}
+    <div class="card" style="margin-top:14px"><h3>Предложения конкурентов ({{ matches|length }})</h3>
+      <table><thead><tr><th>Конкурент</th><th>Товар</th><th class="num">Цена</th><th>Тип</th><th>Уверенность</th></tr></thead><tbody>
+      {% for c in matches %}<tr {% if c.review_status == 'rejected' %}style="opacity:.5"{% endif %}><td><a href="/competitors/{{ c.competitor_id if c.competitor_id else '' }}">{{ c.competitor_name[:28] }}</a></td><td><a href="{{ c.cp_url }}" target="_blank" rel="noopener">{{ c.cp_name[:55] }}</a>{% if c.cp_capacity %} <span class="small muted">({{ c.cp_capacity }})</span>{% endif %}</td><td class="num">{{ c.cp_price | money }}</td><td class="small">{{ MATCH_NAMES.get(c.match_type, c.match_type) }}</td><td>{{ m.conf(c.confidence) }}</td></tr>{% else %}<tr><td colspan="5" class="muted">Сопоставлений нет.</td></tr>{% endfor %}
+      </tbody></table></div>
+    {% if hist|length >= 2 %}<div class="card" style="margin-top:14px"><h3>История цены M22</h3><table><tbody>{% for h in hist %}<tr><td>{{ h.observed_at }}</td><td class="num">{{ h.price | money }}</td><td class="small">{{ h.availability or '' }}</td></tr>{% endfor %}</tbody></table></div>{% endif %}
+  </div>
+</div>
+<h2>Сигналы по товару</h2>{% for s in sigs %}{{ m.signal_card(s, compact=True) }}{% else %}<div class="muted">Сигналов нет.</div>{% endfor %}
+{% endblock %}

@@ -1,0 +1,8 @@
+.env
+data/raw/
+data/*.sqlite3*
+data/exports/
+data/backups/
+__pycache__/
+*.pyc
+.pytest_cache/

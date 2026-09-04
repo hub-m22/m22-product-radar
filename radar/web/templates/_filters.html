@@ -1,0 +1,12 @@
+<form class="filters" method="get">
+  <label>Период<select name="period"><option value="">весь</option>{% for d, n in [("7","7 дней"),("30","30 дней"),("90","90 дней")] %}<option value="{{ d }}" {% if f.period == d %}selected{% endif %}>{{ n }}</option>{% endfor %}</select></label>
+  <label>Категория<select name="category"><option value="">все</option>{% for c in categories %}<option value="{{ c.slug }}" {% if f.category == c.slug %}selected{% endif %}>{{ c.name_ru }}</option>{% endfor %}</select></label>
+  {% if show_product is not defined or show_product %}<label>Товар M22<select name="product"><option value="">все</option>{% for p in products %}<option value="{{ p.id }}" {% if f.product == p.id|string %}selected{% endif %}>{{ p.name[:60] }}</option>{% endfor %}</select></label>{% endif %}
+  {% if show_competitor is not defined or show_competitor %}<label>Конкурент<select name="competitor"><option value="">все</option>{% for c in competitors %}<option value="{{ c.id }}" {% if f.competitor == c.id|string %}selected{% endif %}>{{ c.name[:50] }}</option>{% endfor %}</select></label>{% endif %}
+  {% if types is defined %}<label>{{ type_label or 'Тип' }}<select name="type"><option value="">все</option>{% for v, n in types %}<option value="{{ v }}" {% if f.type == v %}selected{% endif %}>{{ n }}</option>{% endfor %}</select></label>{% endif %}
+  {% if severities is defined %}<label>{{ sev_label or 'Важность' }}<select name="severity"><option value="">любая</option>{% for v, n in severities %}<option value="{{ v }}" {% if f.severity == v %}selected{% endif %}>{{ n }}</option>{% endfor %}</select></label>{% endif %}
+  {% if show_conf is not defined or show_conf %}<label>Уверенность ≥<select name="confidence"><option value="">любая</option>{% for v in ["0.5","0.7","0.9"] %}<option value="{{ v }}" {% if f.confidence == v %}selected{% endif %}>{{ (v|float*100)|int }}%</option>{% endfor %}</select></label>{% endif %}
+  {% if statuses is defined %}<label>Статус<select name="status"><option value="">любой</option>{% for v, n in statuses %}<option value="{{ v }}" {% if f.status == v %}selected{% endif %}>{{ n }}</option>{% endfor %}</select></label>{% endif %}
+  <label>Поиск<input type="text" name="q" value="{{ f.q }}" placeholder="текст"></label>
+  <button type="submit" class="small">Применить</button> <a class="btn sec small" href="{{ path }}">Сбросить</a>
+</form>
