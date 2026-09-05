@@ -1,0 +1,12 @@
+services:
+  radar:
+    build: .
+    container_name: m22-radar
+    restart: unless-stopped
+    env_file: .env
+    environment:
+      RADAR_HOST: 0.0.0.0
+    volumes:
+      - ./data:/app/data        # база, сырые страницы, экспорт, резервные копии — вне контейнера
+    ports:
+      - "127.0.0.1:8022:8022"  # наружу только через nginx с авторизацией

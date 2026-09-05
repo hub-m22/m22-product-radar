@@ -28,3 +28,19 @@
 | Yandex Search API (выдача) | Yandex Cloud, платно | следующий этап |
 | Таможенные данные | ВЭД-Стат / ImportGenius / Volza — подписка | импорт CSV |
 | AI (Anthropic) | ключ API | `.env`: `ANTHROPIC_API_KEY=` — в текущей версии не используется |
+
+## Docker (любой VPS)
+```bash
+docker compose up -d --build      # первый запуск: база создаётся, планировщик включён
+docker compose exec radar python -m radar pipeline   # первый сбор + анализ + отчёт (~20 мин)
+```
+Папка `data/` монтируется с хоста — база и резервные копии переживают пересборку. Чтобы перенести уже собранные данные с рабочей машины, скопируйте `data/radar.sqlite3` на сервер до первого запуска.
+
+Пример nginx с паролем (порт 8022 наружу не открывать):
+```nginx
+server {
+  listen 443 ssl; server_name radar.m22.ru;
+  auth_basic "M22 Product Radar"; auth_basic_user_file /etc/nginx/.htpasswd;   # htpasswd -c /etc/nginx/.htpasswd owner
+  location / { proxy_pass http://127.0.0.1:8022; proxy_set_header Host $host; }
+}
+```

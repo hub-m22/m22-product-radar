@@ -1,0 +1,7 @@
+data/raw/
+data/backups/
+data/exports/
+.git/
+__pycache__/
+.pytest_cache/
+tests/_test_runtime.sqlite3*
