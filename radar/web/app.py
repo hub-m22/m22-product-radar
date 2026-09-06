@@ -16,7 +16,7 @@ from fastapi.responses import HTMLResponse, RedirectResponse, Response, Streamin
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 
-from .. import config, db, discovery, importers, matching, recommendations, reports, scheduler, seed, signals
+from .. import config, db, discovery, feedback, importers, matching, recommendations, reports, scheduler, seed, signals
 from .. import specs as specmod
 from ..importers import TYPE_NAMES
 from ..logging_setup import setup_logging
@@ -229,6 +229,7 @@ def action_update(rid: int, status: str = Form(None), owner: str = Form(None), c
     with db.session() as conn:
         if status:
             conn.execute("UPDATE recommendations SET status=?, updated_at=datetime('now') WHERE id=?", (status, rid))
+            feedback.record(conn, "recommendation", rid, status, author or None, comment or None)
         if owner is not None and owner != "":
             conn.execute("UPDATE recommendations SET owner=?, updated_at=datetime('now') WHERE id=?", (owner, rid))
         if due_date:
@@ -261,7 +262,10 @@ def signal_detail(request: Request, sid: int):
         recs = db.rows(conn, "SELECT * FROM recommendations WHERE signal_ids_json LIKE ?", (f"%{sid}%",))
         recs = [r for r in recs if sid in (db.uj(r["signal_ids_json"], []) or [])]
         series = db.rows(conn, "SELECT period_start, value FROM demand_observations WHERE query_id=? AND source='google_trends' ORDER BY period_start", (s["query_id"],)) if s["query_id"] else []
-    return render(request, "signal_detail.html", s=s, comments=comments, evidence=db.uj(s["evidence_json"], {}), cp=cp, recs=recs, series=series)
+        fb_type = db.row(conn, "SELECT SUM(decision='confirmed') c, SUM(decision='rejected') r FROM feedback WHERE signal_type=?", (s["type"],))
+        fb_this = db.rows(conn, "SELECT * FROM feedback WHERE signal_id=? ORDER BY created_at DESC", (sid,))
+    return render(request, "signal_detail.html", s=s, comments=comments, evidence=db.uj(s["evidence_json"], {}), cp=cp, recs=recs, series=series,
+                  fb_type={"c": (fb_type["c"] or 0), "r": (fb_type["r"] or 0)} if fb_type else {"c": 0, "r": 0}, fb_this=fb_this)
 
 
 @app.post("/signals/{sid}/update")
@@ -269,6 +273,7 @@ def signal_update(sid: int, status: str = Form(None), owner: str = Form(None), c
     with db.session() as conn:
         if status:
             conn.execute("UPDATE signals SET status=?, updated_at=datetime('now') WHERE id=?", (status, sid))
+            feedback.record(conn, "signal", sid, status, author or None, comment or None)
         if owner:
             conn.execute("UPDATE signals SET owner=?, updated_at=datetime('now') WHERE id=?", (owner, sid))
         if comment and comment.strip():
@@ -643,6 +648,7 @@ def hypothesis_update(hid: int, decision_status: str = Form(None), owner: str = 
     with db.session() as conn:
         if decision_status:
             conn.execute("UPDATE hypotheses SET decision_status=?, updated_at=datetime('now') WHERE id=?", (decision_status, hid))
+            feedback.record(conn, "hypothesis", hid, decision_status, author or None, comment or None)
         if owner:
             conn.execute("UPDATE hypotheses SET owner=?, updated_at=datetime('now') WHERE id=?", (owner, hid))
         if next_step is not None and next_step.strip():
@@ -795,7 +801,11 @@ def settings_page(request: Request):
     thresholds = {"Порог изменения цены конкурента, %": config.PRICE_CHANGE_THRESHOLD_PCT, "Порог отклонения от медианы рынка, %": config.MARKET_GAP_THRESHOLD_PCT,
                   "Минимум сопоставимых предложений": config.MIN_COMPARABLES, "Порог изменения спроса, %": config.DEMAND_CHANGE_THRESHOLD_PCT, "Z-порог аномалии": config.ANOMALY_Z,
                   "Задержка между запросами к домену, с": config.REQUEST_DELAY_SEC}
+    with db.session() as conn:
+        fb_stats = feedback.stats(conn)
+        fb_recent = db.rows(conn, "SELECT f.*, s.title FROM feedback f LEFT JOIN signals s ON s.id=f.signal_id ORDER BY f.created_at DESC LIMIT 30")
     return render(request, "settings.html", settings=settings, cats=cats, thresholds=thresholds, counts=counts, db_path=str(config.DB_PATH), backup_dir=str(config.BACKUP_DIR),
+                  fb_stats=fb_stats, fb_recent=fb_recent, min_checks=feedback.MIN_CHECKS,
                   schedule={"M22 (час)": config.M22_CRON_HOUR, "Конкуренты (час)": config.COMPETITORS_CRON_HOUR, "Спрос (день недели)": config.TRENDS_CRON_DOW, "Отчёт (день недели)": config.REPORT_CRON_DOW, "Включён": config.SCHEDULE_ENABLED})
 
 

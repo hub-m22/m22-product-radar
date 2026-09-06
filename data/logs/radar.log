@@ -169,3 +169,24 @@
 2026-09-06 18:37:25,505 INFO apscheduler.scheduler: Added job "_run_job" to job store "default"
 2026-09-06 18:37:25,505 INFO apscheduler.scheduler: Scheduler started
 2026-09-06 18:37:25,507 INFO radar.scheduler: scheduler started
+2026-09-06 18:38:35,186 INFO apscheduler.scheduler: Adding job tentatively -- it will be properly scheduled when the scheduler starts
+2026-09-06 18:38:35,187 INFO apscheduler.scheduler: Adding job tentatively -- it will be properly scheduled when the scheduler starts
+2026-09-06 18:38:35,187 INFO apscheduler.scheduler: Adding job tentatively -- it will be properly scheduled when the scheduler starts
+2026-09-06 18:38:35,187 INFO apscheduler.scheduler: Adding job tentatively -- it will be properly scheduled when the scheduler starts
+2026-09-06 18:38:35,188 INFO apscheduler.scheduler: Added job "_run_job" to job store "default"
+2026-09-06 18:38:35,188 INFO apscheduler.scheduler: Added job "_run_job" to job store "default"
+2026-09-06 18:38:35,189 INFO apscheduler.scheduler: Added job "_run_job" to job store "default"
+2026-09-06 18:38:35,189 INFO apscheduler.scheduler: Added job "_run_job" to job store "default"
+2026-09-06 18:38:35,189 INFO apscheduler.scheduler: Scheduler started
+2026-09-06 18:38:35,190 INFO radar.scheduler: scheduler started
+2026-09-06 18:48:22,593 INFO radar.db: migration applied: 005_feedback
+2026-09-06 18:48:28,556 INFO apscheduler.scheduler: Adding job tentatively -- it will be properly scheduled when the scheduler starts
+2026-09-06 18:48:28,556 INFO apscheduler.scheduler: Adding job tentatively -- it will be properly scheduled when the scheduler starts
+2026-09-06 18:48:28,557 INFO apscheduler.scheduler: Adding job tentatively -- it will be properly scheduled when the scheduler starts
+2026-09-06 18:48:28,557 INFO apscheduler.scheduler: Adding job tentatively -- it will be properly scheduled when the scheduler starts
+2026-09-06 18:48:28,558 INFO apscheduler.scheduler: Added job "_run_job" to job store "default"
+2026-09-06 18:48:28,558 INFO apscheduler.scheduler: Added job "_run_job" to job store "default"
+2026-09-06 18:48:28,558 INFO apscheduler.scheduler: Added job "_run_job" to job store "default"
+2026-09-06 18:48:28,558 INFO apscheduler.scheduler: Added job "_run_job" to job store "default"
+2026-09-06 18:48:28,558 INFO apscheduler.scheduler: Scheduler started
+2026-09-06 18:48:28,559 INFO radar.scheduler: scheduler started

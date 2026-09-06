@@ -3,7 +3,9 @@
 {% block content %}
 <a href="/signals">← Сигналы</a>
 <h1>{{ s.title }}</h1>
-<div class="sub">{{ m.sev(s.severity) }} {{ m.fact(s.fact_kind) }} {{ m.status(s.status) }} · {{ SIGNAL_TYPES.get(s.type, s.type) }} · уверенность {{ m.conf(s.confidence) }}</div>
+<div class="sub">{{ m.sev(s.severity) }} {{ m.fact(s.fact_kind) }} {{ m.status(s.status) }} · {{ SIGNAL_TYPES.get(s.type, s.type) }} · уверенность {{ m.conf(s.confidence) }}
+  · ручных проверок по этому типу сигналов: <b>{{ fb_type.c }}</b> подтверждено, <b>{{ fb_type.r }}</b> отклонено{% if fb_this %} · этот сигнал: {% for f in fb_this %}{{ 'подтверждён' if f.decision == 'confirmed' else 'отклонён' }} ({{ f.author or 'пользователь' }}, {{ f.created_at[:10] }}){% if not loop.last %}, {% endif %}{% endfor %}{% endif %}</div>
+{% if s.status == 'new' %}<div class="note" style="background:#e8f0fc;border-color:#c5d6f2">Ваше решение «Принять» или «Отклонить» записывается как ручная проверка: оно калибрует уверенность будущих сигналов этого типа и закрепляет сопоставления товаров, на которых сигнал построен.</div>{% endif %}
 <div class="grid grid-2">
   <div class="card">
     <h3>Что произошло</h3><p>{{ s.what_happened }}</p>

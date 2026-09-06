@@ -10,7 +10,7 @@ import sqlite3
 import statistics
 from datetime import datetime, timedelta, timezone
 
-from . import config, db
+from . import config, db, feedback
 from . import specs as specmod
 from .matching import comparables_for
 from .normalize import CATEGORY_NAMES
@@ -46,6 +46,16 @@ def _emit(conn: sqlite3.Connection, **s) -> bool:
             "what_happened", "old_value", "new_value", "observed_at", "period", "source", "source_url", "evidence_json", "confidence", "why_matters",
             "recommended_action", "dedupe_key"]
     vals = [s.get(c) for c in cols]
+    conf, note = feedback.calibrate(conn, s["type"], s.get("category_slug"), s.get("confidence"))
+    vals[cols.index("confidence")] = conf
+    if note:
+        ev = s.get("evidence_json")
+        if isinstance(ev, dict):
+            ev = {**ev, "calibration": note}
+        elif ev is None:
+            ev = {"calibration": note}
+        s["evidence_json"] = ev
+        vals[cols.index("why_matters")] = (s.get("why_matters") or "") + f" [{note}]"
     if isinstance(s.get("evidence_json"), (dict, list)):
         vals[cols.index("evidence_json")] = db.j(s["evidence_json"])
     if not vals[cols.index("observed_at")]:

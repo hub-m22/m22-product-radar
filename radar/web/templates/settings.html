@@ -16,6 +16,12 @@
     <table><tbody>{% for c in cats %}<tr><td>{{ c.name_ru }}</td><td class="small muted">{{ c.slug }}</td><td><form method="post" action="/settings/category/{{ c.slug }}/toggle" class="inline"><button class="sec small">{{ 'в контуре ✓' if c.in_scope else 'вне контура' }}</button></form></td></tr>{% endfor %}</tbody></table>
     <h3>Система</h3><dl class="kv"><dt>База данных</dt><dd>{{ db_path }}</dd><dt>Резервные копии</dt><dd>{{ backup_dir }} ({{ counts.backups }} файлов)</dd><dt>Последний анализ</dt><dd>{{ settings.get('last_analysis_at', '—') }}</dd><dt>Базовая дата замера</dt><dd>{{ settings.get('baseline_date', '—') }}</dd></dl>
     <div class="actions-row"><a class="btn sec small" href="/export/backup.sqlite3">Скачать резервную копию</a></div>
+    <h3>Самокалибровка по ручным проверкам</h3>
+    <p class="small muted">Каждое «Принять»/«Отклонить» записывается как проверка. После {{ min_checks }} проверок по типу сигнала уверенность новых сигналов этого типа умножается на коэффициент от 0,6 (всё отклонено) до 1,15 (всё подтверждено). Подтверждённые ценовые сигналы закрепляют сопоставления товаров, отклонённые — отправляют их на ручную проверку.</p>
+    <table><thead><tr><th>Тип сигнала</th><th class="num">Подтверждено</th><th class="num">Отклонено</th><th class="num">Доля</th><th class="num">Коэффициент</th></tr></thead><tbody>
+    {% for t, v in fb_stats.items() %}<tr><td>{{ SIGNAL_TYPES.get(t, t) }}</td><td class="num">{{ v.confirmed }}</td><td class="num">{{ v.rejected }}</td><td class="num">{{ (v.rate * 100) | int }}%</td><td class="num">{{ v.factor }}</td></tr>{% else %}<tr><td colspan="5" class="muted">Проверок пока нет — принимайте или отклоняйте сигналы и рекомендации.</td></tr>{% endfor %}
+    </tbody></table>
+    {% if fb_recent %}<details style="margin-top:8px"><summary>Последние проверки ({{ fb_recent|length }})</summary><table><tbody>{% for f in fb_recent %}<tr><td class="small nowrap">{{ f.created_at[:16] }}</td><td class="small">{{ 'подтверждено' if f.decision == 'confirmed' else 'отклонено' }}</td><td class="small">{% if f.signal_id %}<a href="/signals/{{ f.signal_id }}">{{ (f.title or '')[:70] }}</a>{% else %}{{ f.entity_type }} #{{ f.entity_id }}{% endif %}</td><td class="small muted">{{ f.author or '' }}</td></tr>{% endfor %}</tbody></table></details>{% endif %}
     <h3>Секреты</h3><p class="small muted">Токены (Wordstat API, AI) хранятся только в .env и не показываются в интерфейсе.</p>
   </div>
 </div>
