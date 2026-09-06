@@ -17,6 +17,7 @@ from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 
 from .. import categories as catmod
+from .. import competitor_matrix as cmx
 from .. import config, db, discovery, feedback, importers, matching, recommendations, reports, scheduler, seed, signals
 from .. import specs as specmod
 from ..importers import TYPE_NAMES
@@ -343,7 +344,9 @@ def competitor_detail(request: Request, cid: int):
                                     FROM competitor_products cp WHERE cp.competitor_id=? ORDER BY cp.is_active DESC, cp.category_slug, cp.price""", (cid,))
         sigs = db.rows(conn, SIGNAL_SQL + " WHERE s.competitor_id=? ORDER BY s.created_at DESC LIMIT 30", (cid,))
         comments = db.rows(conn, "SELECT * FROM comments WHERE entity_type='competitor' AND entity_id=? ORDER BY created_at DESC", (cid,))
-    return render(request, "competitor_detail.html", c=c, pages=pages, products=products, sigs=sigs, comments=comments,
+        for p in products:
+            p["norm"] = specmod.normalize(p["name"], p["description"], p["specs_json"], p["price"], p["capacity"])
+    return render(request, "competitor_detail.html", c=c, pages=pages, products=products, sigs=sigs, comments=comments, cols=cmx.MATRIX_COLS,
                   types=db.uj(c["types_json"], []) or [], brands=db.uj(c["brands_json"], []) or [], cats=db.uj(c["categories_json"], []) or [], src=db.uj(c["source_urls_json"], []) or [])
 
 
@@ -409,6 +412,26 @@ def match_review(mid: int, decision: str = Form(...), note: str = Form(""), matc
         conn.execute("UPDATE product_matches SET review_status=?, reviewer_note=?, needs_review=0, method='manual', match_type=COALESCE(NULLIF(?, ''), match_type), updated_at=datetime('now') WHERE id=?",
                      ("confirmed" if decision == "confirm" else "rejected", note, match_type, mid))
     return RedirectResponse("/matches", status_code=303)
+
+
+# ---------------- Матрица конкурентов ----------------
+@app.get("/competitor-matrix", response_class=HTMLResponse)
+def competitor_matrix(request: Request, view: str = "matrix", competitor: str = "", category: str = "", kind: str = "", state: str = "", q: str = ""):
+    f = {"competitor": competitor, "category": category, "kind": kind, "state": state, "q": q}
+    with db.session() as conn:
+        lists = _lists(conn)
+        cov = cmx.coverage(conn) if view == "coverage" else None
+        ch = cmx.changes(conn) if view == "changes" else None
+        rows = []
+        if view == "matrix":
+            rows = cmx.rows(conn, int(competitor) if competitor else None, category or None, kind or None, include_inactive=(state != "active"), q=q or None)
+            if state == "gone":
+                rows = [r for r in rows if r["state"] == "gone"]
+            elif state == "new":
+                rows = [r for r in rows if r["state"] == "new"]
+            elif state == "nomatch":
+                rows = [r for r in rows if not r["m22_id"]]
+    return render(request, "competitor_matrix.html", view=view, f=f, rows=rows, cov=cov, ch=ch, cols=cmx.MATRIX_COLS, kinds=cmx.KIND_LABELS, **lists)
 
 
 # ---------------- Категории ----------------
@@ -789,6 +812,7 @@ def export_backup():
 
 
 EXPORTS = {
+    "competitor_matrix": None,
     "signals": SIGNAL_SQL + " ORDER BY s.created_at DESC",
     "recommendations": "SELECT r.*, m.name AS m22_name FROM recommendations r LEFT JOIN m22_products m ON m.id=r.m22_product_id ORDER BY r.priority",
     "matrix": "SELECT * FROM m22_products WHERE is_active=1 ORDER BY site, category_slug, name",
@@ -809,7 +833,7 @@ def export(what: str, fmt: str):
     if what not in EXPORTS:
         raise HTTPException(404)
     with db.session() as conn:
-        rows = db.rows(conn, EXPORTS[what])
+        rows = cmx.export_rows(conn) if what == "competitor_matrix" else db.rows(conn, EXPORTS[what])
     return _xlsx_response(rows, f"m22-radar-{what}") if fmt == "xlsx" else _csv_response(rows, f"m22-radar-{what}")
 
 

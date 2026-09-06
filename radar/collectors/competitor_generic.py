@@ -359,6 +359,10 @@ def run(conn: sqlite3.Connection, competitor_id: int | None = None, page_id: int
             status = "ok" if s else "empty"
             conn.execute("UPDATE monitored_pages SET last_checked_at=datetime('now'), last_status=?, last_error=?, fail_count=? WHERE id=?",
                          (status, None if s else "На странице не найдено товаров с ценой", 0 if s else page["fail_count"] + 1, page["id"]))
+            if s and page["kind"] != "product":
+                # позиция каталога, не встреченная на странице ≥2 дней после успешных проверок, считается исчезнувшей
+                conn.execute("UPDATE competitor_products SET is_active=0 WHERE page_id=? AND is_active=1 AND fetched_at IS NOT NULL AND fetched_at < datetime('now', '-2 days') AND url!=?",
+                             (page["id"], page["url"]))
             if not s:
                 db.log_error(conn, SOURCE_KEY, page["url"], "Не найдено товаров на странице", page["competitor_name"])
         except http.RobotsDisallowed as exc:

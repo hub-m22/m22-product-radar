@@ -1,0 +1,89 @@
+"""Матрица конкурентов: все товары всех конкурентов с нормализованными параметрами, покрытие категорий, изменения."""
+from __future__ import annotations
+
+import sqlite3
+
+from . import categories as catmod
+from . import db
+from . import specs as specmod
+from .normalize import CATEGORY_NAMES
+
+KIND_LABELS = catmod.KIND_LABELS
+MATRIX_COLS = [("range_m", "Дальность, м"), ("channels", "Каналов"), ("freq_band", "Диапазон"), ("display", "Экран"), ("battery_h", "Автономность, ч"),
+               ("weight_g", "Вес, г"), ("two_way", "Двустор. связь"), ("capacity", "Вместимость")]
+
+
+def rows(conn: sqlite3.Connection, competitor_id: int | None = None, category: str | None = None, kind: str | None = None, include_inactive: bool = True, q: str | None = None) -> list[dict]:
+    where, params = ["c.is_active=1"], []
+    if competitor_id:
+        where.append("cp.competitor_id=?")
+        params.append(competitor_id)
+    if category:
+        where.append("cp.category_slug=?")
+        params.append(category)
+    if kind:
+        where.append("cp.kind=?")
+        params.append(kind)
+    if not include_inactive:
+        where.append("cp.is_active=1")
+    if q:
+        where.append("(cp.name LIKE ? OR cp.model_key LIKE ? OR c.name LIKE ?)")
+        params += [f"%{q}%"] * 3
+    baseline = (db.get_setting(conn, "baseline_date") or "")[:10]
+    out = db.rows(conn, f"""SELECT cp.*, c.name AS competitor_name, COALESCE(c.group_name, c.name) AS seller, c.website,
+                           (SELECT COUNT(*) FROM competitor_price_history h WHERE h.competitor_product_id=cp.id) AS obs,
+                           (SELECT m.id FROM product_matches pm JOIN m22_products m ON m.id=pm.m22_product_id WHERE pm.competitor_product_id=cp.id AND pm.review_status!='rejected' ORDER BY pm.confidence DESC LIMIT 1) AS m22_id,
+                           (SELECT m.name FROM product_matches pm JOIN m22_products m ON m.id=pm.m22_product_id WHERE pm.competitor_product_id=cp.id AND pm.review_status!='rejected' ORDER BY pm.confidence DESC LIMIT 1) AS m22_name,
+                           (SELECT m.price FROM product_matches pm JOIN m22_products m ON m.id=pm.m22_product_id WHERE pm.competitor_product_id=cp.id AND pm.review_status!='rejected' ORDER BY pm.confidence DESC LIMIT 1) AS m22_price,
+                           (SELECT pm.match_type FROM product_matches pm WHERE pm.competitor_product_id=cp.id AND pm.review_status!='rejected' ORDER BY pm.confidence DESC LIMIT 1) AS match_type,
+                           (SELECT pm.confidence FROM product_matches pm WHERE pm.competitor_product_id=cp.id AND pm.review_status!='rejected' ORDER BY pm.confidence DESC LIMIT 1) AS match_conf
+                           FROM competitor_products cp JOIN competitors c ON c.id=cp.competitor_id WHERE {' AND '.join(where)}
+                           ORDER BY seller, cp.category_slug, cp.kind, cp.price""", params)
+    for r in out:
+        r["norm"] = specmod.normalize(r["name"], r["description"], r["specs_json"], r["price"], r["capacity"])
+        r["unit_price"], r["pack_qty"] = catmod.unit_price(r["name"], r["price"], r["category_slug"], r["kind"], r["capacity"])
+        r["state"] = "gone" if not r["is_active"] else ("new" if baseline and (r["first_seen_at"] or "")[:10] > baseline else "ok")
+        r["category_name"] = CATEGORY_NAMES.get(r["category_slug"], r["category_slug"] or "—")
+        r["kind_name"] = KIND_LABELS.get(r["kind"], r["kind"] or "—")
+    return out
+
+
+def coverage(conn: sqlite3.Connection) -> dict:
+    """Карта «продавец × категория»: число активных товаров; строка M22 — первой."""
+    cats = [c for c in db.rows(conn, "SELECT slug, name_ru FROM categories ORDER BY sort_order")]
+    m22 = {r["category_slug"]: r["n"] for r in db.rows(conn, "SELECT category_slug, COUNT(*) n FROM m22_products WHERE is_active=1 AND in_scope=1 AND parent_url IS NULL GROUP BY 1")}
+    comp = db.rows(conn, """SELECT COALESCE(c.group_name, c.name) AS seller, MIN(c.id) AS competitor_id, cp.category_slug, COUNT(*) n, SUM(cp.price IS NOT NULL) priced
+                            FROM competitor_products cp JOIN competitors c ON c.id=cp.competitor_id WHERE cp.is_active=1 AND c.is_active=1 GROUP BY seller, cp.category_slug""")
+    sellers: dict[str, dict] = {}
+    for r in comp:
+        s = sellers.setdefault(r["seller"], {"seller": r["seller"], "competitor_id": r["competitor_id"], "cats": {}, "total": 0})
+        s["cats"][r["category_slug"]] = {"n": r["n"], "priced": r["priced"]}
+        s["total"] += r["n"]
+    used = {slug for s in sellers.values() for slug in s["cats"]} | set(m22)
+    cats = [c for c in cats if c["slug"] in used]
+    seller_rows = sorted(sellers.values(), key=lambda s: -s["total"])
+    gaps = [c for c in cats if not m22.get(c["slug"]) and any(c["slug"] in s["cats"] for s in seller_rows)]
+    return {"cats": cats, "m22": m22, "sellers": seller_rows, "gaps": gaps}
+
+
+def changes(conn: sqlite3.Connection, days: int = 30) -> dict:
+    baseline = (db.get_setting(conn, "baseline_date") or "")[:10]
+    added = db.rows(conn, """SELECT cp.id, cp.name, cp.price, cp.url, cp.category_slug, cp.first_seen_at, COALESCE(c.group_name, c.name) AS seller, c.id AS competitor_id
+                             FROM competitor_products cp JOIN competitors c ON c.id=cp.competitor_id WHERE cp.is_active=1 AND substr(cp.first_seen_at,1,10) > ? ORDER BY cp.first_seen_at DESC LIMIT 100""", (baseline,))
+    gone = db.rows(conn, """SELECT cp.id, cp.name, cp.price, cp.url, cp.category_slug, cp.last_seen_at, COALESCE(c.group_name, c.name) AS seller, c.id AS competitor_id
+                            FROM competitor_products cp JOIN competitors c ON c.id=cp.competitor_id WHERE cp.is_active=0 ORDER BY cp.last_seen_at DESC LIMIT 100""")
+    price_moves = db.rows(conn, """SELECT s.id, s.title, s.observed_at, s.competitor_id FROM signals s WHERE s.type='competitor_price_change' AND s.status!='rejected'
+                                   AND substr(s.created_at,1,10) >= date('now', ?) ORDER BY s.created_at DESC LIMIT 50""", (f"-{days} days",))
+    return {"added": added, "gone": gone, "price_moves": price_moves, "baseline": baseline}
+
+
+def export_rows(conn: sqlite3.Connection) -> list[dict]:
+    out = []
+    for r in rows(conn):
+        n = r["norm"]
+        out.append({"продавец": r["seller"], "конкурент": r["competitor_name"], "категория": r["category_name"], "тип": r["kind_name"], "модель": r["model_key"], "товар": r["name"],
+                    "цена": r["price"], "цена_за_ед": r["unit_price"], "валюта": r["currency"], "дальность_м": n.get("range_m"), "каналов": n.get("channels"), "диапазон": n.get("freq_band"),
+                    "экран": n.get("display"), "автономность_ч": n.get("battery_h"), "вес_г": n.get("weight_g"), "двусторонняя_связь": n.get("two_way"), "вместимость": n.get("capacity"),
+                    "сопоставлено_с_M22": r["m22_name"], "тип_сопоставления": r["match_type"], "уверенность": r["match_conf"], "статус": r["state"], "url": r["url"],
+                    "впервые": r["first_seen_at"], "последний_раз": r["last_seen_at"], "снято": r["fetched_at"]})
+    return out

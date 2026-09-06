@@ -38,13 +38,16 @@
   </div>
 </div>
 <h2>Товары конкурента ({{ products|length }})</h2>
-<div class="card compact tbl-wrap"><table><thead><tr><th>Товар</th><th>Категория</th><th>Модель</th><th class="num">Цена</th><th>Сопоставление с M22</th><th>Снято</th><th class="num">Замеров</th></tr></thead><tbody>
+<div class="card compact tbl-wrap"><table><thead><tr><th></th><th>Товар</th><th>Категория</th><th>Модель</th><th class="num">Цена</th>{% for k, n in cols %}<th class="num">{{ n }}</th>{% endfor %}<th>Сопоставление с M22</th><th>Снято</th></tr></thead><tbody>
 {% for p in products %}<tr {% if not p.is_active %}style="opacity:.55"{% endif %}>
-  <td><a href="{{ p.url }}" target="_blank" rel="noopener">{{ p.name[:80] }}</a>{% if p.description %}<div class="small muted">{{ p.description[:120] }}</div>{% endif %}</td>
-  <td class="small">{{ CATEGORY_NAMES.get(p.category_slug, p.category_slug or '—') }}</td><td class="small">{{ p.model_key or '—' }}{% if p.capacity %} · {{ p.capacity }} чел.{% endif %}</td>
+  <td>{% if p.image_url %}<img src="{{ p.image_url }}" alt="" referrerpolicy="no-referrer" width="36" height="36" style="width:36px;height:36px;object-fit:contain;border:1px solid var(--line);border-radius:4px">{% endif %}</td>
+  <td><a href="{{ p.url }}" target="_blank" rel="noopener">{{ p.name[:70] }}</a>{% if not p.is_active %} <span class="badge sev-high">исчез</span>{% endif %}</td>
+  <td class="small">{{ CATEGORY_NAMES.get(p.category_slug, p.category_slug or '—') }}</td><td class="small">{{ p.model_key or '—' }}</td>
   <td class="num">{{ p.price | money }}{% if p.currency != 'RUB' %} {{ p.currency }}{% endif %}</td>
-  <td class="small">{{ p.matches or '—' }}</td><td class="small nowrap">{{ p.fetched_at | dt }}</td><td class="num">{{ p.obs }}</td></tr>{% endfor %}
+  {% for k, n in cols %}{% set v = p.norm.get(k) %}<td class="num small">{% if v is none %}<span class="muted">—</span>{% elif v is sameas true %}да{% elif v is sameas false %}<span class="muted">нет</span>{% else %}{{ v }}{% endif %}</td>{% endfor %}
+  <td class="small">{{ p.matches or '—' }}</td><td class="small nowrap">{{ p.fetched_at | dt }}<div class="muted">{{ p.obs }} замер.</div></td></tr>{% endfor %}
 </tbody></table></div>
+<p><a class="btn sec small" href="/competitor-matrix?competitor={{ c.id }}">Открыть в матрице конкурентов</a></p>
 <div class="grid grid-2" style="margin-top:14px">
   <div><h2>Сигналы по конкуренту</h2>{% for s in sigs %}{{ m.signal_card(s, compact=True) }}{% else %}<div class="muted">Сигналов нет.</div>{% endfor %}</div>
   <div>{{ m.comments_block(comments, "/competitors/" ~ c.id ~ "/update", None, [], []) }}

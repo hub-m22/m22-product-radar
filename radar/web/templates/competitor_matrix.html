@@ -1,0 +1,54 @@
+{% extends "base.html" %}{% import "_macros.html" as m %}
+{% block title %}Матрица конкурентов — M22 Product Radar{% endblock %}
+{% block content %}
+<div class="topbar"><div><h1>Матрица конкурентов</h1><div class="sub">Все товары всех конкурентов с нормализованными параметрами и сопоставлением с M22. Параметры извлечены из карточек автоматически; пустая ячейка — продавец не указал.</div></div>
+<div class="actions-row"><a class="btn sec small" href="/export/competitor_matrix.xlsx">XLSX</a> <a class="btn sec small" href="/export/competitor_matrix.csv">CSV</a> <a class="btn sec small" href="/competitors">Реестр конкурентов</a></div></div>
+
+<div class="tabs"><a href="/competitor-matrix" class="{% if view == 'matrix' %}active{% endif %}">Товары</a><a href="/competitor-matrix?view=coverage" class="{% if view == 'coverage' %}active{% endif %}">Покрытие категорий</a><a href="/competitor-matrix?view=changes" class="{% if view == 'changes' %}active{% endif %}">Что появилось / исчезло</a></div>
+
+{% if view == 'coverage' %}
+<div class="note">Карта «продавец × категория»: число активных товаров. {% if cov.gaps %}<b>Категории, где у M22 ничего нет, а у конкурентов есть:</b> {% for g in cov.gaps %}<a href="/categories/{{ g.slug }}">{{ g.name_ru }}</a>{% if not loop.last %}, {% endif %}{% endfor %}.{% else %}Категорий без товаров M22 при наличии их у конкурентов нет.{% endif %}</div>
+<div class="card compact tbl-wrap"><table><thead><tr><th>Продавец</th>{% for c in cov.cats %}<th class="num" style="min-width:64px"><a href="/categories/{{ c.slug }}" title="{{ c.name_ru }}">{{ c.name_ru[:18] }}</a></th>{% endfor %}<th class="num">Всего</th></tr></thead><tbody>
+  <tr style="background:#e8f0fc"><td><b>M22</b></td>{% for c in cov.cats %}<td class="num" {% if not cov.m22.get(c.slug) %}style="color:var(--high);font-weight:600"{% endif %}>{{ cov.m22.get(c.slug, '—') }}</td>{% endfor %}<td class="num"><b>{{ cov.m22.values() | sum }}</b></td></tr>
+  {% for s in cov.sellers %}<tr><td><a href="/competitor-matrix?competitor={{ s.competitor_id }}">{{ s.seller[:40] }}</a></td>{% for c in cov.cats %}{% set v = s.cats.get(c.slug) %}<td class="num" {% if v and not cov.m22.get(c.slug) %}style="background:var(--high-bg)"{% endif %}>{% if v %}{{ v.n }}<span class="small muted"> ({{ v.priced }})</span>{% else %}·{% endif %}</td>{% endfor %}<td class="num">{{ s.total }}</td></tr>{% endfor %}
+</tbody></table></div>
+<div class="small muted" style="margin-top:6px">В скобках — товары с ценой. Красная заливка — категория есть у продавца, но отсутствует у M22.</div>
+
+{% elif view == 'changes' %}
+<div class="grid grid-2">
+  <div class="card"><h3>Появились после базового замера ({{ ch.baseline }})</h3>
+    {% for a in ch.added %}<div class="small" style="margin-bottom:6px"><a href="/competitors/{{ a.competitor_id }}">{{ a.seller[:30] }}</a>: <a href="{{ a.url }}" target="_blank" rel="noopener">{{ a.name[:70] }}</a> — {{ a.price | money }} · {{ a.first_seen_at | dt }}</div>{% else %}<div class="muted">Новых позиций не обнаружено: все известные товары были в базовом замере. Появление новых позиций фиксируется при ежедневном сборе.</div>{% endfor %}</div>
+  <div class="card"><h3>Исчезли из продажи</h3>
+    {% for g in ch.gone %}<div class="small" style="margin-bottom:6px"><a href="/competitors/{{ g.competitor_id }}">{{ g.seller[:30] }}</a>: <a href="{{ g.url }}" target="_blank" rel="noopener">{{ g.name[:70] }}</a> — {{ g.price | money }} · последний раз {{ g.last_seen_at | dt }}</div>{% else %}<div class="muted">Исчезнувших позиций нет. Позиция считается исчезнувшей, если её нет на странице два ежедневных сбора подряд.</div>{% endfor %}</div>
+</div>
+<div class="card" style="margin-top:14px"><h3>Изменения цен за 30 дней</h3>{% for p in ch.price_moves %}<div class="small"><a href="/signals/{{ p.id }}">{{ p.title }}</a> · {{ p.observed_at | dt }}</div>{% else %}<div class="muted">Изменений цен пока нет — нужен второй замер по каждой позиции.</div>{% endfor %}</div>
+
+{% else %}
+<form class="filters" method="get">
+  <input type="hidden" name="view" value="matrix">
+  <label>Продавец<select name="competitor"><option value="">все</option>{% for c in competitors %}<option value="{{ c.id }}" {% if f.competitor == c.id|string %}selected{% endif %}>{{ c.name[:50] }}</option>{% endfor %}</select></label>
+  <label>Категория<select name="category"><option value="">все</option>{% for c in categories %}<option value="{{ c.slug }}" {% if f.category == c.slug %}selected{% endif %}>{{ c.name_ru }}</option>{% endfor %}</select></label>
+  <label>Тип изделия<select name="kind"><option value="">все</option>{% for k, n in kinds.items() %}<option value="{{ k }}" {% if f.kind == k %}selected{% endif %}>{{ n }}</option>{% endfor %}</select></label>
+  <label>Статус<select name="state"><option value="">все</option><option value="active" {% if f.state == 'active' %}selected{% endif %}>в продаже</option><option value="gone" {% if f.state == 'gone' %}selected{% endif %}>исчезли</option><option value="new" {% if f.state == 'new' %}selected{% endif %}>новые</option><option value="nomatch" {% if f.state == 'nomatch' %}selected{% endif %}>без аналога у M22</option></select></label>
+  <label>Поиск<input type="text" name="q" value="{{ f.q }}" placeholder="модель, товар, продавец"></label>
+  <button class="small">Применить</button> <a class="btn sec small" href="/competitor-matrix">Сбросить</a>
+</form>
+<div class="sub">Позиций: {{ rows|length }}.</div>
+<div class="card compact tbl-wrap"><table>
+<thead><tr><th></th><th>Продавец</th><th>Товар</th><th>Категория</th><th>Тип</th><th>Модель</th><th class="num">Цена</th><th class="num">За ед./место</th>{% for k, n in cols %}<th class="num">{{ n }}</th>{% endfor %}<th>Аналог M22</th><th>Статус</th><th>Снято</th></tr></thead>
+<tbody>
+{% for r in rows %}<tr {% if r.state == 'gone' %}style="opacity:.55"{% endif %}>
+  <td>{% if r.image_url %}<img src="{{ r.image_url }}" alt="" referrerpolicy="no-referrer" width="36" height="36" style="width:36px;height:36px;object-fit:contain;border:1px solid var(--line);border-radius:4px">{% endif %}</td>
+  <td class="small"><a href="/competitors/{{ r.competitor_id }}">{{ r.seller[:28] }}</a></td>
+  <td><a href="{{ r.url }}" target="_blank" rel="noopener">{{ r.name[:60] }}</a></td>
+  <td class="small">{{ r.category_name[:24] }}</td><td class="small">{{ r.kind_name }}</td><td class="small">{{ r.model_key or '—' }}</td>
+  <td class="num">{{ r.price | money }}{% if r.currency != 'RUB' %} {{ r.currency }}{% endif %}</td>
+  <td class="num small">{% if r.unit_price and r.unit_price != r.price %}{{ r.unit_price | money }}{% if r.pack_qty %} <span class="muted">/{{ r.pack_qty }}</span>{% endif %}{% else %}—{% endif %}</td>
+  {% for k, n in cols %}{% set v = r.norm.get(k) %}<td class="num small">{% if v is none %}<span class="muted">—</span>{% elif v is sameas true %}да{% elif v is sameas false %}<span class="muted">нет</span>{% else %}{{ v }}{% endif %}</td>{% endfor %}
+  <td class="small">{% if r.m22_id %}<a href="/matrix/{{ r.m22_id }}">{{ r.m22_name[:40] }}</a> {{ r.m22_price | money }}<div class="muted">{{ MATCH_NAMES.get(r.match_type, r.match_type) }} · {{ (r.match_conf * 100) | int }}%</div>{% elif r.match_type %}<span class="muted">{{ MATCH_NAMES.get(r.match_type, r.match_type) }}</span>{% else %}<span class="muted">нет аналога</span>{% endif %}</td>
+  <td><span class="badge {{ {'ok':'st','new':'st-new','gone':'sev-high'}.get(r.state) }}">{{ {'ok':'в продаже','new':'новый','gone':'исчез'}.get(r.state) }}</span></td>
+  <td class="small nowrap">{{ r.fetched_at | dt }}<div class="muted">{{ r.obs }} замер.</div></td>
+</tr>{% else %}<tr><td colspan="18" class="muted">Ничего не найдено.</td></tr>{% endfor %}
+</tbody></table></div>
+{% endif %}
+{% endblock %}
