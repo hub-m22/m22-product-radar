@@ -14,7 +14,7 @@
       <dt>Категория</dt><dd>{{ CATEGORY_NAMES.get(s.category_slug, s.category_slug or '—') }}</dd>
       <dt>Товар M22</dt><dd>{% if s.m22_product_id %}<a href="/matrix/{{ s.m22_product_id }}">{{ s.m22_name }}</a> · <a href="{{ s.m22_url }}" target="_blank" rel="noopener">на сайте ↗</a>{% else %}—{% endif %}</dd>
       <dt>Конкурент</dt><dd>{% if s.competitor_id %}<a href="/competitors/{{ s.competitor_id }}">{{ s.competitor_name }}</a>{% else %}—{% endif %}</dd>
-      {% if cp %}<dt>Товар конкурента</dt><dd>{% if cp.image_url %}<img src="{{ cp.image_url }}" alt="" class="thumb" referrerpolicy="no-referrer"> {% endif %}{{ cp.name }} — {{ cp.price | money }} · <a href="{{ cp.url }}" target="_blank" rel="noopener">страница ↗</a> · снято {{ cp.fetched_at | dt }}</dd>{% endif %}
+      {% if cp %}<dt>Товар конкурента</dt><dd>{% if cp.image_url %}<img src="{{ cp.image_url }}" alt="" class="thumb" referrerpolicy="no-referrer" width="48" height="48" style="width:48px;height:48px;object-fit:contain"> {% endif %}{{ cp.name }} — {{ cp.price | money }} · <a href="{{ cp.url }}" target="_blank" rel="noopener">страница ↗</a> · снято {{ cp.fetched_at | dt }}</dd>{% endif %}
       {% if s.query_text %}<dt>Запрос</dt><dd>{{ s.query_text }}</dd>{% endif %}
       <dt>Источник</dt><dd>{{ s.source or '—' }} {% if s.source_url %}· <a href="{{ s.source_url }}" target="_blank" rel="noopener">{{ s.source_url[:80] }} ↗</a>{% endif %}</dd>
       <dt>Ответственный</dt><dd>{{ s.owner or '—' }}</dd>
@@ -36,7 +36,7 @@
       <div class="offers">
         {% for it in evidence.get('items') %}
         <div class="offer">
-          {% if it.image %}<a href="{{ it.url }}" target="_blank" rel="noopener"><img src="{{ it.image }}" alt="" loading="lazy" referrerpolicy="no-referrer"></a>{% else %}<div class="noimg">нет фото</div>{% endif %}
+          {% if it.image %}<a href="{{ it.url }}" target="_blank" rel="noopener"><img src="{{ it.image }}" alt="" loading="lazy" referrerpolicy="no-referrer" width="84" height="84" style="width:84px;height:84px;object-fit:contain"></a>{% else %}<div class="noimg">нет фото</div>{% endif %}
           <div class="ob">
             <div><a href="/competitors/{{ it.competitor_id }}"><b>{{ it.competitor }}</b></a></div>
             <div><a href="{{ it.url }}" target="_blank" rel="noopener">{{ it.name[:80] }} ↗</a></div>

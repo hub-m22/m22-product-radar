@@ -54,7 +54,7 @@ details summary { cursor:pointer; color:var(--accent); font-size:13px; }
 @media (max-width:1200px) { .q-answer { grid-template-columns:1fr 1fr; } }
 .offers { display:grid; grid-template-columns:repeat(auto-fill, minmax(260px, 1fr)); gap:10px; }
 .offer { display:flex; gap:10px; border:1px solid var(--line); border-radius:8px; padding:8px; align-items:flex-start; }
-.offer img { width:84px; height:84px; object-fit:contain; background:#fff; border:1px solid var(--line); border-radius:6px; flex:0 0 84px; }
+.offer img { width:84px !important; height:84px !important; max-width:84px; object-fit:contain; background:#fff; border:1px solid var(--line); border-radius:6px; flex:0 0 84px; }
 .offer .noimg { width:84px; height:84px; flex:0 0 84px; border:1px dashed var(--line); border-radius:6px; font-size:11px; color:var(--muted); display:flex; align-items:center; justify-content:center; }
 .offer .ob { font-size:13px; min-width:0; word-break:break-word; }
 img.thumb { width:48px; height:48px; object-fit:contain; vertical-align:middle; border:1px solid var(--line); border-radius:4px; margin-right:6px; }

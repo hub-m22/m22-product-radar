@@ -73,7 +73,7 @@ def fmt_dt(v):
 
 templates.env.filters.update({"money": fmt_money, "pct": fmt_pct, "dt": fmt_dt, "uj": lambda t, d=None: db.uj(t, d)})
 templates.env.globals.update({"CATEGORY_NAMES": CATEGORY_NAMES, "SIGNAL_TYPES": SIGNAL_TYPES, "STATUS_NAMES": STATUS_NAMES, "SEV_NAMES": SEV_NAMES, "FACT_NAMES": FACT_NAMES,
-                              "MATCH_NAMES": MATCH_NAMES, "SOURCE_STATUS": SOURCE_STATUS, "MVP_NAMES": MVP_NAMES, "TYPE_NAMES": TYPE_NAMES, "app_version": "0.1.0"})
+                              "MATCH_NAMES": MATCH_NAMES, "SOURCE_STATUS": SOURCE_STATUS, "MVP_NAMES": MVP_NAMES, "TYPE_NAMES": TYPE_NAMES, "app_version": "0.1.0", "asset_version": str(int(__import__("time").time()))})
 
 
 def render(request: Request, name: str, **ctx) -> HTMLResponse:
