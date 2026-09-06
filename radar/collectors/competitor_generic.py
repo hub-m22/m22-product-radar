@@ -14,6 +14,7 @@ import json
 import logging
 import re
 import sqlite3
+from datetime import datetime, timedelta, timezone
 from urllib.parse import urljoin
 
 from bs4 import BeautifulSoup
@@ -315,6 +316,48 @@ def _relevant(name: str, description: str | None = None) -> bool:
     return normalize.classify_category(name, description) is not None
 
 
+def _enrich_from_product_pages(conn: sqlite3.Connection, page: dict, items: list[dict], limit: int = 40) -> None:
+    """Для позиций каталога открывает страницу товара (тот же домен) и дописывает характеристики, фото и описание.
+    Чтобы не нагружать сайт: не чаще раза в 7 дней на товар и не более `limit` страниц за проход."""
+    from urllib.parse import urlparse
+
+    dom = urlparse(page["url"]).netloc.lower()
+    done = 0
+    for it in items:
+        if done >= limit:
+            break
+        url = it.get("url") or ""
+        if not url or url == page["url"] or urlparse(url).netloc.lower() != dom or "#" in url or "/cart" in url:
+            continue
+        if not normalize.classify_category(it["name"], it.get("description")):
+            continue
+        prev = db.row(conn, "SELECT specs_json, image_url, fetched_at FROM competitor_products WHERE competitor_id=? AND url=? ORDER BY id LIMIT 1", (page["competitor_id"], url))
+        if prev and prev["specs_json"] and prev["specs_json"] not in ("{}", "null") and prev["fetched_at"] and prev["fetched_at"] >= db.now_iso()[:10].replace("-", "") and False:
+            continue
+        if prev and prev["specs_json"] and prev["specs_json"] not in ("{}", "null") and prev["fetched_at"] and prev["fetched_at"][:10] >= (datetime.now(timezone.utc) - timedelta(days=7)).strftime("%Y-%m-%d"):
+            continue
+        try:
+            res = http.fetch(url, f"competitor_{page['competitor_id']}")
+        except Exception as exc:  # noqa: BLE001
+            log.info("deep fetch skipped %s: %s", url, exc)
+            continue
+        done += 1
+        parsed = parse_product_page(res.text, url)
+        if not parsed:
+            continue
+        d = parsed[0]
+        if d.get("specs"):
+            it["specs"] = d["specs"]
+        if d.get("image_url") and not it.get("image_url"):
+            it["image_url"] = d["image_url"]
+        if d.get("description") and not it.get("description"):
+            it["description"] = d["description"][:2000]
+        if d.get("price") and not it.get("price"):
+            it["price"] = d["price"]
+        if d.get("name") and good_name(d["name"]) and len(d["name"]) > len(it["name"]) + 5:
+            it["name"] = d["name"]
+
+
 def collect_page(conn: sqlite3.Connection, page: dict, run_id: int) -> tuple[int, int]:
     """Обрабатывает одну страницу мониторинга. Возвращает (seen, changed)."""
     cfg = db.uj(page.get("parser_config_json"), {}) or {}
@@ -326,6 +369,8 @@ def collect_page(conn: sqlite3.Connection, page: dict, run_id: int) -> tuple[int
         items = [i for i in items if _relevant(i["name"], i.get("description")) or page.get("category_slug")]
     seen = changed = 0
     is_rent = page["kind"] == "rent" or bool(re.search(r"(^|[/_.-])(rent|rental|arenda|prokat|аренда)([/_.-]|$)", page["url"].lower()))
+    if page["kind"] != "product":
+        _enrich_from_product_pages(conn, page, items)
     for it in items:
         it["fetched_at"] = res.fetched_at
         if is_rent:
