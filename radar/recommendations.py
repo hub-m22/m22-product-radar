@@ -50,7 +50,7 @@ def generate(conn: sqlite3.Connection) -> int:
         above = s["type"] == "m22_price_above_market"
         gap = abs((p["price"] - ev["median"]) / ev["median"] * 100)
         prio = "P1" if gap >= 20 else "P2"
-        srcs = [{"name": c["competitor_name"], "url": c["url"], "price": c["price"]} for c in comps]
+        srcs = [{"name": f"{c['competitor_name']} — {c['name'][:50]} ({c.get('specs', '')})", "url": c["url"], "price": c["price"]} for c in comps]
         if above:
             action = (f"Провести ценовой разбор «{p['name']}»: цена {p['price']:,.0f} ₽ против медианы {ev['median']:,.0f} ₽ у {len(comps)} конкурентов. "
                       f"Решение: снизить до {ev['median'] * 0.97:,.0f}–{ev['median'] * 1.05:,.0f} ₽ или добавить в карточку явные преимущества (гарантия 2 года, наличие, поддержка) и проверить конверсию 2 недели.").replace(",", " ")

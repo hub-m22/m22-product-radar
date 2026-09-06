@@ -12,7 +12,7 @@ from datetime import datetime, timedelta, timezone
 
 from . import config, db, feedback
 from . import specs as specmod
-from .matching import comparables_for
+from .matching import comparables_for, spec_summary as specmod_summary
 from .normalize import CATEGORY_NAMES
 
 log = logging.getLogger(__name__)
@@ -300,13 +300,16 @@ def detect_price_vs_market(conn: sqlite3.Connection) -> int:
         conf = round(min(avg_conf + 0.15, 0.45 + 0.05 * len(comps), 0.95), 2)
         above = gap > 0
         exact = sum(1 for c in comps if c["match_type"] == "exact_model")
-        note = f"{exact} точных совпадений модели, {len(comps) - exact} прямых аналогов"
+        m_norm = specmod.normalize(p["name"], p["description"], p["specs_json"], p["price"], p["capacity"])
+        note = (f"{exact} точных совпадений модели, {len(comps) - exact} прямых аналогов. Правило: тот же тип изделия ({p['kind']}) и совместимые ключевые характеристики "
+                f"(двусторонняя связь, класс диапазона, порядок дальности). Характеристики M22: {specmod_summary(m_norm)}. "
+                f"Аналоги: " + "; ".join(f"{c['competitor_name'][:25]} — {c['name'][:40]} ({c['specs']}, {_fmt(c['price'])})" for c in comps[:6]) + ("…" if len(comps) > 6 else ""))
         if _emit(conn, type="m22_price_above_market" if above else "m22_price_below_market", severity="high" if abs(gap) >= 20 else "medium",
                  fact_kind="inference", category_slug=p["category_slug"], m22_product_id=p["id"],
                  title=f"«{p['name'][:60]}» {'дороже' if above else 'дешевле'} медианы рынка на {abs(gap):.0f}%",
                  what_happened=f"Цена M22 {_fmt(p['price'])} ({p['site']}); медиана {len(comps)} сопоставимых предложений — {_fmt(med)} ({note}).",
                  old_value=_fmt(med), new_value=_fmt(p["price"]), observed_at=db.now_iso(), period="текущий замер", source="сопоставление с конкурентами",
-                 source_url=p["url"], evidence_json={"median": med, "comparables": comps}, confidence=conf,
+                 source_url=p["url"], evidence_json={"median": med, "comparables": comps, "m22_specs": specmod_summary(m_norm), "rule": "тот же тип изделия и совместимые ключевые характеристики (двусторонняя связь, класс диапазона, порядок дальности)"}, confidence=conf,
                  why_matters=("Премия к рынку без подтверждённого преимущества снижает конверсию B2B-запросов в заказы." if above
                               else "Цена ниже рынка — недополученная маржа, если спрос не падает."),
                  recommended_action=(f"Проверить обоснованность цены: либо снизить до диапазона {_fmt(med * 0.95)} – {_fmt(med * 1.05)}, либо явно показать в карточке преимущества (гарантия 2 года, поддержка, наличие)."

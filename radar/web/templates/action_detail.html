@@ -12,7 +12,8 @@
     <dl class="kv"><dt>Категория</dt><dd>{{ CATEGORY_NAMES.get(r.category_slug, r.category_slug or '—') }}</dd>
       <dt>Товар M22</dt><dd>{% if r.m22_product_id %}<a href="/matrix/{{ r.m22_product_id }}">{{ r.m22_name }}</a>{% else %}—{% endif %}</dd>
       <dt>Создано</dt><dd>{{ r.created_at }}</dd><dt>Обновлено</dt><dd>{{ r.updated_at }}</dd></dl>
-    <h3>Источники</h3><ul>{% for s in sources %}<li>{{ s.name }}{% if s.price %} — {{ s.price | money }}{% endif %}{% if s.url %} · <a href="{{ s.url }}" target="_blank" rel="noopener">ссылка ↗</a>{% endif %}</li>{% else %}<li class="muted">—</li>{% endfor %}</ul>
+    <h3>Источники и аналоги</h3>{% if sigs %}<p><a class="btn small" href="/compare?signal={{ sigs[0].id }}">Сравнить характеристики и цены</a></p>{% endif %}
+    <ul>{% for s in sources %}<li>{{ s.name }}{% if s.price %} — {{ s.price | money }}{% endif %}{% if s.url %} · <a href="{{ s.url }}" target="_blank" rel="noopener">ссылка ↗</a>{% endif %}</li>{% else %}<li class="muted">—</li>{% endfor %}</ul>
   </div>
   <div>
     <div class="card"><h3>Решение</h3>
