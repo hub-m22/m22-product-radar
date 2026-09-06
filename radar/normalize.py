@@ -126,6 +126,7 @@ CATEGORY_RULES: list[tuple[str, list[str]]] = [
     ("kits_solutions", ["комплексное решение", "готовое решение", "прайм", "профи", "комплект для", "solution", "решение"]),
     ("intercom_events", ["интерком", "intercom", "xtalk", "служебная связь"]),
     ("radio_walkie", ["раци", "walkie", "baofeng", "retevis rt", "тангент", "программатор"]),
+    ("adjacent_new", ["bluetooth", "блютуз"]),
     ("radiogid", ["радиогид", "радио гид", "радио-гид", "radioguide", "radio guide", "tour guide", "экскурсионн", "передатчик", "приёмник", "приемник", "transmitter", "receiver", "шепталк", "whisper", "гид-переводчик", "радиосистема для экскурс"]),
 ]
 

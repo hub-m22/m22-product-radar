@@ -422,17 +422,24 @@ def compare(request: Request, signal: Optional[int] = None, product: Optional[in
             if not s:
                 raise HTTPException(404)
             ev = db.uj(s["evidence_json"], {}) or {}
-            ids = [it["competitor_id"] for it in ev.get("items", [])]
-            urls = [it["url"] for it in ev.get("items", [])]
-            if urls:
-                comp_rows = db.rows(conn, f"SELECT cp.*, COALESCE(c.group_name, c.name) AS seller FROM competitor_products cp JOIN competitors c ON c.id=cp.competitor_id WHERE cp.url IN ({','.join('?' * len(urls))}) AND cp.is_active=1", urls)
+            ids = [it["id"] for it in ev.get("items", []) if it.get("id")]
+            if ids:
+                comp_rows = db.rows(conn, f"SELECT cp.*, COALESCE(c.group_name, c.name) AS seller FROM competitor_products cp JOIN competitors c ON c.id=cp.competitor_id WHERE cp.id IN ({','.join('?' * len(ids))})", ids)
+            elif ev.get("comparables"):
+                cids = [c["competitor_product_id"] for c in ev["comparables"]]
+                comp_rows = db.rows(conn, f"SELECT cp.*, COALESCE(c.group_name, c.name) AS seller FROM competitor_products cp JOIN competitors c ON c.id=cp.competitor_id WHERE cp.id IN ({','.join('?' * len(cids))})", cids)
             elif s["competitor_product_id"]:
                 comp_rows = db.rows(conn, "SELECT cp.*, COALESCE(c.group_name, c.name) AS seller FROM competitor_products cp JOIN competitors c ON c.id=cp.competitor_id WHERE cp.id=?", (s["competitor_product_id"],))
             if s["m22_product_id"]:
                 m22_rows = db.rows(conn, "SELECT * FROM m22_products WHERE id=?", (s["m22_product_id"],))
             elif comp_rows:
                 kinds = {r["kind"] for r in comp_rows}
-                m22_rows = db.rows(conn, f"SELECT * FROM m22_products WHERE is_active=1 AND in_scope=1 AND parent_url IS NULL AND price IS NOT NULL AND category_slug=? AND kind IN ({','.join('?' * len(kinds))}) ORDER BY price", [s["category_slug"], *kinds])
+                m22_rows = db.rows(conn, f"SELECT * FROM m22_products WHERE is_active=1 AND in_scope=1 AND parent_url IS NULL AND price IS NOT NULL AND site='m22.ru' AND category_slug=? AND kind IN ({','.join('?' * len(kinds))}) ORDER BY price", [s["category_slug"], *kinds])
+                # показываем до 4 ближайших по цене к минимальной цене конкурентов
+                ref = min((r["price"] for r in comp_rows if r["price"]), default=None)
+                if ref and len(m22_rows) > 4:
+                    m22_rows = sorted(m22_rows, key=lambda r: abs(r["price"] - ref))[:4]
+                    m22_rows.sort(key=lambda r: r["price"])
             title = s["title"]
         elif product:
             p = db.row(conn, "SELECT * FROM m22_products WHERE id=?", (product,))

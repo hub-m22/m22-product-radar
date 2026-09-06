@@ -220,7 +220,7 @@ def detect_multi_competitor_products(conn: sqlite3.Connection) -> int:
             if o["url"] in seen_urls:
                 continue
             seen_urls.add(o["url"])
-            items.append({"competitor_id": o["competitor_id"], "competitor": o["competitor"], "seller": o["seller"], "website": o["website"], "name": o["name"],
+            items.append({"id": o["id"], "competitor_id": o["competitor_id"], "competitor": o["competitor"], "seller": o["seller"], "website": o["website"], "name": o["name"],
                           "price": o["price"], "url": o["url"], "image": o["image_url"], "fetched_at": o["fetched_at"], "kind": o["kind"]})
         good = {it["competitor_id"] for it in items if not _junk_url(it["url"])}
         items = [it for it in items if not _junk_url(it["url"]) or it["competitor_id"] not in good]
@@ -230,7 +230,7 @@ def detect_multi_competitor_products(conn: sqlite3.Connection) -> int:
         full = db.rows(conn, "SELECT id, name, description, specs_json, price, capacity, kind FROM competitor_products WHERE id IN (%s)" % ",".join(str(o["id"]) for o in offers))
         kinds = {o["kind"] for o in offers}
         cat = offers[0]["category_slug"]
-        m22_rows = db.rows(conn, "SELECT id, name, description, specs_json, price, capacity, kind, url FROM m22_products WHERE is_active=1 AND in_scope=1 AND parent_url IS NULL AND price IS NOT NULL AND category_slug=? AND kind IN (%s)" % ",".join("?" * len(kinds)), [cat, *kinds])
+        m22_rows = db.rows(conn, "SELECT id, name, description, specs_json, price, capacity, kind, url FROM m22_products WHERE is_active=1 AND in_scope=1 AND parent_url IS NULL AND price IS NOT NULL AND site='m22.ru' AND category_slug=? AND kind IN (%s) ORDER BY price" % ",".join("?" * len(kinds)), [cat, *kinds])
         offers_n = [{"id": f["id"], "name": f["name"], "price": f["price"], "norm": specmod.normalize(f["name"], f["description"], f["specs_json"], f["price"], f["capacity"])} for f in full]
         m22_n = [{"id": m["id"], "name": m["name"], "price": m["price"], "url": m["url"], "norm": specmod.normalize(m["name"], m["description"], m["specs_json"], m["price"], m["capacity"])} for m in m22_rows]
         category_in_m22 = bool(db.row(conn, "SELECT 1 FROM m22_products WHERE is_active=1 AND in_scope=1 AND category_slug=?", (cat,)))

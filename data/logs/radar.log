@@ -148,3 +148,4 @@
 2026-09-06 18:30:59,475 INFO apscheduler.scheduler: Scheduler started
 2026-09-06 18:30:59,477 INFO radar.scheduler: scheduler started
 2026-09-06 18:34:10,225 INFO radar.signals: signals: {'competitor_price_change': 0, 'appear_disappear': 0, 'new_category': 0, 'new_competitor': 0, 'multi_competitor': 8, 'price_vs_market': 0, 'demand': 0, 'new_use_case': 0, 'cross_site': 0, 'source_errors': 6}
+2026-09-06 18:36:04,202 INFO radar.signals: signals: {'competitor_price_change': 0, 'appear_disappear': 0, 'new_category': 0, 'new_competitor': 0, 'multi_competitor': 8, 'price_vs_market': 0, 'demand': 0, 'new_use_case': 0, 'cross_site': 0, 'source_errors': 0}
