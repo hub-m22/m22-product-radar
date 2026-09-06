@@ -4,19 +4,25 @@
 <div class="topbar"><div><h1>Конкуренты</h1><div class="sub">{{ comps|length }} компаний в реестре. {% if review %}<a href="/matches">Сопоставлений на ручной проверке: {{ review }}</a>{% endif %}</div></div>
 <div class="actions-row"><a class="btn sec small" href="/matches?review=0">Все сопоставления</a> <a class="btn sec small" href="/export/competitors.xlsx">XLSX реестр</a> <a class="btn sec small" href="/export/competitor_products.xlsx">XLSX товары</a> <a class="btn sec small" href="/export/price_history.csv">CSV история цен</a></div></div>
 {% set types = TYPE_NAMES.items() | list %}{% set show_product = False %}{% set show_competitor = False %}{% set show_conf = False %}
-{% set severities = [("A","A — прямые ключевые"),("B","B — вторичные"),("C","C — косвенные")] %}{% set sev_label = "Уровень" %}
+{% set severities = [("A","A — прямые ключевые"),("B","B — вторичные"),("C","C — косвенные")] %}{% set sev_label = "Категория конкурента" %}
 {% include "_filters.html" %}
-<div class="note" style="margin-bottom:10px"><b>Уровни:</b> A — прямые ключевые конкуренты (сами продают радиогиды, аудиогиды, одноразовые наушники и экскурсионное оборудование), B — вторичные (реселлеры, аренда, продавцы на маркетплейсах, одиночные позиции), C — косвенные, заменители, зарубежные бренды и справочные записи. Уровень можно изменить в карточке конкурента.</div>
-<div class="card compact tbl-wrap"><table><thead><tr><th>Уровень</th><th>Компания</th><th>Типы</th><th>География</th><th class="num">Товаров</th><th class="num">С ценой</th><th class="num">Страниц</th><th>Аренда</th><th>Последняя проверка</th></tr></thead><tbody>
+<div class="note" style="margin-bottom:10px"><b>Категории конкурентов:</b> A — прямые ключевые (сами продают радиогиды, аудиогиды, одноразовые наушники и экскурсионное оборудование), B — вторичные (реселлеры, аренда, продавцы на маркетплейсах, одиночные позиции), C — косвенные, заменители, зарубежные бренды и справочные записи. Категорию можно изменить в карточке конкурента.
+<br><b>Сервисные признаки</b> извлечены из текста сайтов автоматически (с фрагментом-доказательством в карточке) и могут быть поправлены вручную. <span class="badge sev-high">зелёная</span>&nbsp;подсветка ячейки = у конкурента лучше, чем у M22 (M22: гарантия {{ m22p.warranty_years or '—' }} г., сервис {{ 'да' if m22p.service_center == 'yes' else 'нет/не указано' }}, подменный фонд {{ 'да' if m22p.replacement_fund == 'yes' else 'нет/не указано' }}, аренда {{ 'да' if m22p.rental == 'yes' else 'нет' }}, бесплатная доставка {{ 'да' if m22p.free_delivery == 'yes' else 'нет/не указано' }}; изменить — в «Настройках»).</div>
+<div class="card compact tbl-wrap"><table style="min-width:1700px"><thead><tr><th>Категория</th><th style="min-width:220px">Компания</th><th>Типы</th><th class="num">Товаров</th><th class="num">С ценой</th><th class="num" title="в наличии / нет в наличии / не указано">Наличие</th><th>Аренда</th><th>Гарантия</th><th>Сервис</th><th>Подмена</th><th>Беспл. доставка</th><th style="min-width:220px">УТП</th><th class="num">Страниц</th><th>Проверка</th></tr></thead><tbody>
 {% for c in comps %}<tr>
   <td><span class="badge {{ {'A':'sev-high','B':'sev-medium','C':'st'}.get(c.tier or 'C') }}">{{ c.tier or 'C' }}</span></td>
   <td><a href="/competitors/{{ c.id }}"><b>{{ c.name }}</b></a>{% if c.unreachable %} <span class="badge sev-medium" title="Все страницы мониторинга отвечают ошибкой (403/404/robots)">сайт недоступен для проверки</span>{% endif %}{% if c.group_name %}<div class="small muted">группа: {{ c.group_name }}</div>{% endif %}<br><a class="small" href="{{ c.website }}" target="_blank" rel="noopener">{{ c.website }}</a></td>
-  <td class="small">{% for t in (c.types_json | uj([])) %}<span class="pill">{{ TYPE_NAMES.get(t, t) }}</span> {% endfor %}</td>
-  <td class="small">{{ (c.geography or '')[:50] }}</td>
+  <td class="small">{% for t in (c.types_json | uj([]))[:3] %}<span class="pill">{{ TYPE_NAMES.get(t, t)[:22] }}</span> {% endfor %}</td>
   <td class="num">{{ c.products }}</td><td class="num">{{ c.priced }}</td>
+  <td class="num small" title="в наличии / нет / не указано">{{ c.in_stock or 0 }} / {{ c.out_stock or 0 }} / {{ (c.products or 0) - (c.in_stock or 0) - (c.out_stock or 0) }}</td>
+  <td class="{% if c.flags.rental %}better{% endif %}">{{ {'yes':'да','no':'нет'}.get(c.rental_available, '—') }}</td>
+  <td class="{% if c.flags.warranty_years %}better{% elif c.flags.warranty_years is sameas false %}worse{% endif %}">{% if c.warranty_years %}{{ c.warranty_years | round(1) }} г.{% else %}—{% endif %}</td>
+  <td class="{% if c.flags.service_center %}better{% endif %}">{{ {'yes':'да','no':'нет'}.get(c.service_center, '—') }}</td>
+  <td class="{% if c.flags.replacement_fund %}better{% endif %}">{{ {'yes':'да','no':'нет'}.get(c.replacement_fund, '—') }}</td>
+  <td class="{% if c.flags.free_delivery %}better{% endif %}">{{ {'yes':'да','no':'нет'}.get(c.free_delivery, '—') }}</td>
+  <td class="small">{{ (c.usp or '')[:140] }}</td>
   <td class="num">{{ c.pages }}{% if c.failing %} <span class="badge sev-medium" title="страниц с ошибками">{{ c.failing }}</span>{% endif %}</td>
-  <td>{{ {'yes':'да','no':'нет'}.get(c.rental_available, '?') }}</td>
-  <td class="small nowrap">{{ c.last_checked | dt }}</td>
+  <td class="small nowrap">{{ c.last_checked | dt }}{% if c.profile_checked_at %}<div class="muted">профиль {{ c.profile_checked_at[:10] }}</div>{% endif %}</td>
 </tr>{% endfor %}</tbody></table></div>
 
 <div class="grid grid-2" style="margin-top:14px">

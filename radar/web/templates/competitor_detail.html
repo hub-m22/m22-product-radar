@@ -2,7 +2,7 @@
 {% block title %}{{ c.name }} — конкуренты{% endblock %}
 {% block content %}
 <a href="/competitors">← Конкуренты</a>
-<h1><span class="badge {{ {'A':'sev-high','B':'sev-medium','C':'st'}.get(c.tier or 'C') }}">уровень {{ c.tier or 'C' }}</span> {{ c.name }} {% if not c.is_active %}<span class="badge st">неактивен</span>{% endif %}</h1>
+<h1><span class="badge {{ {'A':'sev-high','B':'sev-medium','C':'st'}.get(c.tier or 'C') }}">категория {{ c.tier or 'C' }}</span> {{ c.name }} {% if not c.is_active %}<span class="badge st">неактивен</span>{% endif %}</h1>
 {% if unreachable %}<div class="note"><b>Сайт недоступен для автоматической проверки.</b> Все страницы мониторинга отвечают ошибкой (403/404 или запрет в robots.txt). Данные ниже — из ручного исследования на дату проверки; актуальность цен и ассортимента нужно подтверждать вручную по ссылкам.</div>{% endif %}
 <div class="sub"><a href="{{ c.website }}" target="_blank" rel="noopener">{{ c.website }}</a> · проверен {{ c.checked_at or '—' }} · добавлен: {{ c.added_by }} · доступность: {{ c.scrapable or '?' }}</div>
 <div class="grid grid-2">
@@ -11,7 +11,15 @@
     <dt>География</dt><dd>{{ c.geography or '—' }}</dd>
     <dt>Категории</dt><dd>{{ cats | join(', ') or '—' }}</dd>
     <dt>Бренды</dt><dd>{{ brands | join(', ') or '—' }}</dd>
-    <dt>Аренда</dt><dd>{{ {'yes':'да','no':'нет'}.get(c.rental_available, 'неизвестно') }}</dd>
+    <dt>Аренда</dt><dd class="{% if flags.rental %}better{% endif %}">{{ {'yes':'да','no':'нет'}.get(c.rental_available, 'неизвестно') }}{% if profile.get('rental') %} <span class="small muted">— {{ profile.rental.snippet[:160] }} <a href="{{ profile.rental.url }}" target="_blank" rel="noopener">↗</a></span>{% endif %}</dd>
+    <dt>Гарантия</dt><dd class="{% if flags.warranty_years %}better{% elif flags.warranty_years is sameas false %}worse{% endif %}">{% if c.warranty_years %}{{ c.warranty_years | round(1) }} г.{% else %}не найдено{% endif %} <span class="small muted">(M22: {{ m22p.warranty_years or '—' }} г.)</span>{% if profile.get('warranty_years') %}<div class="small muted">{{ profile.warranty_years.snippet[:200] }} <a href="{{ profile.warranty_years.url }}" target="_blank" rel="noopener">↗</a></div>{% endif %}</dd>
+    <dt>Сервисный центр</dt><dd class="{% if flags.service_center %}better{% endif %}">{{ {'yes':'да','no':'нет'}.get(c.service_center, 'не найдено') }}{% if profile.get('service_center') %}<div class="small muted">{{ profile.service_center.snippet[:200] }} <a href="{{ profile.service_center.url }}" target="_blank" rel="noopener">↗</a></div>{% endif %}</dd>
+    <dt>Подменный фонд</dt><dd class="{% if flags.replacement_fund %}better{% endif %}">{{ {'yes':'да','no':'нет'}.get(c.replacement_fund, 'не найдено') }}{% if profile.get('replacement_fund') %}<div class="small muted">{{ profile.replacement_fund.snippet[:200] }} <a href="{{ profile.replacement_fund.url }}" target="_blank" rel="noopener">↗</a></div>{% endif %}</dd>
+    <dt>Бесплатная доставка</dt><dd class="{% if flags.free_delivery %}better{% endif %}">{{ {'yes':'да','no':'нет'}.get(c.free_delivery, 'не найдено') }}{% if profile.get('free_delivery') %}<div class="small muted">{{ profile.free_delivery.snippet[:200] }} <a href="{{ profile.free_delivery.url }}" target="_blank" rel="noopener">↗</a></div>{% endif %}</dd>
+    <dt>УТП (с сайта)</dt><dd>{{ c.usp or '—' }}</dd>
+    <dt>Наличие товаров</dt><dd>в наличии {{ stock.a or 0 }} · нет в наличии {{ stock.b or 0 }} · не указано {{ stock.u or 0 }}</dd>
+    <dt>Профиль проверен</dt><dd>{{ c.profile_checked_at or 'ещё не сканировался' }}{% if profile.get('_checked') %} <span class="small muted">({{ profile._checked | length }} страниц: {{ profile._checked | join(', ') | truncate(200) }})</span>{% endif %}
+      <form method="post" action="/competitors/{{ c.id }}/profile-scan" class="inline"><button class="sec small">Пересканировать сайт</button></form></dd>
     <dt>Преимущества / позиционирование</dt><dd>{{ c.advantages or '—' }}</dd>
     <dt>Целевые сегменты</dt><dd>{{ c.target_segments or '—' }}</dd>
     <dt>Новые товары и решения</dt><dd>{{ c.new_products or '—' }}</dd>
@@ -53,9 +61,15 @@
   <div><h2>Сигналы по конкуренту</h2>{% for s in sigs %}{{ m.signal_card(s, compact=True) }}{% else %}<div class="muted">Сигналов нет.</div>{% endfor %}</div>
   <div>{{ m.comments_block(comments, "/competitors/" ~ c.id ~ "/update", None, [], []) }}
     <form method="post" action="/competitors/{{ c.id }}/update" class="form-grid" style="margin-top:8px">
-      <label>Уровень конкурента<select name="tier"><option value="A" {% if c.tier == 'A' %}selected{% endif %}>A — прямой ключевой</option><option value="B" {% if c.tier == 'B' %}selected{% endif %}>B — вторичный</option><option value="C" {% if (c.tier or 'C') == 'C' %}selected{% endif %}>C — косвенный / справочно</option></select></label>
+      <label>Категория конкурента<select name="tier"><option value="A" {% if c.tier == 'A' %}selected{% endif %}>A — прямой ключевой</option><option value="B" {% if c.tier == 'B' %}selected{% endif %}>B — вторичный</option><option value="C" {% if (c.tier or 'C') == 'C' %}selected{% endif %}>C — косвенный / справочно</option></select></label>
       <label>Группа компаний (несколько сайтов = один продавец)<input type="text" name="group_name" value="{{ c.group_name or '' }}"></label>
-      <div class="full"><button type="submit" class="small">Сохранить уровень и группу</button></div></form>
+      <label>Гарантия, лет (вручную)<input type="text" name="warranty_years" value="{{ c.warranty_years_manual if c.warranty_years_manual is not none else '' }}" placeholder="например 3"></label>
+      <label>Аренда<select name="rental"><option value="">— не менять —</option><option value="yes">да</option><option value="no">нет</option><option value="unknown">неизвестно</option></select></label>
+      <label>Сервисный центр<select name="service_center"><option value="">— не менять —</option><option value="yes">да</option><option value="no">нет</option></select></label>
+      <label>Подменный фонд<select name="replacement_fund"><option value="">— не менять —</option><option value="yes">да</option><option value="no">нет</option></select></label>
+      <label>Бесплатная доставка<select name="free_delivery"><option value="">— не менять —</option><option value="yes">да</option><option value="no">нет</option></select></label>
+      <label class="full">УТП (вручную, заменяет автоматическое)<input type="text" name="usp" value="{{ c.usp_manual or '' }}"></label>
+      <div class="full"><button type="submit" class="small">Сохранить категорию, группу и сервисный профиль</button></div></form>
     <form method="post" action="/competitors/{{ c.id }}/update" class="inline" style="margin-top:8px"><input type="hidden" name="is_active" value="{{ 0 if c.is_active else 1 }}"><button class="sec small">{{ 'Деактивировать конкурента' if c.is_active else 'Активировать' }}</button></form></div>
 </div>
 {% endblock %}

@@ -16,6 +16,17 @@
     <table><tbody>{% for c in cats %}<tr><td>{{ c.name_ru }}</td><td class="small muted">{{ c.slug }}</td><td><form method="post" action="/settings/category/{{ c.slug }}/toggle" class="inline"><button class="sec small">{{ 'в контуре ✓' if c.in_scope else 'вне контура' }}</button></form></td></tr>{% endfor %}</tbody></table>
     <h3>Система</h3><dl class="kv"><dt>База данных</dt><dd>{{ db_path }}</dd><dt>Резервные копии</dt><dd>{{ backup_dir }} ({{ counts.backups }} файлов)</dd><dt>Последний анализ</dt><dd>{{ settings.get('last_analysis_at', '—') }}</dd><dt>Базовая дата замера</dt><dd>{{ settings.get('baseline_date', '—') }}</dd></dl>
     <div class="actions-row"><a class="btn sec small" href="/export/backup.sqlite3">Скачать резервную копию</a></div>
+    <h3>Сервисный профиль M22 (эталон для подсветки в «Конкурентах»)</h3>
+    <form method="post" action="/settings/m22-profile" class="form-grid">
+      <label>Гарантия, лет<input type="text" name="warranty_years" value="{{ m22p.warranty_years or '' }}"></label>
+      <label>Аренда<select name="rental"><option value="yes" {% if m22p.rental == 'yes' %}selected{% endif %}>да</option><option value="no" {% if m22p.rental != 'yes' %}selected{% endif %}>нет</option></select></label>
+      <label>Сервисный центр<select name="service_center"><option value="">не указано</option><option value="yes" {% if m22p.service_center == 'yes' %}selected{% endif %}>да</option><option value="no" {% if m22p.service_center == 'no' %}selected{% endif %}>нет</option></select></label>
+      <label>Подменный фонд<select name="replacement_fund"><option value="">не указано</option><option value="yes" {% if m22p.replacement_fund == 'yes' %}selected{% endif %}>да</option><option value="no" {% if m22p.replacement_fund == 'no' %}selected{% endif %}>нет</option></select></label>
+      <label>Бесплатная доставка<select name="free_delivery"><option value="">не указано</option><option value="yes" {% if m22p.free_delivery == 'yes' %}selected{% endif %}>да</option><option value="no" {% if m22p.free_delivery == 'no' %}selected{% endif %}>нет</option></select></label>
+      <label class="full">УТП M22<input type="text" name="usp" value="{{ m22p.usp or '' }}"></label>
+      <div class="full actions-row"><button type="submit" class="small">Сохранить</button> <button type="submit" name="rescan" value="1" class="sec small">Пересканировать m22.ru и radiosync.ru</button></div>
+    </form>
+    {% if m22p_auto %}<p class="small muted">Автоматически найдено на сайтах M22: {% for k, v in m22p_auto.items() if not k.startswith('_') %}{{ k }} = {{ v.value }}; {% endfor %}</p>{% endif %}
     <h3>Самокалибровка по ручным проверкам</h3>
     <p class="small muted">Каждое «Принять»/«Отклонить» записывается как проверка. После {{ min_checks }} проверок по типу сигнала уверенность новых сигналов этого типа умножается на коэффициент от 0,6 (всё отклонено) до 1,15 (всё подтверждено). Подтверждённые ценовые сигналы закрепляют сопоставления товаров, отклонённые — отправляют их на ручную проверку.</p>
     <table><thead><tr><th>Тип сигнала</th><th class="num">Подтверждено</th><th class="num">Отклонено</th><th class="num">Доля</th><th class="num">Коэффициент</th></tr></thead><tbody>

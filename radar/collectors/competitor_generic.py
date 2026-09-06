@@ -404,6 +404,8 @@ def expand_sitemap(conn: sqlite3.Connection, page: dict, limit: int = 200) -> in
         except Exception:  # noqa: BLE001
             pass
     dom = urlparse(page["url"]).netloc.lower()
+    existing = db.row(conn, "SELECT COUNT(*) n FROM monitored_pages WHERE competitor_id=? AND kind!='sitemap'", (page["competitor_id"],))["n"]
+    limit = max(0, min(limit, 250 - existing))  # не более 250 страниц на конкурента
     added = 0
     for u in locs:
         if urlparse(u).netloc.lower() != dom or u.endswith(".xml"):

@@ -18,6 +18,7 @@ from fastapi.templating import Jinja2Templates
 
 from .. import categories as catmod
 from .. import competitor_matrix as cmx
+from .. import profile as profmod
 from .. import config, db, discovery, feedback, importers, matching, recommendations, reports, scheduler, seed, signals
 from .. import specs as specmod
 from ..importers import TYPE_NAMES
@@ -306,15 +307,19 @@ def competitors_page(request: Request):
                                  (SELECT COUNT(*) FROM monitored_pages mp WHERE mp.competitor_id=c.id AND mp.is_active=1) AS pages,
                                  (SELECT MAX(last_checked_at) FROM monitored_pages mp WHERE mp.competitor_id=c.id) AS last_checked,
                                  (SELECT COUNT(*) FROM monitored_pages mp WHERE mp.competitor_id=c.id AND mp.fail_count>0) AS failing,
-                                 (SELECT COUNT(*) FROM monitored_pages mp WHERE mp.competitor_id=c.id AND mp.last_status='ok') AS ok_pages
+                                 (SELECT COUNT(*) FROM monitored_pages mp WHERE mp.competitor_id=c.id AND mp.last_status='ok') AS ok_pages,
+                                 (SELECT COUNT(*) FROM competitor_products cp WHERE cp.competitor_id=c.id AND cp.is_active=1 AND cp.availability='InStock') AS in_stock,
+                                 (SELECT COUNT(*) FROM competitor_products cp WHERE cp.competitor_id=c.id AND cp.is_active=1 AND cp.availability IN ('OutOfStock','PreOrder','SoldOut')) AS out_stock
                                  FROM competitors c WHERE c.is_active=1 ORDER BY priced DESC, products DESC, c.name""")
         if f["type"]:
             comps = [c for c in comps if f["type"] in (db.uj(c["types_json"], []) or [])]
         if f["severity"]:  # фильтр по уровню A/B/C
             comps = [c for c in comps if (c["tier"] or "C") == f["severity"]]
         comps.sort(key=lambda c: ({"A": 0, "B": 1, "C": 2}.get(c["tier"] or "C", 2), -(c["priced"] or 0)))
+        m22p = profmod.m22_profile(conn)
         for c in comps:
             c["unreachable"] = (c["pages"] or 0) > 0 and (c["ok_pages"] or 0) == 0 and (c["failing"] or 0) > 0
+            c["flags"] = profmod.compare_flags(c, m22p)
         if f["category"]:
             ids = {r["competitor_id"] for r in db.rows(conn, "SELECT DISTINCT competitor_id FROM competitor_products WHERE category_slug=?", (f["category"],))}
             comps = [c for c in comps if c["id"] in ids]
@@ -322,7 +327,7 @@ def competitors_page(request: Request):
             comps = [c for c in comps if f["q"].lower() in (c["name"] + " " + (c["website"] or "")).lower()]
         lists = _lists(conn)
         review = db.row(conn, "SELECT COUNT(*) n FROM product_matches WHERE needs_review=1 AND review_status='auto'")["n"]
-    return render(request, "competitors.html", comps=comps, f=f, review=review, **lists)
+    return render(request, "competitors.html", comps=comps, f=f, review=review, m22p=m22p, **lists)
 
 
 @app.post("/competitors/add")
@@ -353,13 +358,31 @@ def competitor_detail(request: Request, cid: int):
         unreachable = bool(pages) and not any(p["last_status"] == "ok" for p in pages) and any(p["last_status"] in ("error", "robots_disallowed") for p in pages)
         for p in products:
             p["norm"] = specmod.normalize(p["name"], p["description"], p["specs_json"], p["price"], p["capacity"])
+        m22p = profmod.m22_profile(conn)
+        stock = db.row(conn, "SELECT SUM(availability='InStock') a, SUM(availability IN ('OutOfStock','PreOrder','SoldOut')) b, SUM(availability IS NULL OR availability NOT IN ('InStock','OutOfStock','PreOrder','SoldOut')) u FROM competitor_products WHERE competitor_id=? AND is_active=1", (cid,))
     return render(request, "competitor_detail.html", c=c, pages=pages, products=products, sigs=sigs, comments=comments, cols=cmx.MATRIX_COLS, unreachable=unreachable,
+                  profile=db.uj(c["profile_json"], {}) or {}, flags=profmod.compare_flags(c, m22p), m22p=m22p, stock=stock, prof_fields=profmod.FIELDS,
                   types=db.uj(c["types_json"], []) or [], brands=db.uj(c["brands_json"], []) or [], cats=db.uj(c["categories_json"], []) or [], src=db.uj(c["source_urls_json"], []) or [])
 
 
 @app.post("/competitors/{cid}/update")
-def competitor_update(cid: int, comment: str = Form(None), author: str = Form(""), is_active: str = Form(None), notes: str = Form(None), tier: str = Form(None), group_name: str = Form(None)):
+def competitor_update(cid: int, comment: str = Form(None), author: str = Form(""), is_active: str = Form(None), notes: str = Form(None), tier: str = Form(None), group_name: str = Form(None),
+                      warranty_years: str = Form(None), service_center: str = Form(None), replacement_fund: str = Form(None), free_delivery: str = Form(None), usp: str = Form(None), rental: str = Form(None)):
     with db.session() as conn:
+        if warranty_years is not None:
+            try:
+                wy = float(warranty_years.replace(",", ".")) if warranty_years.strip() else None
+            except ValueError:
+                wy = None
+            conn.execute("UPDATE competitors SET warranty_years_manual=?, warranty_years=COALESCE(?, warranty_years) WHERE id=?", (wy, wy, cid))
+        for col, val in (("service_center", service_center), ("replacement_fund", replacement_fund), ("free_delivery", free_delivery)):
+            if val is not None:
+                v = val if val in ("yes", "no") else None
+                conn.execute(f"UPDATE competitors SET {col}_manual=?, {col}=COALESCE(?, {col}) WHERE id=?", (v, v, cid))
+        if usp is not None:
+            conn.execute("UPDATE competitors SET usp_manual=?, usp=COALESCE(NULLIF(?, ''), usp) WHERE id=?", (usp.strip() or None, usp.strip(), cid))
+        if rental in ("yes", "no", "unknown"):
+            conn.execute("UPDATE competitors SET rental_available=? WHERE id=?", (rental, cid))
         if tier in ("A", "B", "C"):
             conn.execute("UPDATE competitors SET tier=?, updated_at=datetime('now') WHERE id=?", (tier, cid))
         if group_name is not None:
@@ -386,6 +409,33 @@ def page_add(cid: int, url: str = Form(...), kind: str = Form("product"), name: 
             conn.execute("INSERT INTO monitored_pages(competitor_id, url, kind, name, category_slug, parser, parser_config_json) VALUES(?,?,?,?,?,?,?)",
                          (cid, url.strip(), kind, name or None, category_slug or None, "css" if cfg else "auto", cfg))
     return RedirectResponse(f"/competitors/{cid}", status_code=303)
+
+
+@app.post("/competitors/{cid}/profile-scan")
+def competitor_profile_scan(cid: int):
+    with db.session() as conn:
+        profmod.scan_competitor(conn, cid, fetch=True)
+    return RedirectResponse(f"/competitors/{cid}", status_code=303)
+
+
+@app.post("/settings/m22-profile")
+def m22_profile_update(warranty_years: str = Form(""), service_center: str = Form(""), replacement_fund: str = Form(""), free_delivery: str = Form(""), rental: str = Form(""), usp: str = Form(""), rescan: str = Form("")):
+    with db.session() as conn:
+        if rescan:
+            profmod.scan_m22(conn, fetch=True)
+        manual = {}
+        if warranty_years.strip():
+            try:
+                manual["warranty_years"] = float(warranty_years.replace(",", "."))
+            except ValueError:
+                pass
+        for k, v in (("service_center", service_center), ("replacement_fund", replacement_fund), ("free_delivery", free_delivery), ("rental", rental)):
+            if v in ("yes", "no"):
+                manual[k] = v
+        if usp.strip():
+            manual["usp"] = usp.strip()
+        db.set_setting(conn, "m22_profile_manual", db.j(manual))
+    return RedirectResponse("/settings", status_code=303)
 
 
 @app.post("/pages/{pid}/toggle")
@@ -861,8 +911,11 @@ def settings_page(request: Request):
     with db.session() as conn:
         fb_stats = feedback.stats(conn)
         fb_recent = db.rows(conn, "SELECT f.*, s.title FROM feedback f LEFT JOIN signals s ON s.id=f.signal_id ORDER BY f.created_at DESC LIMIT 30")
+    with db.session() as conn:
+        m22p = profmod.m22_profile(conn)
+        m22p_auto = db.uj(db.get_setting(conn, "m22_profile"), {}) or {}
     return render(request, "settings.html", settings=settings, cats=cats, thresholds=thresholds, counts=counts, db_path=str(config.DB_PATH), backup_dir=str(config.BACKUP_DIR),
-                  fb_stats=fb_stats, fb_recent=fb_recent, min_checks=feedback.MIN_CHECKS,
+                  fb_stats=fb_stats, fb_recent=fb_recent, min_checks=feedback.MIN_CHECKS, m22p=m22p, m22p_auto=m22p_auto,
                   schedule={"M22 (час)": config.M22_CRON_HOUR, "Конкуренты (час)": config.COMPETITORS_CRON_HOUR, "Спрос (день недели)": config.TRENDS_CRON_DOW, "Отчёт (день недели)": config.REPORT_CRON_DOW, "Включён": config.SCHEDULE_ENABLED})
 
 
