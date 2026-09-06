@@ -37,7 +37,7 @@
       </tbody></table><div class="small muted">Медиана: {{ evidence.median | money }}</div>
       {% elif evidence.history %}<table><thead><tr><th>Дата</th><th class="num">Цена</th></tr></thead><tbody>{% for h in evidence.history %}<tr><td>{{ h.observed_at }}</td><td class="num">{{ h.price | money }}</td></tr>{% endfor %}</tbody></table>
       {% elif evidence.series %}<table><thead><tr><th>Период</th><th class="num">Значение</th></tr></thead><tbody>{% for p in evidence.series %}<tr><td>{{ p[0] }}</td><td class="num">{{ p[1] }}</td></tr>{% endfor %}</tbody></table>
-      {% elif evidence['items'] %}<ul>{% for it in evidence['items'] %}<li>{{ it.competitor }}: <a href="{{ it.url }}" target="_blank" rel="noopener">{{ it.name }}</a></li>{% endfor %}</ul>
+      {% elif evidence.get('items') %}<ul>{% for it in evidence.get('items') %}<li>{{ it.competitor }}: <a href="{{ it.url }}" target="_blank" rel="noopener">{{ it.name }}</a></li>{% endfor %}</ul>
       {% else %}<details><summary>JSON</summary><pre class="small">{{ evidence | tojson(indent=1) }}</pre></details>{% endif %}
     {% else %}<span class="muted">Нет дополнительных данных.</span>{% endif %}
   </div>
