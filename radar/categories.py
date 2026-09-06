@@ -80,7 +80,9 @@ def summary(conn: sqlite3.Connection, slug: str) -> dict:
     hyps = db.rows(conn, "SELECT * FROM hypotheses WHERE category_slug=? AND decision_status IN ('new','research') ORDER BY created_at DESC", (slug,))
     tenders = db.rows(conn, "SELECT * FROM market_observations WHERE category_slug=? AND kind='tender' ORDER BY observed_date DESC LIMIT 15", (slug,))
     # вердикт
-    if not m22:
+    if slug == "rental":
+        status, verdict = "no_data", f"Аренда: у конкурентов цены за приёмник в день, у M22 — минимальная сумма заказа; автоматически несопоставимо. Предложений: {len(offers)} от {len(sellers)} продавцов."
+    elif not m22:
         status, verdict = "gap", f"У M22 нет товаров в категории; у конкурентов {len(offers)} предложений от {len(sellers)} продавцов."
     elif len(priced) < 3:
         status, verdict = "no_data", f"Предложений конкурентов с ценой мало ({len(priced)}) — вывод о ценовом положении пока не делается."

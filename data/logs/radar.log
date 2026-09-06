@@ -211,3 +211,4 @@
 2026-09-06 19:03:49,249 INFO apscheduler.scheduler: Added job "_run_job" to job store "default"
 2026-09-06 19:03:49,249 INFO apscheduler.scheduler: Scheduler started
 2026-09-06 19:03:49,250 INFO radar.scheduler: scheduler started
+2026-09-06 19:05:45,308 INFO radar.signals: signals: {'competitor_price_change': 0, 'appear_disappear': 0, 'new_category': 0, 'new_competitor': 0, 'multi_competitor': 0, 'price_vs_market': 0, 'demand': 0, 'new_use_case': 0, 'cross_site': 0, 'source_errors': 0}

@@ -208,10 +208,10 @@ def detect_kind(name: str) -> str:
         return "receiver"
     if any(k in low for k in ("кейс", "докстанц", "док-станц", "сумк", "case", "dock", "зарядн", "charger")):
         return "case_charger"
+    if "наушник" in low or "headphone" in low or "earphone" in low:
+        return "accessory" if low.startswith(("чехл", "накладк", "амбушюр")) else "headphones"
     if "чехл" in low or "накладк" in low or "амбушюр" in low:
         return "accessory"
-    if "наушник" in low or "headphone" in low or "earphone" in low:
-        return "headphones"
     if "микрофон" in low or "гарнитур" in low or "microphone" in low or "headset" in low:
         return "microphone"
     if "аудиогид" in low or "audio guide" in low or "audioguide" in low:
