@@ -189,15 +189,41 @@ def detect_multi_competitor_products(conn: sqlite3.Connection) -> int:
     for r in rows:
         has = r["model_key"] in m22_keys
         sev = "high" if r["n_comp"] >= 3 and not has else "medium"
+        # предложения каждого продавца: ссылка на его страницу, цена, фото
+        offers = db.rows(conn, """SELECT cp.id, cp.name, cp.price, cp.url, cp.image_url, cp.fetched_at, c.id AS competitor_id, c.name AS competitor, c.website
+                                  FROM competitor_products cp JOIN competitors c ON c.id=cp.competitor_id WHERE cp.is_active=1 AND cp.model_key=? ORDER BY c.name, cp.price""", (r["model_key"],))
+        items, seen_urls = [], set()
+        for o in sorted(offers, key=lambda x: (x["url"], x["price"] is None, x["image_url"] is None)):
+            if o["url"] in seen_urls:
+                continue
+            seen_urls.add(o["url"])
+            items.append({"competitor_id": o["competitor_id"], "competitor": o["competitor"], "website": o["website"], "name": o["name"], "price": o["price"], "url": o["url"],
+                          "image": o["image_url"], "fetched_at": o["fetched_at"]})
+        def _junk(u):
+            from urllib.parse import urlparse as _up
+            pth = _up(u).path.rstrip("/")
+            return pth == "" or "/cart" in pth
+        good = {it["competitor_id"] for it in items if not _junk(it["url"])}
+        items = [it for it in items if not _junk(it["url"]) or it["competitor_id"] not in good]
+        items.sort(key=lambda x: (x["competitor"], x["price"] is None, x["price"] or 0))
+        own = next((o["url"] for o in offers if o["website"] and o["url"].split("/")[2].replace("www.", "") in o["website"]), offers[0]["url"] if offers else r["url"])
+        evidence = {**dict(r), "items": items}
+        existing = db.row(conn, "SELECT id FROM signals WHERE dedupe_key=?", (f"multi:{r['model_key']}",))
+        title = f"Модель {(r['brand'] + ' ') if r['brand'] else ''}{r['model_key']} есть у {r['n_comp']} конкурентов" + ("" if has else " и отсутствует у M22")
+        what = f"Продавцы: {r['comps']}. Цены {_fmt(r['pmin'])} – {_fmt(r['pmax'])}. Пример: {r['name'][:80]}"
+        if existing:
+            conn.execute("UPDATE signals SET title=?, what_happened=?, new_value=?, severity=?, evidence_json=?, source_url=?, updated_at=datetime('now') WHERE id=?",
+                         (title, what, f"{r['n_comp']} конкурентов", sev, db.j(evidence), own, existing["id"]))
+            continue
         if _emit(conn, type="multi_competitor_product", severity=sev, fact_kind="fact", category_slug=r["category_slug"],
                  title=f"Модель {(r['brand'] + ' ') if r['brand'] else ''}{r['model_key']} есть у {r['n_comp']} конкурентов" + ("" if has else " и отсутствует у M22"),
                  what_happened=f"Продавцы: {r['comps']}. Цены {_fmt(r['pmin'])} – {_fmt(r['pmax'])}. Пример: {r['name'][:80]}", new_value=f"{r['n_comp']} конкурентов",
-                 observed_at=db.now_iso(), source="мониторинг конкурентов", source_url=r["url"], evidence_json=dict(r), confidence=0.8,
+                 observed_at=db.now_iso(), source="мониторинг конкурентов", source_url=own, evidence_json=evidence, confidence=0.8,
                  why_matters=("Модель стала рыночным стандартом; отсутствие в матрице — прямой пробел ассортимента." if not has
                               else "Модель широко представлена — ценовая конкуренция по ней будет высокой."),
                  recommended_action=(f"Запросить у поставщиков цену и образец модели {r['model_key']}; сравнить характеристики с ближайшей моделью Radiosync." if not has
                                      else f"Проверить цену M22 на {r['model_key']} относительно диапазона {_fmt(r['pmin'])} – {_fmt(r['pmax'])}."),
-                 dedupe_key=f"multi:{r['model_key']}:{r['n_comp']}"):
+                 dedupe_key=f"multi:{r['model_key']}"):
             n += 1
     return n
 
@@ -418,7 +444,7 @@ def detect_source_errors(conn: sqlite3.Connection) -> int:
                  why_matters="Без источника часть сигналов не обновляется.", recommended_action="Проверить доступность сайта и настройки страницы мониторинга в разделе «Источники».",
                  dedupe_key=f"srcerr:{s['key']}:{(s['last_run_at'] or '')[:10]}"):
             n += 1
-    pages = db.rows(conn, "SELECT mp.*, c.name AS cname FROM monitored_pages mp JOIN competitors c ON c.id=mp.competitor_id WHERE mp.fail_count>=3 AND mp.is_active=1")
+    pages = db.rows(conn, "SELECT mp.*, c.name AS cname FROM monitored_pages mp JOIN competitors c ON c.id=mp.competitor_id WHERE mp.fail_count>=3 AND mp.is_active=1 AND mp.last_status IN ('error','robots_disallowed')")
     for p in pages:
         if _emit(conn, type="source_error", severity="low", fact_kind="fact", competitor_id=p["competitor_id"], title=f"Страница {p['cname']} недоступна {p['fail_count']} раз подряд",
                  what_happened=(p["last_error"] or "")[:300], observed_at=db.now_iso(), source=p["cname"], source_url=p["url"], confidence=1.0,

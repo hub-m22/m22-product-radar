@@ -84,9 +84,9 @@ def upsert_competitor_product(conn: sqlite3.Connection, competitor_id: int, page
         changed = (existing["price"] != price) or (existing["availability"] != availability) or (existing["content_hash"] != chash) or not existing["is_active"]
         conn.execute(
             """UPDATE competitor_products SET page_id=COALESCE(?,page_id), name=?, brand=?, model_key=?, category_slug=COALESCE(?,category_slug), kind=?, capacity=?,
-               price=?, currency=?, availability=?, description=?, specs_json=?, content_hash=?, is_active=1, last_seen_at=datetime('now'), fetched_at=? WHERE id=?""",
+               price=?, currency=?, availability=?, description=?, specs_json=?, content_hash=?, image_url=COALESCE(?, image_url), is_active=1, last_seen_at=datetime('now'), fetched_at=? WHERE id=?""",
             (page_id, name, brand, mkey, category, kind, capacity, price, currency, availability, data.get("description"), specs_json, chash,
-             data.get("fetched_at"), existing["id"]),
+             data.get("image_url"), data.get("fetched_at"), existing["id"]),
         )
         cid = existing["id"]
         last = db.row(conn, "SELECT price, availability FROM competitor_price_history WHERE competitor_product_id=? ORDER BY observed_at DESC, id DESC LIMIT 1", (cid,))
@@ -96,9 +96,9 @@ def upsert_competitor_product(conn: sqlite3.Connection, competitor_id: int, page
     else:
         cur = conn.execute(
             """INSERT INTO competitor_products(competitor_id,page_id,url,name,brand,model_key,category_slug,kind,capacity,price,currency,availability,
-               description,specs_json,content_hash,fetched_at) VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)""",
+               description,specs_json,content_hash,fetched_at,image_url) VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)""",
             (competitor_id, page_id, data["url"], name, brand, mkey, category, kind, capacity, price, currency, availability,
-             data.get("description"), specs_json, chash, data.get("fetched_at")),
+             data.get("description"), specs_json, chash, data.get("fetched_at"), data.get("image_url")),
         )
         cid = int(cur.lastrowid)
         conn.execute("INSERT INTO competitor_price_history(competitor_product_id, price, availability, run_id) VALUES(?,?,?,?)",

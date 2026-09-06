@@ -14,7 +14,7 @@
       <dt>Категория</dt><dd>{{ CATEGORY_NAMES.get(s.category_slug, s.category_slug or '—') }}</dd>
       <dt>Товар M22</dt><dd>{% if s.m22_product_id %}<a href="/matrix/{{ s.m22_product_id }}">{{ s.m22_name }}</a> · <a href="{{ s.m22_url }}" target="_blank" rel="noopener">на сайте ↗</a>{% else %}—{% endif %}</dd>
       <dt>Конкурент</dt><dd>{% if s.competitor_id %}<a href="/competitors/{{ s.competitor_id }}">{{ s.competitor_name }}</a>{% else %}—{% endif %}</dd>
-      {% if cp %}<dt>Товар конкурента</dt><dd>{{ cp.name }} — {{ cp.price | money }} · <a href="{{ cp.url }}" target="_blank" rel="noopener">страница ↗</a> · снято {{ cp.fetched_at | dt }}</dd>{% endif %}
+      {% if cp %}<dt>Товар конкурента</dt><dd>{% if cp.image_url %}<img src="{{ cp.image_url }}" alt="" class="thumb" referrerpolicy="no-referrer"> {% endif %}{{ cp.name }} — {{ cp.price | money }} · <a href="{{ cp.url }}" target="_blank" rel="noopener">страница ↗</a> · снято {{ cp.fetched_at | dt }}</dd>{% endif %}
       {% if s.query_text %}<dt>Запрос</dt><dd>{{ s.query_text }}</dd>{% endif %}
       <dt>Источник</dt><dd>{{ s.source or '—' }} {% if s.source_url %}· <a href="{{ s.source_url }}" target="_blank" rel="noopener">{{ s.source_url[:80] }} ↗</a>{% endif %}</dd>
       <dt>Ответственный</dt><dd>{{ s.owner or '—' }}</dd>
@@ -32,7 +32,20 @@
   {{ m.comments_block(comments, "/signals/" ~ s.id ~ "/update", s.owner, owners, [("new","Новый"),("in_research","Отправить на исследование"),("accepted","Принять"),("rejected","Отклонить"),("done","Выполнено")], "status", s.status) }}
   <div class="card"><h3>Подтверждающие данные</h3>
     {% if evidence %}
-      {% if evidence.comparables %}<table><thead><tr><th>Конкурент</th><th>Товар</th><th class="num">Цена</th><th>Сопоставление</th><th>Уверенность</th></tr></thead><tbody>
+      {% if evidence.get('items') and evidence.get('items')[0].get('competitor_id') is not none %}
+      <div class="offers">
+        {% for it in evidence.get('items') %}
+        <div class="offer">
+          {% if it.image %}<a href="{{ it.url }}" target="_blank" rel="noopener"><img src="{{ it.image }}" alt="" loading="lazy" referrerpolicy="no-referrer"></a>{% else %}<div class="noimg">нет фото</div>{% endif %}
+          <div class="ob">
+            <div><a href="/competitors/{{ it.competitor_id }}"><b>{{ it.competitor }}</b></a></div>
+            <div><a href="{{ it.url }}" target="_blank" rel="noopener">{{ it.name[:80] }} ↗</a></div>
+            <div class="small">{{ it.price | money }}{% if it.fetched_at %} · снято {{ it.fetched_at | dt }}{% endif %}</div>
+          </div>
+        </div>
+        {% endfor %}
+      </div>
+      {% elif evidence.comparables %}<table><thead><tr><th>Конкурент</th><th>Товар</th><th class="num">Цена</th><th>Сопоставление</th><th>Уверенность</th></tr></thead><tbody>
         {% for c in evidence.comparables %}<tr><td><a href="/competitors/{{ c.competitor_id }}">{{ c.competitor_name[:30] }}</a></td><td><a href="{{ c.url }}" target="_blank" rel="noopener">{{ c.name[:50] }}</a></td><td class="num">{{ c.price | money }}</td><td>{{ MATCH_NAMES.get(c.match_type, c.match_type) }}</td><td>{{ m.conf(c.confidence) }}</td></tr>{% endfor %}
       </tbody></table><div class="small muted">Медиана: {{ evidence.median | money }}</div>
       {% elif evidence.history %}<table><thead><tr><th>Дата</th><th class="num">Цена</th></tr></thead><tbody>{% for h in evidence.history %}<tr><td>{{ h.observed_at }}</td><td class="num">{{ h.price | money }}</td></tr>{% endfor %}</tbody></table>

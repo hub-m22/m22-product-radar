@@ -80,3 +80,18 @@
 2026-09-06 16:53:51,660 INFO apscheduler.scheduler: Added job "_run_job" to job store "default"
 2026-09-06 16:53:51,660 INFO apscheduler.scheduler: Scheduler started
 2026-09-06 16:53:51,660 INFO radar.scheduler: scheduler started
+2026-09-06 17:17:52,867 INFO apscheduler.scheduler: Adding job tentatively -- it will be properly scheduled when the scheduler starts
+2026-09-06 17:17:52,867 INFO apscheduler.scheduler: Adding job tentatively -- it will be properly scheduled when the scheduler starts
+2026-09-06 17:17:52,867 INFO apscheduler.scheduler: Adding job tentatively -- it will be properly scheduled when the scheduler starts
+2026-09-06 17:17:52,867 INFO apscheduler.scheduler: Adding job tentatively -- it will be properly scheduled when the scheduler starts
+2026-09-06 17:17:52,867 INFO apscheduler.scheduler: Added job "_run_job" to job store "default"
+2026-09-06 17:17:52,867 INFO apscheduler.scheduler: Added job "_run_job" to job store "default"
+2026-09-06 17:17:52,867 INFO apscheduler.scheduler: Added job "_run_job" to job store "default"
+2026-09-06 17:17:52,867 INFO apscheduler.scheduler: Added job "_run_job" to job store "default"
+2026-09-06 17:17:52,867 INFO apscheduler.scheduler: Scheduler started
+2026-09-06 17:17:52,867 INFO radar.scheduler: scheduler started
+2026-09-06 17:18:01,263 INFO radar.signals: signals: {'competitor_price_change': 0, 'appear_disappear': 0, 'new_category': 0, 'new_competitor': 0, 'multi_competitor': 0, 'price_vs_market': 0, 'demand': 0, 'new_use_case': 0, 'cross_site': 0, 'source_errors': 0}
+2026-09-06 17:27:25,926 INFO radar.db: migration applied: 003_competitor_images
+2026-09-06 17:31:26,941 INFO radar.signals: signals: {'competitor_price_change': 0, 'appear_disappear': 0, 'new_category': 0, 'new_competitor': 0, 'multi_competitor': 0, 'price_vs_market': 0, 'demand': 0, 'new_use_case': 0, 'cross_site': 0, 'source_errors': 18}
+2026-09-06 17:32:25,624 INFO radar.signals: signals: {'competitor_price_change': 0, 'appear_disappear': 0, 'new_category': 0, 'new_competitor': 9, 'multi_competitor': 11, 'price_vs_market': 0, 'demand': 0, 'new_use_case': 0, 'cross_site': 0, 'source_errors': 6}
+2026-09-06 17:33:03,730 INFO radar.signals: signals: {'competitor_price_change': 0, 'appear_disappear': 0, 'new_category': 0, 'new_competitor': 0, 'multi_competitor': 10, 'price_vs_market': 0, 'demand': 0, 'new_use_case': 0, 'cross_site': 0, 'source_errors': 0}

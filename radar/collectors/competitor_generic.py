@@ -124,17 +124,52 @@ def _offer_price(offers) -> tuple[float | None, str | None, str | None]:
     return normalize.parse_price(str(price)) if price else None, cur, av
 
 
+def _first_image(prod: dict) -> str | None:
+    img = prod.get("image")
+    if isinstance(img, list):
+        img = img[0] if img else None
+    if isinstance(img, dict):
+        img = img.get("url") or img.get("contentUrl")
+    return str(img) if img else None
+
+
+def page_image(soup: BeautifulSoup, url: str) -> str | None:
+    for sel, attr in (('meta[property="og:image"]', "content"), ('meta[itemprop="image"]', "content"), ('[itemprop="image"]', "src"), ('link[rel="image_src"]', "href")):
+        el = soup.select_one(sel)
+        if el is not None and (el.get(attr) or "").strip() and not any(w in el.get(attr).lower() for w in ("logo", "sharing", "share", "icon", "favicon", "placeholder")):
+            return urljoin(url, el.get(attr).strip())
+    main = soup.find("main") or soup.body or soup
+    for img in main.find_all("img", src=True):
+        src = img.get("src") or ""
+        if any(w in src.lower() for w in ("logo", "icon", "sprite", "pixel", "banner", ".svg", "data:image")):
+            continue
+        w = img.get("width")
+        if w and str(w).isdigit() and int(w) < 80:
+            continue
+        return urljoin(url, src)
+    return None
+
+
+def card_image(card, url: str) -> str | None:
+    for img in card.find_all("img"):
+        src = img.get("data-src") or img.get("data-original") or img.get("src") or ""
+        if src and not any(w in src.lower() for w in ("logo", "icon", "sprite", "pixel", ".svg", "data:image")):
+            return urljoin(url, src)
+    return None
+
+
 def parse_product_page(html: str, url: str, cfg: dict | None = None) -> list[dict]:
     soup = BeautifulSoup(html, "lxml")
     cfg = cfg or {}
     items: list[dict] = []
+    fallback_img = page_image(soup, url)
     # 1. CSS-конфиг
     if cfg.get("name"):
         n = soup.select_one(cfg["name"])
         p = soup.select_one(cfg["price"]) if cfg.get("price") else None
         if n:
             items.append({"url": url, "name": normalize.clean_text(n.get_text()),
-                          "price": normalize.parse_price(p.get("content") or p.get_text()) if p else None})
+                          "price": normalize.parse_price(p.get("content") or p.get_text()) if p else None, "image_url": fallback_img})
             return items
     # 2. JSON-LD
     for prod in _jsonld_products(soup):
@@ -145,7 +180,7 @@ def parse_product_page(html: str, url: str, cfg: dict | None = None) -> list[dic
         items.append({
             "url": prod.get("url") or url, "name": normalize.clean_text(str(prod.get("name") or "")), "brand": brand,
             "sku": prod.get("sku") or prod.get("mpn"), "price": price, "currency": cur or "RUB", "availability": av,
-            "description": normalize.clean_text(str(prod.get("description") or ""))[:2000],
+            "description": normalize.clean_text(str(prod.get("description") or ""))[:2000], "image_url": _first_image(prod) or fallback_img,
         })
     items = [i for i in items if i["name"]]
     if items:
@@ -185,7 +220,7 @@ def parse_product_page(html: str, url: str, cfg: dict | None = None) -> list[dic
                 break
     desc_el = soup.find("meta", attrs={"name": "description"})
     if name:
-        items.append({"url": url, "name": name, "price": price, "description": normalize.clean_text(desc_el.get("content", "")) if desc_el else ""})
+        items.append({"url": url, "name": name, "price": price, "description": normalize.clean_text(desc_el.get("content", "")) if desc_el else "", "image_url": fallback_img})
     return items
 
 
@@ -201,14 +236,14 @@ def parse_catalog_page(html: str, url: str, cfg: dict | None = None, category_sl
             if not n:
                 continue
             items.append({"url": urljoin(url, a["href"]) if a and a.get("href") else url, "name": normalize.clean_text(n.get_text()),
-                          "price": normalize.parse_price(p.get("content") or p.get_text()) if p else None})
+                          "price": normalize.parse_price(p.get("content") or p.get_text()) if p else None, "image_url": card_image(card, url)})
         return [i for i in items if i["name"]]
     # JSON-LD ItemList / Product
     for prod in _jsonld_products(soup):
         price, cur, av = _offer_price(prod.get("offers"))
         if prod.get("name"):
             items.append({"url": prod.get("url") or url, "name": normalize.clean_text(str(prod["name"])), "price": price, "currency": cur or "RUB",
-                          "availability": av})
+                          "availability": av, "image_url": _first_image(prod)})
     if len(items) >= 2:
         return items
     # Эвристика: карточка = ближайший предок элемента с ценой, содержащий ссылку и короткий текст
@@ -234,7 +269,7 @@ def parse_catalog_page(html: str, url: str, cfg: dict | None = None, category_sl
         ctx = normalize.clean_text(pel.get_text(" ")).lower()
         if any(w in ctx for w in NOISE_WORDS):
             continue
-        items.append({"url": link, "name": name, "price": normalize.parse_price(ctx)})
+        items.append({"url": link, "name": name, "price": normalize.parse_price(ctx), "image_url": card_image(card, url)})
     return items
 
 
