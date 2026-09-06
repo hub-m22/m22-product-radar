@@ -76,6 +76,7 @@ def _fmt(p: float | None) -> str:
 def detect_competitor_price_changes(conn: sqlite3.Connection, days: int = 30) -> int:
     n = 0
     since = (datetime.now(timezone.utc) - timedelta(days=days)).strftime("%Y-%m-%d")
+    baseline = (db.get_setting(conn, "baseline_date") or "")[:10]
     products = db.rows(conn, """SELECT cp.*, c.name AS competitor_name FROM competitor_products cp JOIN competitors c ON c.id=cp.competitor_id
                                 WHERE cp.is_active=1 AND cp.price IS NOT NULL""")
     for cp in products:
@@ -84,6 +85,12 @@ def detect_competitor_price_changes(conn: sqlite3.Connection, days: int = 30) ->
             continue
         new, old = hist[0]["price"], hist[1]["price"]
         if not old or not new:
+            continue
+        # два замера в один день — это не изменение цены, а разные страницы/варианты одного товара; замер до базовой даты не считается
+        if hist[0]["observed_at"][:10] == hist[1]["observed_at"][:10] or hist[1]["observed_at"] < baseline:
+            continue
+        # отношение цен > 5x — почти наверняка ошибка разбора (артикул, склеенный с ценой), а не рыночное событие
+        if max(new, old) / min(new, old) > 5:
             continue
         pct = (new - old) / old * 100
         if abs(pct) < config.PRICE_CHANGE_THRESHOLD_PCT:
