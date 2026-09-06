@@ -149,7 +149,7 @@ def index(request: Request):
             "price_7": db.row(conn, "SELECT COUNT(*) n FROM signals WHERE type='competitor_price_change' AND substr(created_at,1,10)>=?", (d7,))["n"],
             "new_products_7": db.row(conn, "SELECT COUNT(*) n FROM signals WHERE type IN ('product_appeared','new_kit_solution') AND substr(created_at,1,10)>=?", (d7,))["n"],
             "new_products_30": db.row(conn, "SELECT COUNT(*) n FROM signals WHERE type IN ('product_appeared','new_kit_solution') AND substr(created_at,1,10)>=?", (d30,))["n"],
-            "gaps": db.row(conn, "SELECT COUNT(*) n FROM signals WHERE type IN ('new_category','multi_competitor_product','category_growth_gap') AND status!='rejected' AND (title LIKE '%нет у M22%' OR title LIKE '%отсутствует%')")["n"],
+            "gaps": db.row(conn, "SELECT COUNT(*) n FROM signals WHERE type IN ('new_category','multi_competitor_product','category_growth_gap') AND status!='rejected' AND (title LIKE '%нет у M22%' OR title LIKE '%у M22 её нет%' OR title LIKE '%отсутствует%')")["n"],
             "hyps": db.row(conn, "SELECT COUNT(*) n FROM hypotheses WHERE decision_status IN ('new','research')")["n"],
             "recs": db.row(conn, "SELECT COUNT(*) n FROM recommendations WHERE status='new'")["n"],
             "m22": db.row(conn, "SELECT COUNT(*) n FROM m22_products WHERE is_active=1 AND in_scope=1")["n"],

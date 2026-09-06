@@ -66,7 +66,7 @@ def build_weekly(conn: sqlite3.Connection, days: int = 7) -> dict:
     price_changes = [brief(s) for s in by_type("competitor_price_change")][:15]
     new_products = [brief(s) for s in by_type("product_appeared", "new_kit_solution", "multi_competitor_product", "new_category")][:15]
     demand = [brief(s) for s in by_type("demand_change", "demand_anomaly", "category_growth_existing", "category_growth_gap")][:15]
-    gaps = [brief(s) for s in by_type("new_category", "multi_competitor_product", "category_growth_gap") if "отсутствует" in s["title"] or "нет у M22" in s["title"] or s["type"] == "new_category"][:15]
+    gaps = [brief(s) for s in by_type("new_category", "multi_competitor_product", "category_growth_gap") if "отсутствует" in s["title"] or "нет у M22" in s["title"] or "у M22 её нет" in s["title"] or s["type"] == "new_category"][:15]
     risks = [brief(s) for s in sigs if s["severity"] == "high"][:8] + [brief(s) for s in by_type("source_error")][:3]
     owner_decisions = [{"id": r["id"], "title": r["title"], "action": r["action"], "priority": r["priority"], "confidence": r["confidence"], "basis": r["basis"], "due": r["due_date"]}
                        for r in recs if r["priority"] == "P1" or (r["owner"] or "") == "Собственник"][:8]
