@@ -171,6 +171,8 @@ HEAD_RULES = [
 def classify_category(name: str, description: str | None = None, site_path: str | None = None) -> str | None:
     """Категория: сначала по началу названия (тип изделия), затем по ключевым словам названия, разделу сайта, описанию."""
     head = clean_text(name).lower()[:45]
+    if re.match(r"^(?:нет бренда\s+)?(?:\w+\s+){0,2}наушник", head) or head.startswith(("одноразов", "многоразов")):
+        return "disposable_headphones" if "одноразов" in head else "reusable_headphones"
     for slug, starts in HEAD_RULES:
         if head.startswith(starts):
             return slug
@@ -206,7 +208,9 @@ def detect_kind(name: str) -> str:
         return "receiver"
     if any(k in low for k in ("кейс", "докстанц", "док-станц", "сумк", "case", "dock", "зарядн", "charger")):
         return "case_charger"
-    if "наушник" in low or "headphone" in low or "earphone" in low or "чехл" in low:
+    if "чехл" in low or "накладк" in low or "амбушюр" in low:
+        return "accessory"
+    if "наушник" in low or "headphone" in low or "earphone" in low:
         return "headphones"
     if "микрофон" in low or "гарнитур" in low or "microphone" in low or "headset" in low:
         return "microphone"

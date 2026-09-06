@@ -1,0 +1,21 @@
+{% extends "base.html" %}{% import "_macros.html" as m %}
+{% block title %}Категории — M22 Product Radar{% endblock %}
+{% block content %}
+<h1>Категории: где M22 по цене и что требует внимания</h1>
+<div class="sub">Для каждой категории: наши модели, предложения конкурентов, доля предложений дешевле самой дешёвой модели M22, сигналы и действия. Цены наушников приведены к штуке, если в названии указано количество в упаковке.</div>
+<div class="card compact tbl-wrap"><table>
+<thead><tr><th>Категория</th><th>Статус</th><th class="num">Моделей M22</th><th class="num">Цены M22</th><th class="num">Продавцов</th><th class="num">Предложений (с ценой)</th><th class="num">Мин / медиана рынка</th><th class="num">Дешевле M22</th><th class="num">Сигналы</th><th class="num">Действия</th><th class="num">Закупки</th></tr></thead>
+<tbody>
+{% for c in rows %}<tr>
+  <td><a href="/categories/{{ c.slug }}" title="{{ c.verdict }}"><b>{{ c.name }}</b></a></td>
+  <td><span class="badge {{ {'ok':'sev-low','watch':'sev-medium','attention':'sev-high','gap':'sev-high','no_data':'st'}.get(c.status, 'st') }}">{{ {'ok':'всё в порядке','watch':'следить','attention':'внимание','gap':'нет у M22','no_data':'мало данных'}.get(c.status, c.status) }}</span></td>
+  <td class="num">{{ c.m22_n }}</td>
+  <td class="num small">{% if c.m22_min %}{{ c.m22_min | money }}{% if c.m22_max and c.m22_max != c.m22_min %} – {{ c.m22_max | money }}{% endif %}{% else %}—{% endif %}</td>
+  <td class="num">{{ c.sellers }}</td><td class="num">{{ c.offers }} ({{ c.priced }})</td>
+  <td class="num small">{% if c.comp_min %}{{ c.comp_min | money }} / {{ c.comp_median | money }}{% else %}—{% endif %}</td>
+  <td class="num">{% if c.cheaper_share is not none %}{{ c.cheaper_share }}%{% else %}—{% endif %}</td>
+  <td class="num">{{ c.signals }}{% if c.high %} <span class="badge sev-high">{{ c.high }}</span>{% endif %}</td>
+  <td class="num">{{ c.recs }}</td><td class="num">{{ c.tenders }}</td>
+</tr>{% endfor %}
+</tbody></table></div>
+{% endblock %}

@@ -4,8 +4,11 @@
 <div class="topbar">
   <div><h1>Что происходит на рынке экскурсионного оборудования</h1>
   <div class="sub">Данные обновлены: <b>{{ last_update | dt }}</b> · Товаров M22 в контуре: {{ counts.m22 }} · Конкурентов: {{ counts.comp }} · Предложений конкурентов с ценой: {{ counts.cp }}</div></div>
-  <div class="actions-row no-print"><form method="post" action="/analyze" class="inline"><button class="sec small">Пересчитать сигналы</button></form> <a class="btn small" href="/reports">Отчёты</a></div>
+  <div class="actions-row no-print">
+    <form method="get" class="inline filters" style="padding:4px 8px;margin:0"><label>Категория<select name="category" onchange="this.form.submit()"><option value="">все категории</option>{% for c in cat_list %}<option value="{{ c.slug }}" {% if category == c.slug %}selected{% endif %}>{{ c.name_ru }}</option>{% endfor %}</select></label></form>
+    <form method="post" action="/analyze" class="inline"><button class="sec small">Пересчитать сигналы</button></form> <a class="btn small" href="/reports">Отчёты</a></div>
 </div>
+{% if category %}<div class="note ok-note">Показаны сигналы и действия только по категории «{{ CATEGORY_NAMES.get(category, category) }}». <a href="/categories/{{ category }}">Открыть разбор категории →</a> · <a href="/">Сбросить</a></div>{% endif %}
 
 {% set top1 = top[0] if top else None %}
 <div class="q-answer">
@@ -37,11 +40,13 @@
     <tbody>{% for r in recs %}{{ m.rec_row(r) }}{% else %}<tr><td colspan="6" class="muted">Рекомендаций пока нет.</td></tr>{% endfor %}</tbody></table></div>
     <a href="/actions">Все действия →</a>
 
-    <h2>Категории: сигналы и спрос</h2>
-    <div class="card compact tbl-wrap"><table><thead><tr><th>Категория</th><th class="num">Сигналов</th><th class="num">Рост спроса</th><th class="num">Падение</th><th class="num">Запросов / точек Trends</th></tr></thead><tbody>
-      {% for c in cats %}<tr><td><a href="/signals?category={{ c.category_slug }}">{{ CATEGORY_NAMES.get(c.category_slug, c.category_slug) }}</a></td><td class="num">{{ c.n }}</td><td class="num">{{ c.up }}</td><td class="num">{{ c.down }}</td>
-        <td class="num">{{ cat_demand[c.category_slug].queries if c.category_slug in cat_demand else 0 }} / {{ cat_demand[c.category_slug].obs if c.category_slug in cat_demand else 0 }}</td></tr>{% endfor %}
+    <h2>Категории: где мы по цене</h2>
+    <div class="card compact tbl-wrap"><table><thead><tr><th>Категория</th><th>Статус</th><th class="num">M22</th><th class="num">Конкур.</th><th class="num">Дешевле M22</th><th class="num">Сигналы</th></tr></thead><tbody>
+      {% for c in cat_overview %}<tr><td><a href="/categories/{{ c.slug }}">{{ c.name }}</a></td>
+        <td><span class="badge {{ {'ok':'sev-low','watch':'sev-medium','attention':'sev-high','gap':'sev-high','no_data':'st'}.get(c.status, 'st') }}">{{ {'ok':'ок','watch':'следить','attention':'внимание','gap':'нет у M22','no_data':'мало данных'}.get(c.status, c.status) }}</span></td>
+        <td class="num">{{ c.m22_n }}</td><td class="num">{{ c.priced }}</td><td class="num">{% if c.cheaper_share is not none %}{{ c.cheaper_share }}%{% else %}—{% endif %}</td><td class="num">{{ c.signals }}</td></tr>{% endfor %}
     </tbody></table></div>
+    <a class="small" href="/categories">Все категории →</a>
   </div>
 </div>
 

@@ -16,6 +16,7 @@ from fastapi.responses import HTMLResponse, RedirectResponse, Response, Streamin
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 
+from .. import categories as catmod
 from .. import config, db, discovery, feedback, importers, matching, recommendations, reports, scheduler, seed, signals
 from .. import specs as specmod
 from ..importers import TYPE_NAMES
@@ -138,11 +139,15 @@ def _lists(conn) -> dict:
 
 # ---------------- Главная ----------------
 @app.get("/", response_class=HTMLResponse)
-def index(request: Request):
+def index(request: Request, category: str = ""):
+    cat_where = " AND s.category_slug=?" if category else ""
+    cat_params: list = [category] if category else []
     with db.session() as conn:
         sev = "CASE severity WHEN 'high' THEN 0 WHEN 'medium' THEN 1 ELSE 2 END"
-        top = db.rows(conn, SIGNAL_SQL + f" WHERE s.status IN ('new','in_research') AND s.type!='source_error' ORDER BY {sev.replace('severity', 's.severity')}, s.confidence DESC, s.created_at DESC LIMIT 8")
-        recs = db.rows(conn, "SELECT * FROM recommendations WHERE status IN ('new','accepted','in_progress') ORDER BY priority, confidence DESC LIMIT 6")
+        top = db.rows(conn, SIGNAL_SQL + f" WHERE s.status IN ('new','in_research') AND s.type!='source_error'{cat_where} ORDER BY {sev.replace('severity', 's.severity')}, s.confidence DESC, s.created_at DESC LIMIT 8", cat_params)
+        recs = db.rows(conn, "SELECT * FROM recommendations WHERE status IN ('new','accepted','in_progress')" + (" AND category_slug=?" if category else "") + " ORDER BY priority, confidence DESC LIMIT 6", cat_params)
+        cat_overview = catmod.overview(conn)
+        cat_list = db.rows(conn, "SELECT slug, name_ru FROM categories ORDER BY sort_order")
         d7, d30 = (date.today() - timedelta(days=7)).isoformat(), (date.today() - timedelta(days=30)).isoformat()
         counts = {
             "signals_7": db.row(conn, "SELECT COUNT(*) n FROM signals WHERE substr(created_at,1,10)>=? AND type!='source_error'", (d7,))["n"],
@@ -176,7 +181,7 @@ def index(request: Request):
                 if top[0]["id"] in (db.uj(r["signal_ids_json"], []) or []):
                     top_rec = r
                     break
-    return render(request, "index.html", top=top, recs=recs, top_rec=top_rec, counts=counts, cats=cats, cat_demand={c["category_slug"]: c for c in cat_demand}, price_signals=price_signals,
+    return render(request, "index.html", top=top, recs=recs, top_rec=top_rec, category=category, cat_overview=cat_overview, cat_list=cat_list, counts=counts, cats=cats, cat_demand={c["category_slug"]: c for c in cat_demand}, price_signals=price_signals,
                   new_products=new_products, gaps=gaps, hyps=hyps, bad_sources=bad_sources, bad_pages=bad_pages, runs=runs, limits=limits)
 
 
@@ -404,6 +409,23 @@ def match_review(mid: int, decision: str = Form(...), note: str = Form(""), matc
         conn.execute("UPDATE product_matches SET review_status=?, reviewer_note=?, needs_review=0, method='manual', match_type=COALESCE(NULLIF(?, ''), match_type), updated_at=datetime('now') WHERE id=?",
                      ("confirmed" if decision == "confirm" else "rejected", note, match_type, mid))
     return RedirectResponse("/matches", status_code=303)
+
+
+# ---------------- Категории ----------------
+@app.get("/categories", response_class=HTMLResponse)
+def categories_page(request: Request):
+    with db.session() as conn:
+        rows = catmod.overview(conn)
+    return render(request, "categories.html", rows=rows)
+
+
+@app.get("/categories/{slug}", response_class=HTMLResponse)
+def category_detail(request: Request, slug: str):
+    if slug not in CATEGORY_NAMES:
+        raise HTTPException(404)
+    with db.session() as conn:
+        s = catmod.summary(conn, slug)
+    return render(request, "category_detail.html", s=s)
 
 
 # ---------------- Сравнение характеристик и цен ----------------

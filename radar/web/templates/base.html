@@ -11,7 +11,7 @@
   <aside class="sidebar">
     <div class="brand">M22 Product Radar<small>рыночная разведка · v{{ app_version }}</small></div>
     <nav>
-      {% set items = [("/", "Главная"), ("/actions", "Рекомендуемые действия"), ("/signals", "Сигналы"), ("/competitors", "Конкуренты"), ("/matrix", "Матрица M22"),
+      {% set items = [("/", "Главная"), ("/actions", "Рекомендуемые действия"), ("/categories", "Категории"), ("/signals", "Сигналы"), ("/competitors", "Конкуренты"), ("/matrix", "Матрица M22"),
                       ("/demand", "Поисковый спрос"), ("/opportunities", "Новые возможности"), ("/sources", "Источники"), ("/reports", "Отчёты"), ("/settings", "Настройки")] %}
       {% for href, label in items %}
         <a href="{{ href }}" class="{% if (href == '/' and path == '/') or (href != '/' and path.startswith(href)) %}active{% endif %}">{{ label }}</a>

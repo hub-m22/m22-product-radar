@@ -1,0 +1,51 @@
+{% extends "base.html" %}{% import "_macros.html" as m %}
+{% block title %}{{ s.name }} — категории{% endblock %}
+{% block content %}
+<a href="/categories">← Категории</a>
+<h1>{{ s.name }}</h1>
+<div class="note {% if s.status == 'ok' %}ok-note{% endif %}"><b>{{ {'ok':'Всё в порядке','watch':'Следить','attention':'Требует внимания','gap':'Категории нет у M22','no_data':'Мало данных'}.get(s.status, s.status) }}.</b> {{ s.verdict }}</div>
+<div class="grid grid-4">
+  <div class="card kpi"><span class="v">{{ s.m22|length }}</span><span class="l">моделей M22</span></div>
+  <div class="card kpi"><span class="v">{{ s.sellers|length }}</span><span class="l">продавцов у конкурентов</span><span class="d">{{ s.offers|length }} предложений, {{ s.priced|length }} с ценой</span></div>
+  <div class="card kpi"><span class="v">{{ s.signals|length }}</span><span class="l">сигналов в категории</span><span class="d">{{ s.recs|length }} рекомендаций</span></div>
+  <div class="card kpi"><span class="v">{{ s.tenders|length }}</span><span class="l">закупок в ЕИС</span></div>
+</div>
+
+<h2>Ценовое положение M22 по типам изделий</h2>
+{% for p in s.positions %}
+<div class="card" style="margin-bottom:10px">
+  <b>{{ {'system':'Системы / комплекты','receiver':'Приёмники','transmitter':'Передатчики','headphones':'Наушники','microphone':'Микрофоны','case_charger':'Кейсы и зарядка','audioguide':'Аудиогиды','kit':'Готовые решения','accessory':'Аксессуары','rental':'Аренда','other':'Прочее'}.get(p.kind, p.kind) }}</b>:
+  {% if p.kind in ('system','kit') %}<span class="small muted">(цена за одно место в комплекте: цена / вместимость)</span> {% endif %}минимум M22 <b>{{ p.m22_min | money }}</b> ({{ p.m22_n }} моделей) · конкуренты: минимум {{ p.min | money }}, медиана {{ p.median | money }} ({{ p.comp_n }} предложений) ·
+  дешевле M22: <b>{{ p.cheaper_share }}%</b> предложений · M22 к минимуму рынка: {{ '%+d' % p.gap_min_pct }}%, к медиане: {{ '%+d' % p.gap_median_pct }}%
+  {% if p.cheaper %}<div class="small" style="margin-top:6px">Дешевле M22: {% for o in p.cheaper %}<a href="{{ o.url }}" target="_blank" rel="noopener">{{ o.seller[:28] }} — {{ o.unit_price | money }}{% if o.pack_qty %} за шт (уп. {{ o.pack_qty }}){% endif %}</a>{% if not loop.last %}; {% endif %}{% endfor %}</div>{% endif %}
+</div>
+{% else %}<div class="card muted">Нет пар «модель M22 — предложения конкурентов того же типа» с ценами.</div>{% endfor %}
+
+<div class="grid grid-2" style="margin-top:14px">
+  <div><h2>Модели M22 ({{ s.m22|length }})</h2>
+    <div class="card compact tbl-wrap"><table><thead><tr><th>Модель</th><th class="num">Цена</th><th class="num">За ед. / место</th><th></th></tr></thead><tbody>
+    {% for p in s.m22 %}<tr><td><a href="/matrix/{{ p.id }}">{{ p.name[:70] }}</a> <span class="small muted">{{ p.site }}</span></td><td class="num">{{ p.price | money }}</td><td class="num">{{ p.unit_price | money }}</td><td><a class="small" href="/compare?product={{ p.id }}">сравнить</a></td></tr>{% else %}<tr><td colspan="4" class="muted">У M22 нет товаров в категории.</td></tr>{% endfor %}
+    </tbody></table></div></div>
+  <div><h2>Предложения конкурентов ({{ s.offers|length }})</h2>
+    <div class="card compact tbl-wrap"><table><thead><tr><th></th><th>Продавец / товар</th><th class="num">Цена</th><th class="num">За ед.</th><th>Сопоставлено с M22</th><th>Снято</th></tr></thead><tbody>
+    {% for o in s.offers %}<tr>
+      <td>{% if o.image_url %}<img src="{{ o.image_url }}" alt="" referrerpolicy="no-referrer" width="40" height="40" style="width:40px;height:40px;object-fit:contain;border:1px solid var(--line);border-radius:4px">{% endif %}</td>
+      <td><a href="/competitors/{{ o.competitor_id }}"><b>{{ o.seller[:30] }}</b></a><br><a href="{{ o.url }}" target="_blank" rel="noopener">{{ o.name[:70] }} ↗</a></td>
+      <td class="num">{{ o.price | money }}{% if o.currency != 'RUB' %} {{ o.currency }}{% endif %}</td>
+      <td class="num">{{ o.unit_price | money }}{% if o.pack_qty %}<div class="small muted">{{ 'мест' if o.kind in ('system','kit') else 'уп.' }} {{ o.pack_qty }}</div>{% endif %}</td>
+      <td class="small">{{ (o.matched_m22 or '—')[:40] }}{% if o.match_type %}<div class="muted">{{ MATCH_NAMES.get(o.match_type, o.match_type) }}</div>{% endif %}</td>
+      <td class="small nowrap">{{ o.fetched_at | dt }}</td></tr>{% else %}<tr><td colspan="6" class="muted">Предложений конкурентов нет — добавьте страницы в разделе «Конкуренты».</td></tr>{% endfor %}
+    </tbody></table></div>
+    {% if s.no_price %}<div class="small muted" style="margin-top:6px">Без цены на странице: {{ s.no_price|length }} предложений (цена по запросу или скрыта скриптом).</div>{% endif %}
+  </div>
+</div>
+
+<div class="grid grid-2" style="margin-top:14px">
+  <div><h2>Сигналы категории</h2>{% for x in s.signals %}{{ m.signal_card(x, compact=True) }}{% else %}<div class="card muted">Сигналов нет.</div>{% endfor %}</div>
+  <div><h2>Рекомендуемые действия</h2>
+    <div class="card compact tbl-wrap"><table><thead><tr><th>Приоритет</th><th>Действие</th><th>Основание</th><th>Уверенность</th><th>Кто / срок</th><th>Статус</th></tr></thead><tbody>{% for r in s.recs %}{{ m.rec_row(r) }}{% else %}<tr><td colspan="6" class="muted">Действий по категории нет.</td></tr>{% endfor %}</tbody></table></div>
+    {% if s.hyps %}<h2>Гипотезы</h2>{% for h in s.hyps %}<div class="small">💡 <a href="/opportunities/{{ h.id }}">{{ h.title }}</a> {{ m.status(h.decision_status) }}</div>{% endfor %}{% endif %}
+    {% if s.tenders %}<h2>Закупки (ЕИС)</h2><div class="card compact"><table><tbody>{% for t in s.tenders %}<tr><td class="small nowrap">{{ t.observed_date or '' }}</td><td class="small">{% if t.url %}<a href="{{ t.url }}" target="_blank" rel="noopener">{{ t.title[:80] }}</a>{% else %}{{ t.title[:80] }}{% endif %}<div class="muted">{{ (t.party or '')[:60] }}</div></td><td class="num small">{{ t.price | money }}</td></tr>{% endfor %}</tbody></table></div>{% endif %}
+  </div>
+</div>
+{% endblock %}
