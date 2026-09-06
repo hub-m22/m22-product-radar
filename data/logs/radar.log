@@ -234,3 +234,17 @@
 2026-09-06 19:06:35,073 INFO apscheduler.scheduler: Scheduler started
 2026-09-06 19:06:35,073 INFO radar.scheduler: scheduler started
 2026-09-06 19:07:27,160 INFO radar.signals: signals: {'competitor_price_change': 3, 'appear_disappear': 0, 'new_category': 0, 'new_competitor': 0, 'multi_competitor': 0, 'price_vs_market': 0, 'demand': 0, 'new_use_case': 0, 'cross_site': 0, 'source_errors': 0}
+2026-09-06 19:07:30,811 INFO apscheduler.scheduler: Adding job tentatively -- it will be properly scheduled when the scheduler starts
+2026-09-06 19:07:30,812 INFO apscheduler.scheduler: Adding job tentatively -- it will be properly scheduled when the scheduler starts
+2026-09-06 19:07:30,812 INFO apscheduler.scheduler: Adding job tentatively -- it will be properly scheduled when the scheduler starts
+2026-09-06 19:07:30,812 INFO apscheduler.scheduler: Adding job tentatively -- it will be properly scheduled when the scheduler starts
+2026-09-06 19:07:30,814 INFO apscheduler.scheduler: Added job "_run_job" to job store "default"
+2026-09-06 19:07:30,815 INFO apscheduler.scheduler: Added job "_run_job" to job store "default"
+2026-09-06 19:07:30,815 INFO apscheduler.scheduler: Added job "_run_job" to job store "default"
+2026-09-06 19:07:30,815 INFO apscheduler.scheduler: Added job "_run_job" to job store "default"
+2026-09-06 19:07:30,815 INFO apscheduler.scheduler: Scheduler started
+2026-09-06 19:07:30,815 INFO radar.scheduler: scheduler started
+2026-09-06 19:08:28,802 WARNING radar.http: fetch error (1/3) https://1okey.ru/chem-otlichayutsya-naushniki-dlya-ekskursij-ot-obychnyh: HTTPSConnectionPool(host='1okey.ru', port=443): Max retries exceeded with url: /chem-otlichayutsya-naushniki-dlya-ekskursij-ot-obychnyh (Caused by SSLError(SSLCertVerificationError(1, "[SSL: CERTIFICATE_VERIFY_FAILED] certificate verify failed: Hostname mismatch, certificate is not valid for '1okey.ru'. (_ssl.c:1010)")))
+2026-09-06 19:08:31,283 WARNING radar.http: fetch error (2/3) https://1okey.ru/chem-otlichayutsya-naushniki-dlya-ekskursij-ot-obychnyh: HTTPSConnectionPool(host='1okey.ru', port=443): Max retries exceeded with url: /chem-otlichayutsya-naushniki-dlya-ekskursij-ot-obychnyh (Caused by SSLError(SSLCertVerificationError(1, "[SSL: CERTIFICATE_VERIFY_FAILED] certificate verify failed: Hostname mismatch, certificate is not valid for '1okey.ru'. (_ssl.c:1010)")))
+2026-09-06 19:08:35,753 WARNING radar.http: fetch error (3/3) https://1okey.ru/chem-otlichayutsya-naushniki-dlya-ekskursij-ot-obychnyh: HTTPSConnectionPool(host='1okey.ru', port=443): Max retries exceeded with url: /chem-otlichayutsya-naushniki-dlya-ekskursij-ot-obychnyh (Caused by SSLError(SSLCertVerificationError(1, "[SSL: CERTIFICATE_VERIFY_FAILED] certificate verify failed: Hostname mismatch, certificate is not valid for '1okey.ru'. (_ssl.c:1010)")))
+2026-09-06 19:09:24,566 INFO radar.signals: signals: {'competitor_price_change': 1, 'appear_disappear': 4, 'new_category': 0, 'new_competitor': 0, 'multi_competitor': 0, 'price_vs_market': 0, 'demand': 0, 'new_use_case': 1, 'cross_site': 0, 'source_errors': 0}
