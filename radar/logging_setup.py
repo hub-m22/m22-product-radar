@@ -14,9 +14,10 @@ def setup_logging(level: str | None = None) -> None:
         return
     root.setLevel(level or config.LOG_LEVEL)
     fmt = logging.Formatter("%(asctime)s %(levelname)s %(name)s: %(message)s")
-    sh = logging.StreamHandler(sys.stdout)
-    sh.setFormatter(fmt)
-    root.addHandler(sh)
+    if sys.stdout is not None:
+        sh = logging.StreamHandler(sys.stdout)
+        sh.setFormatter(fmt)
+        root.addHandler(sh)
     config.LOG_DIR.mkdir(parents=True, exist_ok=True)
     fh = logging.handlers.RotatingFileHandler(config.LOG_DIR / "radar.log", maxBytes=5_000_000, backupCount=5, encoding="utf-8")
     fh.setFormatter(fmt)
