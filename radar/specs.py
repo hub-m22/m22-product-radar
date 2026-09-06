@@ -59,7 +59,7 @@ def normalize(name: str, description: str | None, specs_json: str | None, price:
     if b and 1 <= b <= 200:
         out["battery_h"] = b
     # диапазон
-    if re.search(r"2[.,]4\s*(?:ггц|ghz|g\b)", low):
+    if re.search(r"2[.,]4\s*(?:ггц|ghz|g\b)", low) or re.search(r"\b2[34]\d\d\s*[-–]\s*2[45]\d\d\s*(?:мгц|mhz)", low):
         out["freq_band"] = "2.4 ГГц"
     elif "uhf" in low or re.search(r"\b(4\d\d|5\d\d|8\d\d|9\d\d)\s*[-–]\s*\d{3}\s*(?:мгц|mhz)", low) or re.search(r"\b(4\d\d|8\d\d|9\d\d)\s*(?:мгц|mhz)", low):
         out["freq_band"] = "UHF"
@@ -67,7 +67,7 @@ def normalize(name: str, description: str | None, specs_json: str | None, price:
         out["freq_band"] = "VHF"
     elif re.search(r"\bfm\b|фм[- ]диапазон|8[78][.,]\d\s*[-–]\s*108", low):
         out["freq_band"] = "FM"
-    elif re.search(r"инфракрасн|\bir\b|ик[- ]", low):
+    elif re.search(r"инфракрасн|\bir\b|\bик[- ]", low):
         out["freq_band"] = "ИК"
     # вес приёмника
     w = _num(r"(?:вес|масса|weight)\D{0,30}?(\d{2,3})\s*(?:г\b|гр\b|g\b|грамм)", text)
