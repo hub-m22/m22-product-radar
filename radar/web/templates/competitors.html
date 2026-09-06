@@ -2,7 +2,7 @@
 {% block title %}Конкуренты — M22 Product Radar{% endblock %}
 {% block content %}
 <div class="topbar"><div><h1>Конкуренты</h1><div class="sub">{{ comps|length }} компаний в реестре. {% if review %}<a href="/matches">Сопоставлений на ручной проверке: {{ review }}</a>{% endif %}</div></div>
-<div class="actions-row"><a class="btn sec small" href="/matches?review=0">Все сопоставления</a> <a class="btn sec small" href="/export/competitors.xlsx">XLSX реестр</a> <a class="btn sec small" href="/export/competitor_products.xlsx">XLSX товары</a> <a class="btn sec small" href="/export/price_history.csv">CSV история цен</a></div></div>
+<div class="actions-row"><a class="btn small" href="/competitors/compare">Сравнительная таблица</a> <a class="btn sec small" href="/matches?review=0">Все сопоставления</a> <a class="btn sec small" href="/export/competitors.xlsx">XLSX реестр</a> <a class="btn sec small" href="/export/competitor_products.xlsx">XLSX товары</a> <a class="btn sec small" href="/export/price_history.csv">CSV история цен</a></div></div>
 {% set types = TYPE_NAMES.items() | list %}{% set show_product = False %}{% set show_competitor = False %}{% set show_conf = False %}
 {% set severities = [("A","A — прямые ключевые"),("B","B — вторичные"),("C","C — косвенные")] %}{% set sev_label = "Категория конкурента" %}
 {% include "_filters.html" %}
@@ -15,12 +15,12 @@
   <td class="small">{{ c.role }}</td>
   <td class="num">{{ c.products }}</td><td class="num">{{ c.priced }}</td>
   <td class="small">{% if c.stock_pct is not none %}<b>{{ c.stock_pct }}%</b> <span class="muted">({{ c.in_stock }} из {{ c.stock_known }})</span>{% if (c.products or 0) - c.stock_known %}<div class="muted">у {{ (c.products or 0) - c.stock_known }} наличие не указано</div>{% endif %}{% else %}<span class="muted">сайт не указывает наличие</span>{% endif %}</td>
-  <td class="{% if c.flags.rental %}better{% endif %}">{{ {'yes':'да','no':'нет'}.get(c.rental_available, '—') }}</td>
-  <td class="{% if c.flags.warranty_years %}better{% elif c.flags.warranty_years is sameas false %}worse{% endif %}">{% if c.warranty_years %}{{ c.warranty_years | round(1) }} г.{% else %}—{% endif %}</td>
-  <td class="{% if c.flags.service_center %}better{% endif %}">{{ {'yes':'да','no':'нет'}.get(c.service_center, '—') }}</td>
-  <td class="{% if c.flags.replacement_fund %}better{% endif %}">{{ {'yes':'да','no':'нет'}.get(c.replacement_fund, '—') }}</td>
-  <td class="{% if c.flags.free_delivery %}better{% endif %}">{{ {'yes':'да','no':'нет'}.get(c.free_delivery, '—') }}</td>
-  <td class="small">{{ (c.usp or '')[:140] }}</td>
+  <td class="{% if c.flags.rental %}better{% endif %}">{{ {'yes':'да','no':'нет'}.get(c.rental_available, 'нет данных') }}</td>
+  <td class="{% if c.flags.warranty_years %}better{% elif c.flags.warranty_years is sameas false %}worse{% endif %}">{% if c.warranty_years %}{{ c.warranty_years | round(1) }} г.{% elif c.profile_checked_at %}<span class="muted">не найдено на сайте</span>{% else %}<span class="muted">не проверялось</span>{% endif %}</td>
+  <td class="{% if c.flags.service_center %}better{% endif %}">{{ {'yes':'да','no':'нет'}.get(c.service_center, 'не найдено' if c.profile_checked_at else 'не проверялось') }}</td>
+  <td class="{% if c.flags.replacement_fund %}better{% endif %}">{{ {'yes':'да','no':'нет'}.get(c.replacement_fund, 'не найдено' if c.profile_checked_at else 'не проверялось') }}</td>
+  <td class="{% if c.flags.free_delivery %}better{% endif %}">{{ {'yes':'да','no':'нет'}.get(c.free_delivery, 'не найдено' if c.profile_checked_at else 'не проверялось') }}</td>
+  <td class="small" style="min-width:320px;white-space:normal">{{ c.usp or 'нет данных' }}</td>
   <td class="num">{{ c.pages }}{% if c.failing %} <span class="badge sev-medium" title="страниц с ошибками">{{ c.failing }}</span>{% endif %}</td>
   <td class="small nowrap">{{ c.last_checked | dt }}{% if c.profile_checked_at %}<div class="muted">профиль {{ c.profile_checked_at[:10] }}</div>{% endif %}</td>
 </tr>{% endfor %}</tbody></table></div>

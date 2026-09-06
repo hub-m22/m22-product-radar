@@ -348,6 +348,27 @@ def competitor_add(name: str = Form(...), website: str = Form(...), types: list[
     return RedirectResponse(f"/competitors/{cid}", status_code=303)
 
 
+@app.get("/competitors/compare", response_class=HTMLResponse)
+def competitors_compare(request: Request, tiers: str = "A"):
+    ts = tuple(t for t in tiers.split(",") if t in ("A", "B", "C")) or ("A",)
+    with db.session() as conn:
+        table = profmod.comparison_table(conn, ts)
+    return render(request, "competitors_compare.html", table=table, tiers=ts, extra=profmod.EXTRA_FIELDS)
+
+
+@app.post("/competitors/profile-scan-all")
+def competitors_profile_scan_all(tier: str = Form("A")):
+    def _job(conn):
+        ids = [r["id"] for r in db.rows(conn, "SELECT id FROM competitors WHERE is_active=1 AND tier=? AND website LIKE 'http%'", (tier,))]
+        for cid in ids:
+            profmod.scan_competitor(conn, cid, fetch=True)
+        return {"scanned": len(ids)}
+    import threading
+
+    threading.Thread(target=lambda: scheduler._run_job(f"profile_scan_{tier}", _job), daemon=True).start()
+    return RedirectResponse("/competitors/compare", status_code=303)
+
+
 @app.get("/competitors/{cid}", response_class=HTMLResponse)
 def competitor_detail(request: Request, cid: int):
     with db.session() as conn:
@@ -425,11 +446,19 @@ def competitor_profile_scan(cid: int):
 
 
 @app.post("/settings/m22-profile")
-def m22_profile_update(warranty_years: str = Form(""), service_center: str = Form(""), replacement_fund: str = Form(""), free_delivery: str = Form(""), rental: str = Form(""), usp: str = Form(""), rescan: str = Form("")):
+async def m22_profile_update(request: Request, warranty_years: str = Form(""), service_center: str = Form(""), replacement_fund: str = Form(""), free_delivery: str = Form(""), rental: str = Form(""), usp: str = Form(""), rescan: str = Form("")):
+    form = await request.form()
     with db.session() as conn:
         if rescan:
             profmod.scan_m22(conn, fetch=True)
         manual = {}
+        for k, _n in profmod.EXTRA_FIELDS:
+            v = (form.get(k) or "").strip()
+            if k in ("years_on_market", "clients_count"):
+                if v.isdigit():
+                    manual[k] = int(v)
+            elif v in ("yes", "no"):
+                manual[k] = v
         if warranty_years.strip():
             try:
                 manual["warranty_years"] = float(warranty_years.replace(",", "."))
@@ -920,7 +949,8 @@ def settings_page(request: Request):
     with db.session() as conn:
         m22p = profmod.m22_profile(conn)
         m22p_auto = db.uj(db.get_setting(conn, "m22_profile"), {}) or {}
-    return render(request, "settings.html", settings=settings, cats=cats, thresholds=thresholds, counts=counts, db_path=str(config.DB_PATH), backup_dir=str(config.BACKUP_DIR),
+        m22_manual = db.uj(db.get_setting(conn, "m22_profile_manual"), {}) or {}
+    return render(request, "settings.html", settings=settings, cats=cats, thresholds=thresholds, counts=counts, db_path=str(config.DB_PATH), backup_dir=str(config.BACKUP_DIR), extra_fields=profmod.EXTRA_FIELDS, m22_manual=m22_manual,
                   fb_stats=fb_stats, fb_recent=fb_recent, min_checks=feedback.MIN_CHECKS, m22p=m22p, m22p_auto=m22p_auto,
                   schedule={"M22 (час)": config.M22_CRON_HOUR, "Конкуренты (час)": config.COMPETITORS_CRON_HOUR, "Спрос (день недели)": config.TRENDS_CRON_DOW, "Отчёт (день недели)": config.REPORT_CRON_DOW, "Включён": config.SCHEDULE_ENABLED})
 

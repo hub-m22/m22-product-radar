@@ -24,6 +24,9 @@
       <label>Подменный фонд<select name="replacement_fund"><option value="">не указано</option><option value="yes" {% if m22p.replacement_fund == 'yes' %}selected{% endif %}>да</option><option value="no" {% if m22p.replacement_fund == 'no' %}selected{% endif %}>нет</option></select></label>
       <label>Бесплатная доставка<select name="free_delivery"><option value="">не указано</option><option value="yes" {% if m22p.free_delivery == 'yes' %}selected{% endif %}>да</option><option value="no" {% if m22p.free_delivery == 'no' %}selected{% endif %}>нет</option></select></label>
       <label class="full">УТП M22<input type="text" name="usp" value="{{ m22p.usp or '' }}"></label>
+      {% for k, n in extra_fields %}{% set mv = m22_manual.get(k) %}{% set av = (m22p_auto.get(k) or {}).get('value') if m22p_auto else none %}
+      <label>{{ n }}{% if k in ('years_on_market','clients_count') %}<input type="text" name="{{ k }}" value="{{ mv if mv is not none else (av or '') }}">{% else %}<select name="{{ k }}"><option value="">{% if av == 'yes' %}найдено на сайте: да{% else %}нет данных{% endif %}</option><option value="yes" {% if mv == 'yes' %}selected{% endif %}>да</option><option value="no" {% if mv == 'no' %}selected{% endif %}>нет</option></select>{% endif %}</label>
+      {% endfor %}
       <div class="full actions-row"><button type="submit" class="small">Сохранить</button> <button type="submit" name="rescan" value="1" class="sec small">Пересканировать m22.ru и radiosync.ru</button></div>
     </form>
     {% if m22p_auto %}<p class="small muted">Автоматически найдено на сайтах M22: {% for k, v in m22p_auto.items() if not k.startswith('_') %}{{ k }} = {{ v.value }}; {% endfor %}</p>{% endif %}

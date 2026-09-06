@@ -31,7 +31,7 @@
     {% for o in s.offers %}<tr>
       <td>{% if o.image_url %}<img src="{{ o.image_url }}" alt="" referrerpolicy="no-referrer" width="40" height="40" style="width:40px;height:40px;object-fit:contain;border:1px solid var(--line);border-radius:4px">{% endif %}</td>
       <td><a href="/competitors/{{ o.competitor_id }}"><b>{{ o.seller[:30] }}</b></a><br><a href="{{ o.url }}" target="_blank" rel="noopener">{{ o.name[:70] }} ↗</a></td>
-      <td class="num">{{ o.price | money }}{% if o.currency != 'RUB' %} {{ o.currency }}{% endif %}</td>
+      <td class="num">{% if o.price %}{{ o.price | money }}{% if o.currency != 'RUB' %} {{ o.currency }}{% endif %}{% else %}<span class="muted">цена по запросу</span>{% endif %}<div class="small muted">{{ {'InStock':'в наличии','OutOfStock':'нет в наличии','PreOrder':'предзаказ'}.get(o.availability, 'наличие не указано') }}</div></td>
       <td class="num">{{ o.unit_price | money }}{% if o.pack_qty %}<div class="small muted">{{ 'мест' if o.kind in ('system','kit') else 'уп.' }} {{ o.pack_qty }}</div>{% endif %}</td>
       <td class="small">{{ (o.matched_m22 or '—')[:40] }}{% if o.match_type %}<div class="muted">{{ MATCH_NAMES.get(o.match_type, o.match_type) }}</div>{% endif %}</td>
       <td class="small nowrap">{{ o.fetched_at | dt }}</td></tr>{% else %}<tr><td colspan="6" class="muted">Предложений конкурентов нет — добавьте страницы в разделе «Конкуренты».</td></tr>{% endfor %}

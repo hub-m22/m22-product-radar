@@ -18,7 +18,7 @@
   <tbody>
   {% for field, label in fields %}<tr><td><b>{{ label }}</b></td>
     {% for c in cols %}{% set v = c.norm.get(field) %}<td class="{% if field in ('price','range_m','channels','battery_h','weight_g','capacity') %}num{% endif %}" {% if v is not none and best.get(field) is not none and v == best.get(field) and v is not sameas true and v is not sameas false %}style="font-weight:700;color:var(--low)"{% endif %}>
-      {% if v is none %}<span class="muted">—</span>{% elif field == 'price' %}{{ v | money }}{% elif v is sameas true %}да{% elif v is sameas false %}<span class="muted">нет / не указано</span>{% else %}{{ v }}{% endif %}</td>{% endfor %}
+      {% if v is none %}<span class="muted">нет данных</span>{% elif field == 'price' %}{{ v | money }}{% elif v is sameas true %}да{% elif v is sameas false %}<span class="muted">не указано</span>{% else %}{{ v }}{% endif %}</td>{% endfor %}
   </tr>{% endfor %}
   </tbody>
 </table></div>

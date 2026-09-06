@@ -53,8 +53,8 @@
   <td>{% if p.image_url %}<img src="{{ p.image_url }}" alt="" referrerpolicy="no-referrer" width="36" height="36" style="width:36px;height:36px;object-fit:contain;border:1px solid var(--line);border-radius:4px">{% endif %}</td>
   <td><a href="{{ p.url }}" target="_blank" rel="noopener">{{ p.name[:70] }}</a>{% if not p.is_active %} <span class="badge sev-high">исчез</span>{% endif %}</td>
   <td class="small">{{ CATEGORY_NAMES.get(p.category_slug, p.category_slug or '—') }}</td><td class="small">{{ p.model_key or '—' }}</td>
-  <td class="num">{{ p.price | money }}{% if p.currency != 'RUB' %} {{ p.currency }}{% endif %}</td>
-  {% for k, n in cols %}{% set v = p.norm.get(k) %}<td class="num small">{% if v is none %}<span class="muted">—</span>{% elif v is sameas true %}да{% elif v is sameas false %}<span class="muted">нет</span>{% else %}{{ v }}{% endif %}</td>{% endfor %}
+  <td class="num">{% if p.price %}{{ p.price | money }}{% if p.currency != 'RUB' %} {{ p.currency }}{% endif %}{% else %}<span class="muted">цена по запросу</span>{% endif %}<div class="small muted">{{ {'InStock':'в наличии','OutOfStock':'нет в наличии','PreOrder':'предзаказ'}.get(p.availability, 'наличие не указано') }}</div></td>
+  {% for k, n in cols %}{% set v = p.norm.get(k) %}<td class="num small">{% if v is none %}<span class="muted">нет данных</span>{% elif v is sameas true %}да{% elif v is sameas false %}<span class="muted">не указано</span>{% else %}{{ v }}{% endif %}</td>{% endfor %}
   <td class="small">{{ p.matches or '—' }}</td><td class="small nowrap">{{ p.fetched_at | dt }}<div class="muted">{{ p.obs }} замер.</div></td></tr>{% endfor %}
 </tbody></table></div>
 <p><a class="btn sec small" href="/competitor-matrix?competitor={{ c.id }}">Открыть в матрице конкурентов</a></p>

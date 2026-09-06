@@ -1,5 +1,18 @@
 // Небольшие удобства интерфейса: автосабмит фильтров, подтверждение отклонения, спарклайны.
 document.addEventListener('DOMContentLoaded', function () {
+  // перетаскивание границы заголовка меняет ширину колонки
+  document.querySelectorAll('table').forEach(function (table) {
+    table.querySelectorAll('thead th').forEach(function (th) {
+      var grip = document.createElement('span'); grip.className = 'col-grip'; th.appendChild(grip);
+      var startX, startW;
+      grip.addEventListener('mousedown', function (e) {
+        startX = e.pageX; startW = th.offsetWidth; e.preventDefault();
+        function move(ev) { th.style.minWidth = th.style.width = Math.max(40, startW + ev.pageX - startX) + 'px'; }
+        function up() { document.removeEventListener('mousemove', move); document.removeEventListener('mouseup', up); }
+        document.addEventListener('mousemove', move); document.addEventListener('mouseup', up);
+      });
+    });
+  });
   document.querySelectorAll('form.filters select').forEach(function (el) {
     el.addEventListener('change', function () { el.form.submit(); });
   });

@@ -1,0 +1,30 @@
+{% extends "base.html" %}{% import "_macros.html" as m %}
+{% block title %}Сравнительная таблица конкурентов — M22 Product Radar{% endblock %}
+{% block content %}
+<a href="/competitors">← Конкуренты</a>
+<div class="topbar"><div><h1>Сравнительная таблица конкурентов</h1>
+<div class="sub">Признаки извлечены с сайтов автоматически (наведите на ячейку — фрагмент текста и ссылка) или заданы вручную в карточке конкурента. Зелёная ячейка — у конкурента есть то, чего нет у M22 (или показатель выше). «Нет данных» — на проверенных страницах признак не найден; это не значит, что его нет.</div></div>
+<div class="actions-row">
+  <div class="tabs" style="margin:0">{% for t, n in [("A","A"),("A,B","A + B"),("A,B,C","все")] %}<a href="/competitors/compare?tiers={{ t }}" class="{% if tiers | join(',') == t %}active{% endif %}">{{ n }}</a>{% endfor %}</div>
+  <form method="post" action="/competitors/profile-scan-all" class="inline"><input type="hidden" name="tier" value="A"><button class="sec small">Пересканировать сайты категории A</button></form>
+</div></div>
+<div class="card compact tbl-wrap"><table style="min-width:{{ 260 + table.columns|length * 150 }}px">
+<thead><tr><th style="min-width:230px">Признак</th>{% for c in table.columns %}<th style="min-width:140px;{% if c.is_m22 %}background:#e8f0fc{% endif %}">
+  {% if c.is_m22 %}<b>M22</b>{% else %}<a href="/competitors/{{ c.id }}"><b>{{ c.name[:34] }}</b></a><div class="small muted">кат. {{ c.tier }} · {{ c.role[:40] }}</div>{% endif %}</th>{% endfor %}</tr></thead>
+<tbody>
+<tr><td><b>Товаров в матрице</b></td>{% for c in table.columns %}<td class="num">{{ c.products }}{% if not c.is_m22 %}<span class="small muted"> ({{ c.priced }} с ценой)</span>{% endif %}</td>{% endfor %}</tr>
+<tr><td><b>Категорий товаров</b></td>{% for c in table.columns %}<td class="num">{{ c.categories }}</td>{% endfor %}</tr>
+<tr><td><b>Доля товаров в наличии</b></td>{% for c in table.columns %}<td class="num">{% if c.stock is not none %}{{ c.stock }}%{% else %}<span class="muted">сайт не указывает</span>{% endif %}</td>{% endfor %}</tr>
+{% for key, label, kind in table.rows %}
+<tr><td><b>{{ label }}</b></td>
+{% for c in table.columns %}{% set v = c.vals.get(key) %}{% set ev = c.evidence.get(key) or {} %}
+<td class="{% if not c.is_m22 and c.better.get(key) %}better{% elif not c.is_m22 and c.better.get(key) is sameas false and kind == 'num' %}worse{% endif %}" title="{{ (ev.snippet or '') | replace('\"', '') }}{% if ev.url %} — {{ ev.url }}{% endif %}">
+  {% if v is none %}<span class="muted">нет данных</span>{% elif kind == 'num' %}{{ v | int if v == (v | int) else v }}{% elif v == 'yes' %}да{% elif v == 'no' %}нет{% else %}{{ v }}{% endif %}
+  {% if ev.url and v is not none %}<a class="small" href="{{ ev.url }}" target="_blank" rel="noopener" title="источник">↗</a>{% endif %}
+</td>{% endfor %}</tr>
+{% endfor %}
+<tr><td><b>УТП (с сайта)</b></td>{% for c in table.columns %}<td class="small" style="white-space:normal;min-width:180px">{{ c.usp or 'нет данных' }}</td>{% endfor %}</tr>
+<tr><td><b>Сайт проверен</b></td>{% for c in table.columns %}<td class="small muted">{% if c.is_m22 %}—{% else %}{{ c.checked or 'ещё не сканировался' }}{% endif %}</td>{% endfor %}</tr>
+</tbody></table></div>
+<p class="small muted">Границы колонок можно перетаскивать мышью. Эталонные значения M22 задаются в «Настройках» → «Сервисный профиль M22».</p>
+{% endblock %}

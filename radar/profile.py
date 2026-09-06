@@ -18,8 +18,31 @@ from . import config, db, http, normalize
 
 log = logging.getLogger(__name__)
 
-GUESS_PATHS = ["/", "/delivery", "/dostavka", "/dostavka-i-oplata", "/garantiya", "/garantii", "/warranty", "/service", "/servis", "/about", "/o-kompanii", "/rent", "/arenda", "/support", "/faq"]
+GUESS_PATHS = ["/", "/delivery", "/dostavka", "/dostavka-i-oplata", "/garantiya", "/garantii", "/warranty", "/service", "/servis", "/about", "/o-kompanii", "/rent", "/arenda", "/support", "/faq",
+               "/uslugi", "/services", "/o-nas", "/company", "/kontakty", "/contacts", "/test-drive", "/testdrive", "/montazh", "/oplata", "/payment", "/tender", "/tendery", "/lizing", "/clients", "/klienty", "/otzyvy"]
 FIELDS = [("warranty_years", "Гарантия, лет"), ("service_center", "Сервисный центр"), ("replacement_fund", "Подменный фонд"), ("rental", "Аренда"), ("free_delivery", "Бесплатная доставка"), ("usp", "УТП")]
+# расширенные признаки для сравнительной таблицы (yes / число / текст); хранятся в profile_json
+EXTRA_FIELDS = [("test_drive", "Бесплатный тест-драйв / демо"), ("installation", "Монтаж / настройка на объекте"), ("event_support", "Техническое сопровождение мероприятий"),
+                ("warehouse", "Собственный склад / наличие"), ("production", "Собственное производство"), ("branding", "Брендирование / кастомизация"), ("training", "Обучение персонала"),
+                ("tender", "Работа по 44-ФЗ / 223-ФЗ"), ("leasing", "Лизинг / рассрочка"), ("showroom", "Шоурум / демозал"), ("delivery_russia", "Доставка по всей России"),
+                ("support_247", "Поддержка 24/7"), ("years_on_market", "Лет на рынке"), ("clients_count", "Клиентов / проектов (заявлено)"), ("multilang", "Многоязычные / переводческие решения")]
+EXTRA_RX = {
+    "test_drive": re.compile(r"(тест-?драйв|бесплатн\w+\s+(?:тест|проб\w+|демонстрац\w+)|попробуйте\s+бесплатно|демо-?комплект|на\s+пробу)", re.I),
+    "installation": re.compile(r"(монтаж\w*|установк\w+\s+(?:и\s+)?настройк\w+|пуско-?наладк\w+|настройк\w+\s+на\s+объекте|инсталляц\w+)", re.I),
+    "event_support": re.compile(r"(техническ\w+\s+сопровожден\w+\s+мероприят\w+|сопровожден\w+\s+(?:на\s+)?мероприят\w+|инженер\w*\s+на\s+мероприят\w+|техник\w*\s+на\s+площадк\w+|под\s+ключ)", re.I),
+    "warehouse": re.compile(r"(собственн\w+\s+склад\w*|со\s+склада\s+в\s+\w+|в\s+наличии\s+на\s+складе|отгрузка\s+со\s+склада)", re.I),
+    "production": re.compile(r"(собственн\w+\s+производств\w+|мы\s+производим|производител\w+\s+(?:радиогид|аудиогид|оборудован))", re.I),
+    "branding": re.compile(r"(брендирован\w+|нанесен\w+\s+логотип\w*|под\s+ваш\w*\s+бренд\w*|кастомизац\w+|индивидуальн\w+\s+дизайн)", re.I),
+    "training": re.compile(r"(обучени\w+\s+(?:персонала|сотрудников|гидов|экскурсоводов)|проводим\s+обучени\w+|инструктаж)", re.I),
+    "tender": re.compile(r"(44-?фз|223-?фз|госзакупк\w+|тендер\w*|для\s+бюджетных\s+организаций|по\s+госконтракт\w+)", re.I),
+    "leasing": re.compile(r"(лизинг\w*|рассрочк\w+|оплата\s+частями|отсрочк\w+\s+платеж\w+)", re.I),
+    "showroom": re.compile(r"(шоу-?рум\w*|демо-?зал\w*|выставочн\w+\s+зал|можно\s+посмотреть\s+в\s+офисе|приезжайте\s+в\s+офис)", re.I),
+    "delivery_russia": re.compile(r"(доставк\w+\s+по\s+(?:всей\s+)?россии|доставляем\s+по\s+(?:всей\s+)?россии|во\s+все\s+регионы|в\s+любой\s+город)", re.I),
+    "support_247": re.compile(r"(24\s*/\s*7|круглосуточн\w+\s+поддержк\w+|поддержка\s+24\s+часа)", re.I),
+    "multilang": re.compile(r"(многоязычн\w+|мультиязычн\w+|на\s+\d+\s+языках|синхронн\w+\s+перевод\w*)", re.I),
+}
+RX_YEARS = re.compile(r"(\d{1,2})\+?\s+лет\s+на\s+рынке|(?:с|c)\s+((?:19|20)\d\d)\s+года\s+(?:на\s+рынке|работаем|производим|поставляем)", re.I)
+RX_CLIENTS = re.compile(r"(\d[\d\s]{1,7})\+?\s+(?:клиентов|организаций|компаний|проектов|мероприятий|заказчиков|музеев)", re.I)
 
 RX = {
     "warranty": re.compile(r"гарант\w*\D{0,40}?(\d{1,2})\s*(лет|года?|год|мес\w*|months?|years?)", re.I),
@@ -58,6 +81,25 @@ def extract(text: str, url: str) -> dict:
         m = RX[key].search(text)
         if m:
             out[field] = {"value": "yes", "snippet": _snippet(text, m), "url": url}
+    for field, rx in EXTRA_RX.items():
+        m = rx.search(text)
+        if m:
+            out[field] = {"value": "yes", "snippet": _snippet(text, m), "url": url}
+    m = RX_YEARS.search(text)
+    if m:
+        years = int(m.group(1)) if m.group(1) else (2026 - int(m.group(2)))
+        if 0 < years <= 60:
+            out["years_on_market"] = {"value": years, "snippet": _snippet(text, m), "url": url}
+    best_c = None
+    for m in RX_CLIENTS.finditer(text):
+        try:
+            n = int(m.group(1).replace(" ", ""))
+        except ValueError:
+            continue
+        if 10 <= n <= 1_000_000 and (best_c is None or n > best_c[0]):
+            best_c = (n, _snippet(text, m), url)
+    if best_c:
+        out["clients_count"] = {"value": best_c[0], "snippet": best_c[1], "url": best_c[2]}
     usps = []
     for m in RX["usp"].finditer(text):
         v = normalize.clean_text(m.group(1)).lower()
@@ -77,14 +119,14 @@ def _merge(acc: dict, found: dict) -> None:
             new = [x.strip() for x in v["value"].split(";") if x.strip() and x.strip() not in cur]
             if new:
                 acc["usp"] = {"value": "; ".join(sorted(cur | set(new))), "snippet": "", "url": v["url"]}
-        elif k == "warranty_years":
+        elif k in ("warranty_years", "years_on_market", "clients_count"):
             if k not in acc or (v["value"] or 0) > (acc[k]["value"] or 0):
                 acc[k] = v
         elif k not in acc:
             acc[k] = v
 
 
-def scan_site(base_url: str, source_key: str, cached_dir: str | None = None, fetch: bool = True, max_pages: int = 12) -> dict:
+def scan_site(base_url: str, source_key: str, cached_dir: str | None = None, fetch: bool = True, max_pages: int = 24) -> dict:
     acc: dict = {}
     checked: list[str] = []
     # 1. уже сохранённые страницы товаров этого конкурента (без сети)
@@ -135,8 +177,8 @@ def scan_competitor(conn: sqlite3.Connection, cid: int, fetch: bool = True) -> d
 
 
 def scan_m22(conn: sqlite3.Connection, fetch: bool = True) -> dict:
-    prof = scan_site("https://m22.ru", "m22.ru", str(config.RAW_DIR / "m22.ru"), fetch=fetch, max_pages=8)
-    prof2 = scan_site("https://radiosync.ru", "radiosync.ru", str(config.RAW_DIR / "radiosync.ru"), fetch=fetch, max_pages=6)
+    prof = scan_site("https://m22.ru", "m22.ru", str(config.RAW_DIR / "m22.ru"), fetch=fetch, max_pages=20)
+    prof2 = scan_site("https://radiosync.ru", "radiosync.ru", str(config.RAW_DIR / "radiosync.ru"), fetch=fetch, max_pages=12)
     _merge(prof, {k: v for k, v in prof2.items() if not k.startswith("_")})
     prof["_checked"] = prof.get("_checked", []) + prof2.get("_checked", [])
     # гарантия M22 известна из характеристик товаров (Гарантийный срок 2 года)
@@ -204,6 +246,54 @@ def seller_roles(conn: sqlite3.Connection) -> dict[int, str]:
 
 TYPE_LABELS_SHORT = {"integrator": "интегратор", "b2b_solutions": "B2B-решения", "museum_supplier": "оборудование для музеев", "sync_translation_supplier": "синхронный перевод",
                      "events_supplier": "оборудование для мероприятий", "foreign": "зарубежный бренд", "indirect": "косвенный", "rental": "аренда"}
+
+
+def comparison_table(conn: sqlite3.Connection, tiers: tuple = ("A",)) -> dict:
+    """Сравнительная таблица: признаки × продавцы (M22 первым). Значения: yes / число / None (нет данных)."""
+    comps = db.rows(conn, f"SELECT * FROM competitors WHERE is_active=1 AND tier IN ({','.join('?' * len(tiers))}) ORDER BY tier, name", list(tiers))
+    m22p = m22_profile(conn)
+    m22_auto = db.uj(db.get_setting(conn, "m22_profile"), {}) or {}
+    manual = db.uj(db.get_setting(conn, "m22_profile_manual"), {}) or {}
+    rows_def = [("warranty_years", "Гарантия, лет", "num"), ("service_center", "Сервисный центр", "yn"), ("replacement_fund", "Подменный фонд", "yn"), ("rental", "Аренда", "yn"),
+                ("free_delivery", "Бесплатная доставка", "yn")] + [(k, n, "num" if k in ("years_on_market", "clients_count") else "yn") for k, n in EXTRA_FIELDS]
+    stats = {r["competitor_id"]: r for r in db.rows(conn, "SELECT competitor_id, COUNT(*) n, SUM(price IS NOT NULL) priced, SUM(availability='InStock') a, SUM(availability IN ('OutOfStock','PreOrder','SoldOut')) b FROM competitor_products WHERE is_active=1 GROUP BY competitor_id")}
+    cats = {r["competitor_id"]: r["n"] for r in db.rows(conn, "SELECT competitor_id, COUNT(DISTINCT category_slug) n FROM competitor_products WHERE is_active=1 GROUP BY competitor_id")}
+    columns = [{"id": 0, "name": "M22", "is_m22": True, "vals": {}, "evidence": {}, "products": db.row(conn, "SELECT COUNT(*) n FROM m22_products WHERE is_active=1 AND in_scope=1 AND parent_url IS NULL")["n"],
+                "categories": db.row(conn, "SELECT COUNT(DISTINCT category_slug) n FROM m22_products WHERE is_active=1 AND in_scope=1")["n"], "stock": None, "role": "производитель / владелец бренда (Radiosync, Kromix)", "tier": "—"}]
+    columns[0]["usp"] = manual.get("usp") or ((m22_auto.get("usp") or {}).get("value") if isinstance(m22_auto.get("usp"), dict) else None)
+    for k, _, _t in rows_def:
+        v = manual.get(k) if manual.get(k) not in (None, "") else (m22_auto.get(k) or {}).get("value") if isinstance(m22_auto.get(k), dict) else None
+        if k == "rental" and v is None:
+            v = "yes"
+        columns[0]["vals"][k] = v
+        columns[0]["evidence"][k] = (m22_auto.get(k) or {}) if isinstance(m22_auto.get(k), dict) else {}
+    roles = seller_roles(conn)
+    for c in comps:
+        prof = db.uj(c["profile_json"], {}) or {}
+        vals, ev = {}, {}
+        for k, _, _t in rows_def:
+            if k in ("warranty_years", "service_center", "replacement_fund", "free_delivery"):
+                vals[k] = c[k]
+            elif k == "rental":
+                vals[k] = "yes" if c["rental_available"] == "yes" else None
+            else:
+                vals[k] = (prof.get(k) or {}).get("value") if isinstance(prof.get(k), dict) else None
+            ev[k] = prof.get(k) if isinstance(prof.get(k), dict) else {}
+        st = stats.get(c["id"])
+        known = ((st["a"] or 0) + (st["b"] or 0)) if st else 0
+        columns.append({"id": c["id"], "name": c["name"], "is_m22": False, "vals": vals, "evidence": ev, "products": st["n"] if st else 0, "priced": st["priced"] if st else 0,
+                        "categories": cats.get(c["id"], 0), "stock": round((st["a"] or 0) / known * 100) if known else None, "role": roles.get(c["id"], "—"), "tier": c["tier"] or "C",
+                        "website": c["website"], "usp": c["usp"], "checked": c["profile_checked_at"]})
+    # флаги «лучше M22» по строкам
+    for col in columns[1:]:
+        col["better"] = {}
+        for k, _, t in rows_def:
+            cv, mv = col["vals"].get(k), columns[0]["vals"].get(k)
+            if t == "num":
+                col["better"][k] = None if cv is None or mv is None else (cv > mv)
+            else:
+                col["better"][k] = None if cv is None else (cv == "yes" and mv != "yes")
+    return {"rows": rows_def, "columns": columns}
 
 
 def compare_flags(comp: dict, m22: dict) -> dict:
