@@ -12,7 +12,7 @@
   <div class="t"><a href="/signals/{{ s.id }}">{{ s.title }}</a></div>
   {% if not compact %}<div class="w">{{ s.what_happened }}</div>{% endif %}
   {% if s.why_matters %}<div class="why"><b>Почему важно для M22:</b> {{ s.why_matters }}</div>{% endif %}
-  {% if s.recommended_action %}<div class="act"><b>Действие:</b> {{ s.recommended_action }}</div>{% endif %}
+  {% if s.recommended_action %}<div class="act"><b>Действие:</b> {{ s.recommended_action }} {% if s.type in ('multi_competitor_product','m22_price_above_market','m22_price_below_market') %}<a href="/compare?signal={{ s.id }}">Сравнить характеристики и цены →</a>{% endif %}</div>{% endif %}
   <div class="m">
     {{ sev(s.severity) }} {{ fact(s.fact_kind) }} {{ status(s.status) }}
     <span>{{ conf(s.confidence) }}</span>

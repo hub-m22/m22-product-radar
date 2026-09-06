@@ -11,6 +11,7 @@ import statistics
 from datetime import datetime, timedelta, timezone
 
 from . import config, db
+from . import specs as specmod
 from .matching import comparables_for
 from .normalize import CATEGORY_NAMES
 
@@ -225,16 +226,31 @@ def detect_multi_competitor_products(conn: sqlite3.Connection) -> int:
         items = [it for it in items if not _junk_url(it["url"]) or it["competitor_id"] not in good]
         items.sort(key=lambda x: (x["seller"], x["price"] is None, x["price"] or 0))
         own = next((o["url"] for o in offers if o["website"] and o["url"].split("/")[2].replace("www.", "") in o["website"]), offers[0]["url"])
+        # обоснование: сравнение с ближайшими моделями M22 того же типа по цене и характеристикам
+        full = db.rows(conn, "SELECT id, name, description, specs_json, price, capacity, kind FROM competitor_products WHERE id IN (%s)" % ",".join(str(o["id"]) for o in offers))
+        kinds = {o["kind"] for o in offers}
+        cat = offers[0]["category_slug"]
+        m22_rows = db.rows(conn, "SELECT id, name, description, specs_json, price, capacity, kind, url FROM m22_products WHERE is_active=1 AND in_scope=1 AND parent_url IS NULL AND price IS NOT NULL AND category_slug=? AND kind IN (%s)" % ",".join("?" * len(kinds)), [cat, *kinds])
+        offers_n = [{"id": f["id"], "name": f["name"], "price": f["price"], "norm": specmod.normalize(f["name"], f["description"], f["specs_json"], f["price"], f["capacity"])} for f in full]
+        m22_n = [{"id": m["id"], "name": m["name"], "price": m["price"], "url": m["url"], "norm": specmod.normalize(m["name"], m["description"], m["specs_json"], m["price"], m["capacity"])} for m in m22_rows]
+        category_in_m22 = bool(db.row(conn, "SELECT 1 FROM m22_products WHERE is_active=1 AND in_scope=1 AND category_slug=?", (cat,)))
+        just = specmod.justify(offers_n, m22_n, category_in_m22)
+        if not just["reasons"]:
+            sev = "low" if has else "medium"
         evidence = {"brand": offers[0]["brand"], "model_key": key, "sellers": sellers, "n_comp": len(sellers), "comps": ", ".join(sellers), "pmin": pmin, "pmax": pmax,
-                    "category_slug": offers[0]["category_slug"], "name": offers[0]["name"], "url": own, "items": items,
+                    "category_slug": cat, "name": offers[0]["name"], "url": own, "items": items, "justification": just,
+                    "m22_candidates": [{"id": m["id"], "name": m["name"], "price": m["price"]} for m in m22_n],
                     "rule": "одинаковый бренд и код модели; сайты одной группы компаний считаются одним продавцом"}
         title = f"Модель {label} продают {len(sellers)} независимых продавца" + ("" if has else ", у M22 её нет")
+        reasons_txt = " ".join(r["text"] for r in just["reasons"])
         what = (f"Продавцы: {', '.join(sellers)}. Цены {_fmt(pmin)} - {_fmt(pmax)}. Правило сопоставления: одинаковый бренд и код модели ({label}); "
-                f"сайты одной группы компаний считаются одним продавцом.")
-        why = ("Несколько независимых продавцов держат одну модель - значит, на неё есть спрос и доступная закупка. У M22 такой модели нет: покупатель, ищущий именно её, уйдёт к ним."
-               if not has else "Модель есть и у M22, и у нескольких продавцов - ценовая конкуренция по ней будет прямой.")
-        action = (f"Запросить у 2-3 поставщиков цену и образец {label}; сравнить характеристики с ближайшей моделью Radiosync и посчитать маржу." if not has
-                  else f"Проверить цену M22 на {label} относительно диапазона {_fmt(pmin)} - {_fmt(pmax)}.")
+                f"сайты одной группы компаний считаются одним продавцом. Сравнение с M22: {just['verdict']}. {reasons_txt}")
+        why = (("Основание для вывода аналога: " + reasons_txt) if just["reasons"] else
+               ("Несколько продавцов держат одну модель, но преимуществ перед M22 по цене и характеристикам не найдено - это наблюдение, а не повод для вывода аналога." if not has
+                else "Модель есть и у M22, и у нескольких продавцов - ценовая конкуренция по ней будет прямой."))
+        action = ((f"Запросить у 2-3 поставщиков цену и образец {label}; проверить в разделе сравнения: {reasons_txt} Посчитать маржу." if not has
+                   else f"Проверить цену M22 на {label} относительно диапазона {_fmt(pmin)} - {_fmt(pmax)}.") if just["reasons"]
+                  else f"Действий не требуется. Открыть сравнение характеристик и цен, если появятся новые данные по {label}.")
         dedupe = f"multi:{brand}:{key}"
         existing = db.row(conn, "SELECT id FROM signals WHERE dedupe_key=?", (dedupe,))
         if existing:

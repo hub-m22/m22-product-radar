@@ -17,6 +17,7 @@ from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 
 from .. import config, db, discovery, importers, matching, recommendations, reports, scheduler, seed, signals
+from .. import specs as specmod
 from ..importers import TYPE_NAMES
 from ..logging_setup import setup_logging
 from ..normalize import CATEGORY_NAMES, classify_category
@@ -398,6 +399,71 @@ def match_review(mid: int, decision: str = Form(...), note: str = Form(""), matc
         conn.execute("UPDATE product_matches SET review_status=?, reviewer_note=?, needs_review=0, method='manual', match_type=COALESCE(NULLIF(?, ''), match_type), updated_at=datetime('now') WHERE id=?",
                      ("confirmed" if decision == "confirm" else "rejected", note, match_type, mid))
     return RedirectResponse("/matches", status_code=303)
+
+
+# ---------------- Сравнение характеристик и цен ----------------
+def _norm_rows(rows: list[dict], side: str) -> list[dict]:
+    out = []
+    for r in rows:
+        out.append({"side": side, "id": r["id"], "name": r["name"], "url": r["url"], "price": r["price"], "seller": r.get("seller") or r.get("site") or "M22",
+                    "image": r.get("image_url") or (db.uj(r.get("images_json"), []) or [None])[0], "fetched_at": r.get("fetched_at"),
+                    "norm": specmod.normalize(r["name"], r.get("description"), r.get("specs_json"), r["price"], r.get("capacity")),
+                    "specs": specmod.flatten_specs(r.get("specs_json"))})
+    return out
+
+
+@app.get("/compare", response_class=HTMLResponse)
+def compare(request: Request, signal: Optional[int] = None, product: Optional[int] = None, cp: Optional[str] = None, m22: Optional[str] = None):
+    """Сравнение: предложения конкурентов (по сигналу, по товару M22 или по списку id) против ближайших моделей M22."""
+    with db.session() as conn:
+        title, comp_rows, m22_rows = "Сравнение", [], []
+        if signal:
+            s = db.row(conn, "SELECT * FROM signals WHERE id=?", (signal,))
+            if not s:
+                raise HTTPException(404)
+            ev = db.uj(s["evidence_json"], {}) or {}
+            ids = [it["competitor_id"] for it in ev.get("items", [])]
+            urls = [it["url"] for it in ev.get("items", [])]
+            if urls:
+                comp_rows = db.rows(conn, f"SELECT cp.*, COALESCE(c.group_name, c.name) AS seller FROM competitor_products cp JOIN competitors c ON c.id=cp.competitor_id WHERE cp.url IN ({','.join('?' * len(urls))}) AND cp.is_active=1", urls)
+            elif s["competitor_product_id"]:
+                comp_rows = db.rows(conn, "SELECT cp.*, COALESCE(c.group_name, c.name) AS seller FROM competitor_products cp JOIN competitors c ON c.id=cp.competitor_id WHERE cp.id=?", (s["competitor_product_id"],))
+            if s["m22_product_id"]:
+                m22_rows = db.rows(conn, "SELECT * FROM m22_products WHERE id=?", (s["m22_product_id"],))
+            elif comp_rows:
+                kinds = {r["kind"] for r in comp_rows}
+                m22_rows = db.rows(conn, f"SELECT * FROM m22_products WHERE is_active=1 AND in_scope=1 AND parent_url IS NULL AND price IS NOT NULL AND category_slug=? AND kind IN ({','.join('?' * len(kinds))}) ORDER BY price", [s["category_slug"], *kinds])
+            title = s["title"]
+        elif product:
+            p = db.row(conn, "SELECT * FROM m22_products WHERE id=?", (product,))
+            if not p:
+                raise HTTPException(404)
+            m22_rows = [p]
+            comp_rows = db.rows(conn, """SELECT cp.*, COALESCE(c.group_name, c.name) AS seller FROM product_matches pm JOIN competitor_products cp ON cp.id=pm.competitor_product_id
+                                        JOIN competitors c ON c.id=cp.competitor_id WHERE pm.m22_product_id=? AND pm.review_status!='rejected' AND pm.confidence>=0.55 AND cp.is_active=1 ORDER BY pm.confidence DESC, cp.price""", (product,))
+            title = f"«{p['name']}» и сопоставимые предложения конкурентов"
+        else:
+            cids = [int(x) for x in (cp or "").split(",") if x.strip().isdigit()]
+            mids = [int(x) for x in (m22 or "").split(",") if x.strip().isdigit()]
+            if cids:
+                comp_rows = db.rows(conn, f"SELECT cp.*, COALESCE(c.group_name, c.name) AS seller FROM competitor_products cp JOIN competitors c ON c.id=cp.competitor_id WHERE cp.id IN ({','.join('?' * len(cids))})", cids)
+            if mids:
+                m22_rows = db.rows(conn, f"SELECT * FROM m22_products WHERE id IN ({','.join('?' * len(mids))})", mids)
+        cols = _norm_rows(m22_rows, "m22") + _norm_rows(comp_rows, "competitor")
+        category_in_m22 = bool(m22_rows)
+        just = specmod.justify([c for c in cols if c["side"] == "competitor"], [c for c in cols if c["side"] == "m22"], category_in_m22)
+        # лучшие значения по строкам для подсветки
+        best = {}
+        for field, _ in specmod.FIELDS:
+            vals = [(c["norm"].get(field), i) for i, c in enumerate(cols) if c["norm"].get(field) is not None and isinstance(c["norm"].get(field), (int, float)) and not isinstance(c["norm"].get(field), bool)]
+            if vals:
+                best[field] = (min if field in specmod.BETTER_LOW else max)(vals)[0]
+        raw_keys = []
+        for c in cols:
+            for k in c["specs"]:
+                if k not in raw_keys:
+                    raw_keys.append(k)
+    return render(request, "compare.html", title=title, cols=cols, fields=specmod.FIELDS, best=best, just=just, raw_keys=raw_keys[:40], signal_id=signal)
 
 
 # ---------------- Матрица M22 ----------------

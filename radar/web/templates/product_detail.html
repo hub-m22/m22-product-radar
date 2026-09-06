@@ -25,5 +25,6 @@
     {% if hist|length >= 2 %}<div class="card" style="margin-top:14px"><h3>История цены M22</h3><table><tbody>{% for h in hist %}<tr><td>{{ h.observed_at }}</td><td class="num">{{ h.price | money }}</td><td class="small">{{ h.availability or '' }}</td></tr>{% endfor %}</tbody></table></div>{% endif %}
   </div>
 </div>
+<p><a class="btn small" href="/compare?product={{ p.id }}">Сравнить характеристики и цены с конкурентами</a></p>
 <h2>Сигналы по товару</h2>{% for s in sigs %}{{ m.signal_card(s, compact=True) }}{% else %}<div class="muted">Сигналов нет.</div>{% endfor %}
 {% endblock %}

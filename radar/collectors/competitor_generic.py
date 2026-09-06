@@ -158,11 +158,45 @@ def card_image(card, url: str) -> str | None:
     return None
 
 
+SPEC_KEY_HINTS = ("дальност", "радиус", "канал", "частот", "диапазон", "время работы", "автоном", "аккум", "батаре", "вес", "масса", "габарит", "размер",
+                  "мощност", "разъём", "разъем", "экран", "дисплей", "приёмник", "приемник", "передатчик", "шумопод", "температур", "гарант", "channel", "range",
+                  "battery", "weight", "frequency", "power")
+
+
+def extract_specs(soup: BeautifulSoup) -> dict[str, str]:
+    """Характеристики со страницы: JSON-LD additionalProperty, таблицы th/td, dl/dt/dd, списки «параметр: значение»."""
+    specs: dict[str, str] = {}
+    for prod in _jsonld_products(soup):
+        for ap in prod.get("additionalProperty") or []:
+            if isinstance(ap, dict) and ap.get("name") and ap.get("value") is not None:
+                specs[normalize.clean_text(str(ap["name"]))] = normalize.clean_text(str(ap["value"]))
+    for table in soup.find_all("table"):
+        for tr in table.find_all("tr"):
+            cells = [normalize.clean_text(c.get_text(" ")) for c in tr.find_all(["th", "td"])]
+            cells = [c for c in cells if c]
+            if len(cells) == 2 and len(cells[0]) <= 60 and len(cells[1]) <= 120:
+                specs.setdefault(cells[0].rstrip(":"), cells[1])
+    for dl in soup.find_all("dl"):
+        dts, dds = dl.find_all("dt"), dl.find_all("dd")
+        for dt, dd in zip(dts, dds):
+            k, v = normalize.clean_text(dt.get_text(" ")), normalize.clean_text(dd.get_text(" "))
+            if k and v and len(k) <= 60 and len(v) <= 120:
+                specs.setdefault(k.rstrip(":"), v)
+    for li in soup.find_all(["li", "p"]):
+        t = normalize.clean_text(li.get_text(" "))
+        if 6 <= len(t) <= 140 and ":" in t and not li.find(["ul", "table"]):
+            k, v = t.split(":", 1)
+            if 2 <= len(k) <= 50 and v.strip() and any(h in k.lower() for h in SPEC_KEY_HINTS):
+                specs.setdefault(k.strip(), v.strip())
+    return dict(list(specs.items())[:60])
+
+
 def parse_product_page(html: str, url: str, cfg: dict | None = None) -> list[dict]:
     soup = BeautifulSoup(html, "lxml")
     cfg = cfg or {}
     items: list[dict] = []
     fallback_img = page_image(soup, url)
+    page_specs = extract_specs(soup)
     # 1. CSS-конфиг
     if cfg.get("name"):
         n = soup.select_one(cfg["name"])
@@ -184,6 +218,8 @@ def parse_product_page(html: str, url: str, cfg: dict | None = None) -> list[dic
         })
     items = [i for i in items if i["name"]]
     if items:
+        for i in items:
+            i.setdefault("specs", page_specs)
         return items
     # 3. Microdata / OpenGraph
     name = ""
@@ -220,7 +256,9 @@ def parse_product_page(html: str, url: str, cfg: dict | None = None) -> list[dic
                 break
     desc_el = soup.find("meta", attrs={"name": "description"})
     if name:
-        items.append({"url": url, "name": name, "price": price, "description": normalize.clean_text(desc_el.get("content", "")) if desc_el else "", "image_url": fallback_img})
+        body_text = normalize.clean_text((soup.find("main") or soup.body or soup).get_text(" "))[:3000]
+        items.append({"url": url, "name": name, "price": price, "description": (normalize.clean_text(desc_el.get("content", "")) if desc_el else "") or body_text[:1500],
+                      "image_url": fallback_img, "specs": page_specs})
     return items
 
 

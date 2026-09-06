@@ -59,8 +59,8 @@ def generate(conn: sqlite3.Connection) -> int:
     # B. Модель у ≥2 конкурентов, отсутствующая у M22
     for s in db.rows(conn, "SELECT * FROM signals WHERE type='multi_competitor_product' AND status!='rejected' AND title LIKE '%у M22 её нет%'"):
         ev = db.uj(s["evidence_json"], {}) or {}
-        if (ev.get("n_comp") or 0) < 3:
-            continue  # один слабый сигнал — не повод для карточки
+        if (ev.get("n_comp") or 0) < 2 or not (ev.get("justification") or {}).get("reasons"):
+            continue  # без преимущества по цене/характеристикам карточка не создаётся
         if _emit(conn, title=f"Модель {(ev.get('brand') + ' ') if ev.get('brand') else ''}{ev.get('model_key')} — ввод в матрицу",
                  description=s["what_happened"], discovered_via="мониторинг конкурентов (сигнал multi_competitor_product)", signals_json=[s["id"]],
                  demand_evidence="Брендовые запросы по модели — добавить в семантическую карту и выгрузить Wordstat.",

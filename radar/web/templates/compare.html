@@ -1,0 +1,32 @@
+{% extends "base.html" %}{% import "_macros.html" as m %}
+{% block title %}Сравнение — M22 Product Radar{% endblock %}
+{% block content %}
+{% if signal_id %}<a href="/signals/{{ signal_id }}">← К сигналу</a>{% else %}<a href="/matrix">← Матрица M22</a>{% endif %}
+<h1>Сравнение характеристик и цен</h1>
+<div class="sub">{{ title }}</div>
+<div class="note {% if just.reasons %}ok-note{% endif %}"><b>Вывод по сравнению:</b> {{ just.verdict }}.
+  {% if just.reasons %}<ul style="margin:6px 0 0 18px">{% for r in just.reasons %}<li>{{ r.text }}</li>{% endfor %}</ul>{% endif %}
+  <div class="small muted" style="margin-top:6px">Правила: цена — минимальная цена конкурентов против самой дешёвой сопоставимой модели M22 (порог 25%); характеристики — лучшее значение конкурентов против лучшего у M22 (дальность, каналы, автономность +30%, вес −30%, двусторонняя связь, 2,4 ГГц). Характеристики извлечены автоматически из карточек товаров; пустая ячейка означает, что на странице продавца параметр не указан.</div>
+</div>
+{% if not cols %}<div class="card muted">Нечего сравнивать.</div>{% else %}
+<div class="card compact tbl-wrap"><table>
+  <thead><tr><th style="min-width:160px">Параметр</th>{% for c in cols %}<th style="min-width:170px;{% if c.side == 'm22' %}background:#e8f0fc{% endif %}">
+    {% if c.image %}<img src="{{ c.image }}" alt="" referrerpolicy="no-referrer" width="72" height="72" style="width:72px;height:72px;object-fit:contain;display:block;border:1px solid var(--line);border-radius:6px;background:#fff;margin-bottom:4px">{% endif %}
+    <div class="small muted">{{ 'M22' if c.side == 'm22' else c.seller[:40] }}</div>
+    <div>{% if c.side == 'm22' %}<a href="/matrix/{{ c.id }}">{{ c.name[:70] }}</a>{% else %}<a href="{{ c.url }}" target="_blank" rel="noopener">{{ c.name[:70] }} ↗</a>{% endif %}</div>
+    {% if c.fetched_at %}<div class="small muted">снято {{ c.fetched_at | dt }}</div>{% endif %}</th>{% endfor %}</tr></thead>
+  <tbody>
+  {% for field, label in fields %}<tr><td><b>{{ label }}</b></td>
+    {% for c in cols %}{% set v = c.norm.get(field) %}<td class="{% if field in ('price','range_m','channels','battery_h','weight_g','capacity') %}num{% endif %}" {% if v is not none and best.get(field) is not none and v == best.get(field) and v is not sameas true and v is not sameas false %}style="font-weight:700;color:var(--low)"{% endif %}>
+      {% if v is none %}<span class="muted">—</span>{% elif field == 'price' %}{{ v | money }}{% elif v is sameas true %}да{% elif v is sameas false %}<span class="muted">нет / не указано</span>{% else %}{{ v }}{% endif %}</td>{% endfor %}
+  </tr>{% endfor %}
+  </tbody>
+</table></div>
+{% if raw_keys %}
+<details style="margin-top:12px"><summary>Все характеристики со страниц ({{ raw_keys|length }} параметров)</summary>
+<div class="card compact tbl-wrap" style="margin-top:8px"><table><thead><tr><th>Параметр</th>{% for c in cols %}<th>{{ (c.name)[:40] }}</th>{% endfor %}</tr></thead><tbody>
+{% for k in raw_keys %}<tr><td class="small">{{ k }}</td>{% for c in cols %}<td class="small">{{ c.specs.get(k, '') }}</td>{% endfor %}</tr>{% endfor %}
+</tbody></table></div></details>
+{% endif %}
+{% endif %}
+{% endblock %}

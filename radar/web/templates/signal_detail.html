@@ -24,6 +24,9 @@
   <div class="card">
     <h3>Почему это важно для M22</h3><p>{{ s.why_matters or '—' }}</p>
     <h3>Рекомендуемое действие</h3><p class="act" style="background:#f5f8fc;padding:8px;border-radius:6px">{{ s.recommended_action or '—' }}</p>
+    {% if s.type in ('multi_competitor_product','m22_price_above_market','m22_price_below_market','competitor_price_change','product_appeared','new_kit_solution') %}<p><a class="btn small" href="/compare?signal={{ s.id }}">Сравнить характеристики и цены с M22</a></p>{% endif %}
+    {% if evidence.justification %}<h3>Обоснование</h3><p><b>{{ evidence.justification.verdict }}.</b></p>{% if evidence.justification.reasons %}<ul>{% for r in evidence.justification.reasons %}<li>{{ r.text }}</li>{% endfor %}</ul>{% endif %}
+    {% if evidence.m22_candidates %}<div class="small muted">Сопоставлено с моделями M22: {% for c in evidence.m22_candidates %}<a href="/matrix/{{ c.id }}">{{ c.name[:45] }}</a> ({{ c.price | money }}){% if not loop.last %}; {% endif %}{% endfor %}</div>{% endif %}{% endif %}
     {% if recs %}<h3>Связанные рекомендации</h3>{% for r in recs %}<div>{{ m.prio(r.priority) }} <a href="/actions/{{ r.id }}">{{ r.title }}</a> {{ m.status(r.status) }}</div>{% endfor %}{% endif %}
     {% if series %}<h3>Динамика запроса (Google Trends, индекс 0–100)</h3><svg class="spark" width="420" height="60" data-series='{{ series | map(attribute="value") | list | tojson }}'></svg><div class="small muted">{{ series[0].period_start }} — {{ series[-1].period_start }}, {{ series|length }} точек</div>{% endif %}
   </div>
