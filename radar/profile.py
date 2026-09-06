@@ -163,6 +163,9 @@ def scan_competitor(conn: sqlite3.Connection, cid: int, fetch: bool = True) -> d
         return {}
     cached = str(config.RAW_DIR / f"competitor_{cid}")
     prof = scan_site(c["website"], f"competitor_{cid}", cached, fetch=fetch)
+    old_manual = (db.uj(c["profile_json"], {}) or {}).get("_manual") or {}
+    if old_manual:
+        prof["_manual"] = old_manual
     # аренда — также из типов и товаров
     if "rental" not in prof and (c["rental_available"] == "yes" or "rental" in (c["types_json"] or "")):
         prof["rental"] = {"value": "yes", "snippet": "по типу конкурента / позициям аренды", "url": c["website"]}
@@ -270,15 +273,18 @@ def comparison_table(conn: sqlite3.Connection, tiers: tuple = ("A",)) -> dict:
     roles = seller_roles(conn)
     for c in comps:
         prof = db.uj(c["profile_json"], {}) or {}
+        man = prof.get("_manual") or {}
         vals, ev = {}, {}
         for k, _, _t in rows_def:
             if k in ("warranty_years", "service_center", "replacement_fund", "free_delivery"):
                 vals[k] = c[k]
             elif k == "rental":
                 vals[k] = "yes" if c["rental_available"] == "yes" else None
+            elif man.get(k) not in (None, ""):
+                vals[k] = man[k]
             else:
                 vals[k] = (prof.get(k) or {}).get("value") if isinstance(prof.get(k), dict) else None
-            ev[k] = prof.get(k) if isinstance(prof.get(k), dict) else {}
+            ev[k] = prof.get(k) if isinstance(prof.get(k), dict) else ({"snippet": "задано вручную", "url": ""} if man.get(k) not in (None, "") else {})
         st = stats.get(c["id"])
         known = ((st["a"] or 0) + (st["b"] or 0)) if st else 0
         columns.append({"id": c["id"], "name": c["name"], "is_m22": False, "vals": vals, "evidence": ev, "products": st["n"] if st else 0, "priced": st["priced"] if st else 0,

@@ -388,14 +388,28 @@ def competitor_detail(request: Request, cid: int):
         role = profmod.seller_roles(conn).get(cid, "—")
         stock = db.row(conn, "SELECT SUM(availability='InStock') a, SUM(availability IN ('OutOfStock','PreOrder','SoldOut')) b, SUM(availability IS NULL OR availability NOT IN ('InStock','OutOfStock','PreOrder','SoldOut')) u FROM competitor_products WHERE competitor_id=? AND is_active=1", (cid,))
     return render(request, "competitor_detail.html", c=c, pages=pages, products=products, sigs=sigs, comments=comments, cols=cmx.MATRIX_COLS, unreachable=unreachable,
-                  profile=db.uj(c["profile_json"], {}) or {}, flags=profmod.compare_flags(c, m22p), m22p=m22p, stock=stock, prof_fields=profmod.FIELDS, role=role,
+                  profile=db.uj(c["profile_json"], {}) or {}, flags=profmod.compare_flags(c, m22p), m22p=m22p, stock=stock, prof_fields=profmod.FIELDS, role=role, extra_fields=profmod.EXTRA_FIELDS,
                   types=db.uj(c["types_json"], []) or [], brands=db.uj(c["brands_json"], []) or [], cats=db.uj(c["categories_json"], []) or [], src=db.uj(c["source_urls_json"], []) or [])
 
 
 @app.post("/competitors/{cid}/update")
-def competitor_update(cid: int, comment: str = Form(None), author: str = Form(""), is_active: str = Form(None), notes: str = Form(None), tier: str = Form(None), group_name: str = Form(None),
+async def competitor_update(request: Request, cid: int, comment: str = Form(None), author: str = Form(""), is_active: str = Form(None), notes: str = Form(None), tier: str = Form(None), group_name: str = Form(None),
                       warranty_years: str = Form(None), service_center: str = Form(None), replacement_fund: str = Form(None), free_delivery: str = Form(None), usp: str = Form(None), rental: str = Form(None)):
+    form = await request.form()
     with db.session() as conn:
+        if "extra_manual" in form:
+            c0 = db.row(conn, "SELECT profile_json FROM competitors WHERE id=?", (cid,))
+            prof = db.uj(c0["profile_json"], {}) or {}
+            man = {}
+            for k, _n in profmod.EXTRA_FIELDS:
+                v = (form.get(k) or "").strip()
+                if k in ("years_on_market", "clients_count"):
+                    if v.isdigit():
+                        man[k] = int(v)
+                elif v in ("yes", "no"):
+                    man[k] = v
+            prof["_manual"] = man
+            conn.execute("UPDATE competitors SET profile_json=?, updated_at=datetime('now') WHERE id=?", (db.j(prof), cid))
         if warranty_years is not None:
             try:
                 wy = float(warranty_years.replace(",", ".")) if warranty_years.strip() else None
