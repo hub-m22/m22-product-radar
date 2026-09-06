@@ -11,8 +11,8 @@
 <div class="q-answer">
   <div class="card"><div class="q">Что важного произошло?</div><div class="a">{% if top1 %}<a href="/signals/{{ top1.id }}">{{ top1.title }}</a>{% else %}Новых сигналов нет{% endif %}</div></div>
   <div class="card"><div class="q">Почему это важно?</div><div class="a">{{ top1.why_matters if top1 else '—' }}</div></div>
-  <div class="card"><div class="q">Что делать?</div><div class="a">{% if recs %}<a href="/actions/{{ recs[0].id }}">{{ recs[0].title }}</a>{% else %}{{ top1.recommended_action if top1 else '—' }}{% endif %}</div></div>
-  <div class="card"><div class="q">Какой приоритет?</div><div class="a">{% if recs %}{{ m.prio(recs[0].priority) }} · срок {{ recs[0].due_date }}{% elif top1 %}{{ m.sev(top1.severity) }}{% else %}—{% endif %}</div></div>
+  <div class="card"><div class="q">Что делать?</div><div class="a">{% if top_rec %}<a href="/actions/{{ top_rec.id }}">{{ top_rec.title }}</a>{% elif top1 %}{{ top1.recommended_action }}{% else %}—{% endif %}</div></div>
+  <div class="card"><div class="q">Какой приоритет?</div><div class="a">{% if top_rec %}{{ m.prio(top_rec.priority) }} · срок {{ top_rec.due_date }}{% elif top1 %}{{ m.sev(top1.severity) }} · важность сигнала{% else %}—{% endif %}</div></div>
   <div class="card"><div class="q">Насколько можно доверять?</div><div class="a">{% if top1 %}{{ m.conf(top1.confidence) }} · {{ m.fact(top1.fact_kind) }}{% else %}—{% endif %}</div></div>
 </div>
 

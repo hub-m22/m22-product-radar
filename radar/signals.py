@@ -178,52 +178,72 @@ def detect_new_competitors(conn: sqlite3.Connection) -> int:
 
 
 # ---------- 6. Один товар у нескольких конкурентов ----------
+def _distinctive_key(key: str | None) -> bool:
+    """Код модели пригоден для сопоставления без бренда: >=2 букв в префиксе и >=4 знаков (RG18, SGTR02, WT300R), но не T100/R100."""
+    if not key or len(key) < 4:
+        return False
+    m = re.match(r"^([A-Z]+)", key)
+    return bool(m) and len(m.group(1)) >= 2
+
+
+def _junk_url(u: str) -> bool:
+    from urllib.parse import urlparse as _up
+    pth = _up(u).path.rstrip("/")
+    return pth == "" or "/cart" in pth
+
+
 def detect_multi_competitor_products(conn: sqlite3.Connection) -> int:
     n = 0
-    rows = db.rows(conn, """SELECT cp.model_key, cp.category_slug, COUNT(DISTINCT cp.competitor_id) AS n_comp, GROUP_CONCAT(DISTINCT c.name) AS comps,
-                            MIN(cp.price) AS pmin, MAX(cp.price) AS pmax, MIN(cp.name) AS name, MIN(cp.url) AS url, MIN(cp.brand) AS brand
+    rows = db.rows(conn, """SELECT cp.id, cp.name, cp.brand, cp.model_key, cp.category_slug, cp.price, cp.url, cp.image_url, cp.fetched_at, cp.kind,
+                                   c.id AS competitor_id, c.name AS competitor, c.website, COALESCE(c.group_name, c.name) AS seller
                             FROM competitor_products cp JOIN competitors c ON c.id=cp.competitor_id
-                            WHERE cp.is_active=1 AND cp.model_key IS NOT NULL AND length(cp.model_key)>=4 AND cp.kind IN ('system','transmitter','receiver','audioguide','kit')
-                            GROUP BY cp.model_key HAVING n_comp>=2""")
-    m22_keys = {r["model_key"] for r in db.rows(conn, "SELECT DISTINCT model_key FROM m22_products WHERE is_active=1 AND model_key IS NOT NULL")}
+                            WHERE cp.is_active=1 AND c.is_active=1 AND cp.model_key IS NOT NULL AND cp.kind IN ('system','transmitter','receiver','audioguide','kit')""")
+    groups: dict[tuple, list[dict]] = {}
     for r in rows:
-        has = r["model_key"] in m22_keys
-        sev = "high" if r["n_comp"] >= 3 and not has else "medium"
-        # предложения каждого продавца: ссылка на его страницу, цена, фото
-        offers = db.rows(conn, """SELECT cp.id, cp.name, cp.price, cp.url, cp.image_url, cp.fetched_at, c.id AS competitor_id, c.name AS competitor, c.website
-                                  FROM competitor_products cp JOIN competitors c ON c.id=cp.competitor_id WHERE cp.is_active=1 AND cp.model_key=? ORDER BY c.name, cp.price""", (r["model_key"],))
+        brand = (r["brand"] or "").strip().lower().replace(" ", "")
+        if not brand and not _distinctive_key(r["model_key"]):
+            continue  # короткий код без бренда (T100, R100) - нельзя утверждать, что это одна модель
+        groups.setdefault((brand, r["model_key"]), []).append(r)
+    m22_keys = {x["model_key"] for x in db.rows(conn, "SELECT DISTINCT model_key FROM m22_products WHERE is_active=1 AND model_key IS NOT NULL")}
+    for (brand, key), offers in groups.items():
+        sellers = sorted({o["seller"] for o in offers})
+        if len(sellers) < 2:
+            continue
+        has = key in m22_keys
+        prices = [o["price"] for o in offers if o["price"]]
+        pmin, pmax = (min(prices), max(prices)) if prices else (None, None)
+        sev = "high" if len(sellers) >= 3 and not has else "medium"
+        label = f"{offers[0]['brand'] or ''} {key}".strip()
         items, seen_urls = [], set()
         for o in sorted(offers, key=lambda x: (x["url"], x["price"] is None, x["image_url"] is None)):
             if o["url"] in seen_urls:
                 continue
             seen_urls.add(o["url"])
-            items.append({"competitor_id": o["competitor_id"], "competitor": o["competitor"], "website": o["website"], "name": o["name"], "price": o["price"], "url": o["url"],
-                          "image": o["image_url"], "fetched_at": o["fetched_at"]})
-        def _junk(u):
-            from urllib.parse import urlparse as _up
-            pth = _up(u).path.rstrip("/")
-            return pth == "" or "/cart" in pth
-        good = {it["competitor_id"] for it in items if not _junk(it["url"])}
-        items = [it for it in items if not _junk(it["url"]) or it["competitor_id"] not in good]
-        items.sort(key=lambda x: (x["competitor"], x["price"] is None, x["price"] or 0))
-        own = next((o["url"] for o in offers if o["website"] and o["url"].split("/")[2].replace("www.", "") in o["website"]), offers[0]["url"] if offers else r["url"])
-        evidence = {**dict(r), "items": items}
-        existing = db.row(conn, "SELECT id FROM signals WHERE dedupe_key=?", (f"multi:{r['model_key']}",))
-        title = f"Модель {(r['brand'] + ' ') if r['brand'] else ''}{r['model_key']} есть у {r['n_comp']} конкурентов" + ("" if has else " и отсутствует у M22")
-        what = f"Продавцы: {r['comps']}. Цены {_fmt(r['pmin'])} – {_fmt(r['pmax'])}. Пример: {r['name'][:80]}"
+            items.append({"competitor_id": o["competitor_id"], "competitor": o["competitor"], "seller": o["seller"], "website": o["website"], "name": o["name"],
+                          "price": o["price"], "url": o["url"], "image": o["image_url"], "fetched_at": o["fetched_at"], "kind": o["kind"]})
+        good = {it["competitor_id"] for it in items if not _junk_url(it["url"])}
+        items = [it for it in items if not _junk_url(it["url"]) or it["competitor_id"] not in good]
+        items.sort(key=lambda x: (x["seller"], x["price"] is None, x["price"] or 0))
+        own = next((o["url"] for o in offers if o["website"] and o["url"].split("/")[2].replace("www.", "") in o["website"]), offers[0]["url"])
+        evidence = {"brand": offers[0]["brand"], "model_key": key, "sellers": sellers, "n_comp": len(sellers), "comps": ", ".join(sellers), "pmin": pmin, "pmax": pmax,
+                    "category_slug": offers[0]["category_slug"], "name": offers[0]["name"], "url": own, "items": items,
+                    "rule": "одинаковый бренд и код модели; сайты одной группы компаний считаются одним продавцом"}
+        title = f"Модель {label} продают {len(sellers)} независимых продавца" + ("" if has else ", у M22 её нет")
+        what = (f"Продавцы: {', '.join(sellers)}. Цены {_fmt(pmin)} - {_fmt(pmax)}. Правило сопоставления: одинаковый бренд и код модели ({label}); "
+                f"сайты одной группы компаний считаются одним продавцом.")
+        why = ("Несколько независимых продавцов держат одну модель - значит, на неё есть спрос и доступная закупка. У M22 такой модели нет: покупатель, ищущий именно её, уйдёт к ним."
+               if not has else "Модель есть и у M22, и у нескольких продавцов - ценовая конкуренция по ней будет прямой.")
+        action = (f"Запросить у 2-3 поставщиков цену и образец {label}; сравнить характеристики с ближайшей моделью Radiosync и посчитать маржу." if not has
+                  else f"Проверить цену M22 на {label} относительно диапазона {_fmt(pmin)} - {_fmt(pmax)}.")
+        dedupe = f"multi:{brand}:{key}"
+        existing = db.row(conn, "SELECT id FROM signals WHERE dedupe_key=?", (dedupe,))
         if existing:
-            conn.execute("UPDATE signals SET title=?, what_happened=?, new_value=?, severity=?, evidence_json=?, source_url=?, updated_at=datetime('now') WHERE id=?",
-                         (title, what, f"{r['n_comp']} конкурентов", sev, db.j(evidence), own, existing["id"]))
+            conn.execute("UPDATE signals SET title=?, what_happened=?, new_value=?, severity=?, evidence_json=?, source_url=?, why_matters=?, recommended_action=?, updated_at=datetime('now') WHERE id=?",
+                         (title, what, f"{len(sellers)} продавцов", sev, db.j(evidence), own, why, action, existing["id"]))
             continue
-        if _emit(conn, type="multi_competitor_product", severity=sev, fact_kind="fact", category_slug=r["category_slug"],
-                 title=f"Модель {(r['brand'] + ' ') if r['brand'] else ''}{r['model_key']} есть у {r['n_comp']} конкурентов" + ("" if has else " и отсутствует у M22"),
-                 what_happened=f"Продавцы: {r['comps']}. Цены {_fmt(r['pmin'])} – {_fmt(r['pmax'])}. Пример: {r['name'][:80]}", new_value=f"{r['n_comp']} конкурентов",
-                 observed_at=db.now_iso(), source="мониторинг конкурентов", source_url=own, evidence_json=evidence, confidence=0.8,
-                 why_matters=("Модель стала рыночным стандартом; отсутствие в матрице — прямой пробел ассортимента." if not has
-                              else "Модель широко представлена — ценовая конкуренция по ней будет высокой."),
-                 recommended_action=(f"Запросить у поставщиков цену и образец модели {r['model_key']}; сравнить характеристики с ближайшей моделью Radiosync." if not has
-                                     else f"Проверить цену M22 на {r['model_key']} относительно диапазона {_fmt(r['pmin'])} – {_fmt(r['pmax'])}."),
-                 dedupe_key=f"multi:{r['model_key']}"):
+        if _emit(conn, type="multi_competitor_product", severity=sev, fact_kind="fact", category_slug=offers[0]["category_slug"], title=title, what_happened=what,
+                 new_value=f"{len(sellers)} продавцов", observed_at=db.now_iso(), source="мониторинг конкурентов", source_url=own, evidence_json=evidence, confidence=0.8,
+                 why_matters=why, recommended_action=action, dedupe_key=dedupe):
             n += 1
     return n
 

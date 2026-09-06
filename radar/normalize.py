@@ -49,7 +49,7 @@ def clean_text(s: str | None) -> str:
 
 BRANDS = [
     "radiosync", "kromix", "retekess", "okayo", "sennheiser", "williams sound", "williams av", "listen tech",
-    "listentech", "mipro", "takstar", "bosch", "shure", "gid-lux", "гид-люкс", "гид люкс", "vox tour", "voxtour",
+    "listentech", "conference pro", "conferencepro", "reinvox", "crystalsound", "crystal sound", "touraudio", "mipro", "takstar", "bosch", "shure", "gid-lux", "гид-люкс", "гид люкс", "vox tour", "voxtour",
     "tourtalk", "tour talk", "axitour", "beyerdynamic", "hixio", "synco", "baofeng",
     "pyle", "ankuka", "anleon", "wpt", "ekkotek", "auvisio", "soundpeats", "tonline", "тонлайн", "wintal",
 ]

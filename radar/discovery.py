@@ -57,7 +57,7 @@ def generate(conn: sqlite3.Connection) -> int:
             n += 1
 
     # B. Модель у ≥2 конкурентов, отсутствующая у M22
-    for s in db.rows(conn, "SELECT * FROM signals WHERE type='multi_competitor_product' AND status!='rejected' AND title LIKE '%отсутствует у M22%'"):
+    for s in db.rows(conn, "SELECT * FROM signals WHERE type='multi_competitor_product' AND status!='rejected' AND title LIKE '%у M22 её нет%'"):
         ev = db.uj(s["evidence_json"], {}) or {}
         if (ev.get("n_comp") or 0) < 3:
             continue  # один слабый сигнал — не повод для карточки
@@ -66,7 +66,7 @@ def generate(conn: sqlite3.Connection) -> int:
                  demand_evidence="Брендовые запросы по модели — добавить в семантическую карту и выгрузить Wordstat.",
                  competitors_json=[{"name": c} for c in (ev.get("comps") or "").split(",")], market_prices=f"{_fmt(ev.get('pmin'))} – {_fmt(ev.get('pmax'))}",
                  m22_link="Ближайшие по типу товары Radiosync — см. сопоставления в разделе «Конкуренты»", target_segment="Покупатели, ищущие конкретную модель (брендовый спрос)",
-                 use_case="Замена/дополнение линейки радиогидов", pros="Модель стала стандартом у нескольких продавцов — спрос подтверждён рынком.",
+                 use_case="Замена/дополнение линейки радиогидов", pros="Модель продают несколько независимых продавцов - предложение и, вероятно, спрос подтверждены рынком.",
                  cons="Прямая ценовая конкуренция по одинаковому товару; нет отстройки.", risks="Демпинг конкурентов; зависимость от одного поставщика.",
                  missing_data="Закупочная цена, MOQ, сертификация, объём брендовых запросов.", next_step="Запросить цену и образец у 2–3 поставщиков; посчитать маржу при цене −5% к минимальной рыночной.",
                  owner="Закупки", category_slug=s["category_slug"], dedupe_key=f"hyp:model:{ev.get('model_key')}"):

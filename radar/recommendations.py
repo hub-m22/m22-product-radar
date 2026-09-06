@@ -87,12 +87,13 @@ def generate(conn: sqlite3.Connection) -> int:
     # 3. Модель у ≥3 конкурентов, нет у M22 — сильный факт
     for s in sig("multi_competitor_product"):
         ev = db.uj(s["evidence_json"], {}) or {}
-        if ev.get("n_comp", 0) < 3 or "отсутствует у M22" not in s["title"]:
+        if ev.get("n_comp", 0) < 3 or "у M22 её нет" not in s["title"]:
             continue
-        if _emit(conn, title=f"Запросить у поставщиков модель {ev.get('model_key')}: есть у {ev['n_comp']} конкурентов, нет у M22",
-                 action=f"Запросить у 2–3 поставщиков цену и образец модели {ev.get('brand') or ''} {ev.get('model_key')} (продавцы в РФ: {ev.get('comps')}; цены {s['what_happened'].split('Цены')[-1].split('.')[0].strip()}). "
+        label = f"{ev.get('brand') or ''} {ev.get('model_key')}".strip()
+        if _emit(conn, title=f"Запросить у поставщиков модель {label}: продают {ev['n_comp']} независимых продавца, у M22 её нет",
+                 action=f"Запросить у 2-3 поставщиков цену и образец модели {label} (продавцы в РФ: {ev.get('comps')}; цены {s['what_happened'].split('Цены')[-1].split('.')[0].strip()}). "
                         f"Сравнить характеристики с ближайшей моделью Radiosync и посчитать маржу при цене на 5% ниже минимальной рыночной.",
-                 priority="P2", basis=s["what_happened"], expected_effect="Закрытие пробела ассортимента по модели, ставшей рыночным стандартом.", confidence=s["confidence"],
+                 priority="P2", basis=s["what_happened"], expected_effect="Закрытие пробела ассортимента по модели с подтверждённым предложением у нескольких продавцов.", confidence=s["confidence"],
                  owner=OWNERS["purchasing"], due_date=_due(14), sources_json=[{"name": "мониторинг конкурентов", "url": s["source_url"]}], signal_ids_json=[s["id"]],
                  category_slug=s["category_slug"], dedupe_key=f"rec:{s['dedupe_key']}"):
             n += 1

@@ -169,7 +169,13 @@ def index(request: Request):
         bad_pages = db.rows(conn, "SELECT mp.*, c.name AS cname FROM monitored_pages mp JOIN competitors c ON c.id=mp.competitor_id WHERE mp.fail_count>=1 AND mp.is_active=1 ORDER BY mp.fail_count DESC LIMIT 8")
         runs = db.rows(conn, "SELECT * FROM source_runs ORDER BY id DESC LIMIT 6")
         limits = reports._data_limits(conn)
-    return render(request, "index.html", top=top, recs=recs, counts=counts, cats=cats, cat_demand={c["category_slug"]: c for c in cat_demand}, price_signals=price_signals,
+        top_rec = None
+        if top:
+            for r in db.rows(conn, "SELECT * FROM recommendations WHERE status!='rejected' ORDER BY priority"):
+                if top[0]["id"] in (db.uj(r["signal_ids_json"], []) or []):
+                    top_rec = r
+                    break
+    return render(request, "index.html", top=top, recs=recs, top_rec=top_rec, counts=counts, cats=cats, cat_demand={c["category_slug"]: c for c in cat_demand}, price_signals=price_signals,
                   new_products=new_products, gaps=gaps, hyps=hyps, bad_sources=bad_sources, bad_pages=bad_pages, runs=runs, limits=limits)
 
 
