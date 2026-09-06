@@ -64,5 +64,9 @@ details summary { cursor:pointer; color:var(--accent); font-size:13px; }
 img.thumb { width:48px; height:48px; object-fit:contain; vertical-align:middle; border:1px solid var(--line); border-radius:4px; margin-right:6px; }
 .col-grip { position:absolute; right:0; top:0; width:6px; height:100%; cursor:col-resize; user-select:none; }
 .col-grip:hover { background:#c5d6f2; }
+tr.usp-row td { border-top:0; padding-top:0; color:#4b5563; } tr.usp-row:hover td { background:transparent; }
 td.better { background:#e8f5e9; font-weight:600; color:var(--low); } td.worse { background:#fff4e0; }
 .print-only { display:none; } @media print { .sidebar, .filters, form, .no-print { display:none !important; } main { padding:0; } .print-only { display:block; } }
+
+table.sticky-col th:nth-child(2), table.sticky-col td:nth-child(2) { position:sticky; left:0; background:#fff; z-index:2; box-shadow:2px 0 0 #e5e7eb; } table.sticky-col th:nth-child(2) { z-index:3; background:#f8fafc; }
+table.sticky-col tr.usp-row td:nth-child(2) { position:static; box-shadow:none; }

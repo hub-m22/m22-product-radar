@@ -302,6 +302,33 @@ def comparison_table(conn: sqlite3.Connection, tiers: tuple = ("A",)) -> dict:
     return {"rows": rows_def, "columns": columns}
 
 
+# короткие заголовки колонок реестра
+EXTRA_SHORT = {"test_drive": "Тест-драйв", "installation": "Монтаж", "event_support": "Сопровожд.", "warehouse": "Склад", "production": "Пр-во", "branding": "Бренд.", "training": "Обучение",
+               "tender": "44-ФЗ", "leasing": "Лизинг", "showroom": "Шоурум", "delivery_russia": "По России", "support_247": "24/7", "years_on_market": "Лет", "clients_count": "Клиентов", "multilang": "Многояз."}
+
+
+def extra_values(comp: dict) -> dict:
+    """Значения расширенных признаков конкурента: ручные поверх найденных на сайте."""
+    prof = db.uj(comp.get("profile_json"), {}) or {}
+    man = prof.get("_manual") or {}
+    out = {}
+    for k, _n in EXTRA_FIELDS:
+        if man.get(k) not in (None, ""):
+            out[k] = man[k]
+        else:
+            out[k] = (prof.get(k) or {}).get("value") if isinstance(prof.get(k), dict) else None
+    return out
+
+
+def m22_extra(conn: sqlite3.Connection) -> dict:
+    auto = db.uj(db.get_setting(conn, "m22_profile"), {}) or {}
+    manual = db.uj(db.get_setting(conn, "m22_profile_manual"), {}) or {}
+    out = {}
+    for k, _n in EXTRA_FIELDS:
+        out[k] = manual.get(k) if manual.get(k) not in (None, "") else ((auto.get(k) or {}).get("value") if isinstance(auto.get(k), dict) else None)
+    return out
+
+
 def compare_flags(comp: dict, m22: dict) -> dict:
     """Где конкурент сильнее M22 (True) / слабее (False) / нет данных (None) по каждому признаку."""
     flags = {}

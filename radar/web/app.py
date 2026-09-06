@@ -318,9 +318,17 @@ def competitors_page(request: Request):
         comps.sort(key=lambda c: ({"A": 0, "B": 1, "C": 2}.get(c["tier"] or "C", 2), -(c["priced"] or 0)))
         m22p = profmod.m22_profile(conn)
         roles = profmod.seller_roles(conn)
+        m22x = profmod.m22_extra(conn)
         for c in comps:
             c["unreachable"] = (c["pages"] or 0) > 0 and (c["ok_pages"] or 0) == 0 and (c["failing"] or 0) > 0
             c["flags"] = profmod.compare_flags(c, m22p)
+            c["extra"] = profmod.extra_values(c)
+            for k, v in c["extra"].items():
+                mv = m22x.get(k)
+                if k in ("years_on_market", "clients_count"):
+                    c["flags"][k] = None if v is None or mv is None else (v > mv)
+                else:
+                    c["flags"][k] = None if v is None else (v == "yes" and mv != "yes")
             c["role"] = roles.get(c["id"], "—")
             known = (c["in_stock"] or 0) + (c["out_stock"] or 0)
             c["stock_pct"] = round((c["in_stock"] or 0) / known * 100) if known else None
@@ -332,7 +340,7 @@ def competitors_page(request: Request):
             comps = [c for c in comps if f["q"].lower() in (c["name"] + " " + (c["website"] or "")).lower()]
         lists = _lists(conn)
         review = db.row(conn, "SELECT COUNT(*) n FROM product_matches WHERE needs_review=1 AND review_status='auto'")["n"]
-    return render(request, "competitors.html", comps=comps, f=f, review=review, m22p=m22p, **lists)
+    return render(request, "competitors.html", comps=comps, f=f, review=review, m22p=m22p, **lists, extra_fields=profmod.EXTRA_FIELDS, extra_short=profmod.EXTRA_SHORT, m22x=m22x)
 
 
 @app.post("/competitors/add")
