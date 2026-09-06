@@ -2,7 +2,8 @@
 {% block title %}{{ c.name }} — конкуренты{% endblock %}
 {% block content %}
 <a href="/competitors">← Конкуренты</a>
-<h1>{{ c.name }} {% if not c.is_active %}<span class="badge st">неактивен</span>{% endif %}</h1>
+<h1><span class="badge {{ {'A':'sev-high','B':'sev-medium','C':'st'}.get(c.tier or 'C') }}">уровень {{ c.tier or 'C' }}</span> {{ c.name }} {% if not c.is_active %}<span class="badge st">неактивен</span>{% endif %}</h1>
+{% if unreachable %}<div class="note"><b>Сайт недоступен для автоматической проверки.</b> Все страницы мониторинга отвечают ошибкой (403/404 или запрет в robots.txt). Данные ниже — из ручного исследования на дату проверки; актуальность цен и ассортимента нужно подтверждать вручную по ссылкам.</div>{% endif %}
 <div class="sub"><a href="{{ c.website }}" target="_blank" rel="noopener">{{ c.website }}</a> · проверен {{ c.checked_at or '—' }} · добавлен: {{ c.added_by }} · доступность: {{ c.scrapable or '?' }}</div>
 <div class="grid grid-2">
   <div class="card"><dl class="kv">
@@ -28,7 +29,7 @@
       <details style="margin-top:8px"><summary>Добавить страницу мониторинга</summary>
       <form method="post" action="/competitors/{{ c.id }}/pages/add" class="form-grid" style="margin-top:8px">
         <label class="full">URL<input type="url" name="url" required></label>
-        <label>Тип<select name="kind"><option value="product">товар</option><option value="catalog">каталог / список</option><option value="rent">аренда</option></select></label>
+        <label>Тип<select name="kind"><option value="product">товар</option><option value="catalog">каталог / список</option><option value="rent">аренда</option><option value="sitemap">карта сайта (sitemap.xml) — раскрыть в страницы товаров</option></select></label>
         <label>Категория<select name="category_slug"><option value="">авто</option>{% for k, v in CATEGORY_NAMES.items() %}<option value="{{ k }}">{{ v }}</option>{% endfor %}</select></label>
         <label>Название<input type="text" name="name"></label>
         <label>CSS-селекторы (необязательно, JSON)<input type="text" name="parser_config" placeholder='{"items":".product","name":".title","price":".price"}'></label>
@@ -51,6 +52,10 @@
 <div class="grid grid-2" style="margin-top:14px">
   <div><h2>Сигналы по конкуренту</h2>{% for s in sigs %}{{ m.signal_card(s, compact=True) }}{% else %}<div class="muted">Сигналов нет.</div>{% endfor %}</div>
   <div>{{ m.comments_block(comments, "/competitors/" ~ c.id ~ "/update", None, [], []) }}
+    <form method="post" action="/competitors/{{ c.id }}/update" class="form-grid" style="margin-top:8px">
+      <label>Уровень конкурента<select name="tier"><option value="A" {% if c.tier == 'A' %}selected{% endif %}>A — прямой ключевой</option><option value="B" {% if c.tier == 'B' %}selected{% endif %}>B — вторичный</option><option value="C" {% if (c.tier or 'C') == 'C' %}selected{% endif %}>C — косвенный / справочно</option></select></label>
+      <label>Группа компаний (несколько сайтов = один продавец)<input type="text" name="group_name" value="{{ c.group_name or '' }}"></label>
+      <div class="full"><button type="submit" class="small">Сохранить уровень и группу</button></div></form>
     <form method="post" action="/competitors/{{ c.id }}/update" class="inline" style="margin-top:8px"><input type="hidden" name="is_active" value="{{ 0 if c.is_active else 1 }}"><button class="sec small">{{ 'Деактивировать конкурента' if c.is_active else 'Активировать' }}</button></form></div>
 </div>
 {% endblock %}

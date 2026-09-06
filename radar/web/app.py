@@ -305,10 +305,16 @@ def competitors_page(request: Request):
                                  (SELECT COUNT(*) FROM competitor_products cp WHERE cp.competitor_id=c.id AND cp.is_active=1 AND cp.price IS NOT NULL) AS priced,
                                  (SELECT COUNT(*) FROM monitored_pages mp WHERE mp.competitor_id=c.id AND mp.is_active=1) AS pages,
                                  (SELECT MAX(last_checked_at) FROM monitored_pages mp WHERE mp.competitor_id=c.id) AS last_checked,
-                                 (SELECT COUNT(*) FROM monitored_pages mp WHERE mp.competitor_id=c.id AND mp.fail_count>0) AS failing
+                                 (SELECT COUNT(*) FROM monitored_pages mp WHERE mp.competitor_id=c.id AND mp.fail_count>0) AS failing,
+                                 (SELECT COUNT(*) FROM monitored_pages mp WHERE mp.competitor_id=c.id AND mp.last_status='ok') AS ok_pages
                                  FROM competitors c WHERE c.is_active=1 ORDER BY priced DESC, products DESC, c.name""")
         if f["type"]:
             comps = [c for c in comps if f["type"] in (db.uj(c["types_json"], []) or [])]
+        if f["severity"]:  # фильтр по уровню A/B/C
+            comps = [c for c in comps if (c["tier"] or "C") == f["severity"]]
+        comps.sort(key=lambda c: ({"A": 0, "B": 1, "C": 2}.get(c["tier"] or "C", 2), -(c["priced"] or 0)))
+        for c in comps:
+            c["unreachable"] = (c["pages"] or 0) > 0 and (c["ok_pages"] or 0) == 0 and (c["failing"] or 0) > 0
         if f["category"]:
             ids = {r["competitor_id"] for r in db.rows(conn, "SELECT DISTINCT competitor_id FROM competitor_products WHERE category_slug=?", (f["category"],))}
             comps = [c for c in comps if c["id"] in ids]
@@ -344,15 +350,20 @@ def competitor_detail(request: Request, cid: int):
                                     FROM competitor_products cp WHERE cp.competitor_id=? ORDER BY cp.is_active DESC, cp.category_slug, cp.price""", (cid,))
         sigs = db.rows(conn, SIGNAL_SQL + " WHERE s.competitor_id=? ORDER BY s.created_at DESC LIMIT 30", (cid,))
         comments = db.rows(conn, "SELECT * FROM comments WHERE entity_type='competitor' AND entity_id=? ORDER BY created_at DESC", (cid,))
+        unreachable = bool(pages) and not any(p["last_status"] == "ok" for p in pages) and any(p["last_status"] in ("error", "robots_disallowed") for p in pages)
         for p in products:
             p["norm"] = specmod.normalize(p["name"], p["description"], p["specs_json"], p["price"], p["capacity"])
-    return render(request, "competitor_detail.html", c=c, pages=pages, products=products, sigs=sigs, comments=comments, cols=cmx.MATRIX_COLS,
+    return render(request, "competitor_detail.html", c=c, pages=pages, products=products, sigs=sigs, comments=comments, cols=cmx.MATRIX_COLS, unreachable=unreachable,
                   types=db.uj(c["types_json"], []) or [], brands=db.uj(c["brands_json"], []) or [], cats=db.uj(c["categories_json"], []) or [], src=db.uj(c["source_urls_json"], []) or [])
 
 
 @app.post("/competitors/{cid}/update")
-def competitor_update(cid: int, comment: str = Form(None), author: str = Form(""), is_active: str = Form(None), notes: str = Form(None)):
+def competitor_update(cid: int, comment: str = Form(None), author: str = Form(""), is_active: str = Form(None), notes: str = Form(None), tier: str = Form(None), group_name: str = Form(None)):
     with db.session() as conn:
+        if tier in ("A", "B", "C"):
+            conn.execute("UPDATE competitors SET tier=?, updated_at=datetime('now') WHERE id=?", (tier, cid))
+        if group_name is not None:
+            conn.execute("UPDATE competitors SET group_name=?, updated_at=datetime('now') WHERE id=?", (group_name.strip() or None, cid))
         if comment and comment.strip():
             conn.execute("INSERT INTO comments(entity_type, entity_id, author, text) VALUES('competitor',?,?,?)", (cid, author or "пользователь", comment.strip()))
         if is_active is not None:

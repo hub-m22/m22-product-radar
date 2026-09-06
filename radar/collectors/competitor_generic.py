@@ -249,7 +249,7 @@ def parse_product_page(html: str, url: str, cfg: dict | None = None) -> list[dic
     if price is None:
         main = soup.find("main") or soup.body or soup
         for el in price_elements(main):
-            ctx = normalize.clean_text(el.parent.get_text(" ")).lower() if el.parent is not None else ""
+            ctx = normalize.clean_text(el.get_text(" ")).lower()
             if any(w in ctx for w in NOISE_WORDS):
                 continue
             price = normalize.parse_price(normalize.clean_text(el.get_text(" ")))
@@ -383,10 +383,59 @@ def collect_page(conn: sqlite3.Connection, page: dict, run_id: int) -> tuple[int
     return seen, changed
 
 
+SLUG_KEYWORDS = ("radiogu", "radio-gu", "radiogid", "audiogu", "audiogid", "earphone", "headphone", "headset", "naushnik", "charg", "zaryad", "case", "keis", "bag", "sumk",
+                 "mic", "mikrofon", "lavalier", "petlich", "synchron", "sinhron", "translat", "perevod", "transmit", "peredat", "receiv", "priem", "tour", "guide", "gid",
+                 "reinvox", "retekess", "whisper", "sheptal", "komplekt", "kit", "set", "accessor", "aksessuar", "product", "tovar", "catalog", "shop", "rent", "arenda")
+SLUG_EXCLUDE = ("/en/", "/page", "privacy", "offer", "return", "support", "review", "thank", "contact", "about", "news", "blog", "article", "delivery", "payment",
+                "policy", "oferta", "vacanc", "sitemap", "login", "cart", "search", "tag/", "faq", "warranty", "garant")
+
+
+def expand_sitemap(conn: sqlite3.Connection, page: dict, limit: int = 200) -> int:
+    """Читает sitemap.xml конкурента и добавляет релевантные страницы товаров как страницы мониторинга (без кода)."""
+    from urllib.parse import urlparse
+
+    res = http.fetch(page["url"], f"competitor_{page['competitor_id']}", save=False)
+    locs = re.findall(r"<loc>([^<]+)</loc>", res.text)
+    # вложенные карты сайта
+    nested = [u for u in locs if u.endswith(".xml")]
+    for n in nested[:5]:
+        try:
+            locs += re.findall(r"<loc>([^<]+)</loc>", http.fetch(n, f"competitor_{page['competitor_id']}", save=False).text)
+        except Exception:  # noqa: BLE001
+            pass
+    dom = urlparse(page["url"]).netloc.lower()
+    added = 0
+    for u in locs:
+        if urlparse(u).netloc.lower() != dom or u.endswith(".xml"):
+            continue
+        path = urlparse(u).path.lower()
+        if not path.strip("/") or any(x in u.lower() for x in SLUG_EXCLUDE):
+            continue
+        if not any(k in path for k in SLUG_KEYWORDS):
+            continue
+        if db.row(conn, "SELECT id FROM monitored_pages WHERE url=?", (u,)):
+            continue
+        kind = "rent" if re.search(r"(^|[/_.-])(rent|rental|arenda|prokat)([/_.-]|$)", path) else "product"
+        conn.execute("INSERT INTO monitored_pages(competitor_id, url, kind, name, parser) VALUES(?,?,?,?,'auto')", (page["competitor_id"], u, kind, "из карты сайта"))
+        added += 1
+        if added >= limit:
+            break
+    conn.execute("UPDATE monitored_pages SET last_checked_at=datetime('now'), last_status='ok', last_error=?, fail_count=0 WHERE id=?", (f"добавлено страниц: {added}", page["id"]))
+    conn.commit()
+    return added
+
+
 def run(conn: sqlite3.Connection, competitor_id: int | None = None, page_id: int | None = None) -> dict:
     run_id = db.start_run(conn, SOURCE_KEY)
     conn.commit()
-    sql = "SELECT mp.*, c.name AS competitor_name FROM monitored_pages mp JOIN competitors c ON c.id=mp.competitor_id WHERE mp.is_active=1 AND c.is_active=1"
+    # сначала раскрываем карты сайтов, чтобы новые страницы попали в этот же проход
+    for sp in db.rows(conn, "SELECT * FROM monitored_pages WHERE kind='sitemap' AND is_active=1" + (" AND competitor_id=?" if competitor_id else ""), [competitor_id] if competitor_id else []):
+        try:
+            log.info("sitemap %s: +%s страниц", sp["url"], expand_sitemap(conn, sp))
+        except Exception as exc:  # noqa: BLE001
+            db.log_error(conn, SOURCE_KEY, sp["url"], f"sitemap: {exc}")
+            conn.commit()
+    sql = "SELECT mp.*, c.name AS competitor_name FROM monitored_pages mp JOIN competitors c ON c.id=mp.competitor_id WHERE mp.is_active=1 AND c.is_active=1 AND mp.kind!='sitemap'"
     params: list = []
     if competitor_id:
         sql += " AND mp.competitor_id=?"

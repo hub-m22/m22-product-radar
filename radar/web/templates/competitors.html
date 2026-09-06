@@ -4,10 +4,13 @@
 <div class="topbar"><div><h1>Конкуренты</h1><div class="sub">{{ comps|length }} компаний в реестре. {% if review %}<a href="/matches">Сопоставлений на ручной проверке: {{ review }}</a>{% endif %}</div></div>
 <div class="actions-row"><a class="btn sec small" href="/matches?review=0">Все сопоставления</a> <a class="btn sec small" href="/export/competitors.xlsx">XLSX реестр</a> <a class="btn sec small" href="/export/competitor_products.xlsx">XLSX товары</a> <a class="btn sec small" href="/export/price_history.csv">CSV история цен</a></div></div>
 {% set types = TYPE_NAMES.items() | list %}{% set show_product = False %}{% set show_competitor = False %}{% set show_conf = False %}
+{% set severities = [("A","A — прямые ключевые"),("B","B — вторичные"),("C","C — косвенные")] %}{% set sev_label = "Уровень" %}
 {% include "_filters.html" %}
-<div class="card compact tbl-wrap"><table><thead><tr><th>Компания</th><th>Типы</th><th>География</th><th class="num">Товаров</th><th class="num">С ценой</th><th class="num">Страниц</th><th>Аренда</th><th>Последняя проверка</th></tr></thead><tbody>
+<div class="note" style="margin-bottom:10px"><b>Уровни:</b> A — прямые ключевые конкуренты (сами продают радиогиды, аудиогиды, одноразовые наушники и экскурсионное оборудование), B — вторичные (реселлеры, аренда, продавцы на маркетплейсах, одиночные позиции), C — косвенные, заменители, зарубежные бренды и справочные записи. Уровень можно изменить в карточке конкурента.</div>
+<div class="card compact tbl-wrap"><table><thead><tr><th>Уровень</th><th>Компания</th><th>Типы</th><th>География</th><th class="num">Товаров</th><th class="num">С ценой</th><th class="num">Страниц</th><th>Аренда</th><th>Последняя проверка</th></tr></thead><tbody>
 {% for c in comps %}<tr>
-  <td><a href="/competitors/{{ c.id }}"><b>{{ c.name }}</b></a><br><a class="small" href="{{ c.website }}" target="_blank" rel="noopener">{{ c.website }}</a></td>
+  <td><span class="badge {{ {'A':'sev-high','B':'sev-medium','C':'st'}.get(c.tier or 'C') }}">{{ c.tier or 'C' }}</span></td>
+  <td><a href="/competitors/{{ c.id }}"><b>{{ c.name }}</b></a>{% if c.unreachable %} <span class="badge sev-medium" title="Все страницы мониторинга отвечают ошибкой (403/404/robots)">сайт недоступен для проверки</span>{% endif %}{% if c.group_name %}<div class="small muted">группа: {{ c.group_name }}</div>{% endif %}<br><a class="small" href="{{ c.website }}" target="_blank" rel="noopener">{{ c.website }}</a></td>
   <td class="small">{% for t in (c.types_json | uj([])) %}<span class="pill">{{ TYPE_NAMES.get(t, t) }}</span> {% endfor %}</td>
   <td class="small">{{ (c.geography or '')[:50] }}</td>
   <td class="num">{{ c.products }}</td><td class="num">{{ c.priced }}</td>
