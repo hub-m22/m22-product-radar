@@ -1,9 +1,10 @@
 @echo off
-chcp 65001 >nul
+title M22 Product Radar - обновление данных
 set PYTHONUTF8=1
-cd /d "C:\Users\Adm\Documents\Claude ╨Т╨░╤Б╨╕╨╗╤М╨╡╨▓\m22-product-radar"
-echo ╨б╨╛╨▒╨╕╤А╨░╤О ╨┤╨░╨╜╨╜╤Л╨╡ ╤Б ╤Б╨░╨╣╤В╨╛╨▓ M22 ╨╕ ╨║╨╛╨╜╨║╤Г╤А╨╡╨╜╤В╨╛╨▓, ╤Б╤З╨╕╤В╨░╤О ╤Б╨╕╨│╨╜╨░╨╗╤Л ╨╕ ╨╛╤В╤З╤С╤В. ╨н╤В╨╛ ╨╖╨░╨╣╨╝╤С╤В 15-25 ╨╝╨╕╨╜╤Г╤В.
+set PYTHONPATH=C:\Users\Adm\Documents\Claude Васильев\m22-product-radar
+cd /d "C:\Users\Adm\Documents\Claude Васильев\m22-product-radar"
+echo Собираю данные с сайтов M22 и конкурентов, считаю сигналы и отчёт. Это займёт 15-25 минут.
 "C:\Users\Adm\AppData\Local\Programs\Python\Python312\python.exe" -m radar pipeline
 echo.
-echo ╨У╨╛╤В╨╛╨▓╨╛. ╨Ю╤В╨║╤А╨╛╨╣╤В╨╡ ╤А╨░╨┤╨░╤А ╨║╨╜╨╛╨┐╨║╨╛╨╣ "╨Ч╨░╨┐╤Г╤Б╤В╨╕╤В╤М ╤А╨░╨┤╨░╤А" ╨╕ ╨┐╨╛╤Б╨╝╨╛╤В╤А╨╕╤В╨╡ ╤А╨░╨╖╨┤╨╡╨╗ "╨Ю╤В╤З╤С╤В╤Л".
+echo Готово. Откройте радар кнопкой "Запустить радар" и посмотрите раздел "Отчёты".
 pause
