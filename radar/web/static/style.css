@@ -5,8 +5,12 @@ html,body { margin:0; padding:0; background:var(--bg); color:var(--text); font:1
 a { color:var(--accent); text-decoration:none; } a:hover { text-decoration:underline; }
 .layout { display:flex; min-height:100vh; }
 .sidebar { width:220px; flex:0 0 220px; background:#1b2a3d; color:#dfe7f1; padding:14px 0; position:sticky; top:0; height:100vh; overflow:auto; }
-.sidebar .brand { padding:6px 18px 14px; font-weight:700; font-size:16px; color:#fff; border-bottom:1px solid #2c3f57; }
+.sidebar .brand { padding:8px 18px 14px; border-bottom:1px solid #2c3f57; }
+.sidebar .brand-link { display:flex; align-items:center; gap:10px; color:#fff; text-decoration:none; }
+.sidebar .brand-logo { height:30px; width:auto; flex:0 0 auto; }
+.sidebar .brand-text { font-weight:700; font-size:15px; line-height:1.15; }
 .sidebar .brand small { display:block; font-weight:400; color:#9fb0c5; font-size:11px; margin-top:2px; }
+.page-logo { height:26px; width:auto; vertical-align:-4px; margin-right:10px; }
 .sidebar nav a { display:block; padding:9px 18px; color:#dfe7f1; border-left:3px solid transparent; }
 .sidebar nav a:hover, .sidebar nav a.active { background:#243a55; border-left-color:#5fa1ff; text-decoration:none; }
 .sidebar .meta { padding:14px 18px; font-size:11px; color:#9fb0c5; border-top:1px solid #2c3f57; margin-top:10px; }

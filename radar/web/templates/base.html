@@ -5,11 +5,12 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>{% block title %}M22 Product Radar{% endblock %}</title>
 <link rel="stylesheet" href="/static/style.css?v={{ asset_version }}">
+<link rel="icon" type="image/svg+xml" href="/static/m22-logo.svg">
 </head>
 <body>
 <div class="layout">
   <aside class="sidebar">
-    <div class="brand">M22 Product Radar<small>рыночная разведка · v{{ app_version }}</small></div>
+    <div class="brand"><a href="/" class="brand-link"><img src="/static/m22-logo.svg" alt="M22" class="brand-logo"><span class="brand-text">Product Radar<small>рыночная разведка · v{{ app_version }}</small></span></a></div>
     <nav>
       {% set items = [("/", "Главная"), ("/actions", "Рекомендуемые действия"), ("/categories", "Категории"), ("/signals", "Сигналы"), ("/competitors", "Конкуренты"), ("/matrix", "Матрица M22"),
                       ("/demand", "Поисковый спрос"), ("/opportunities", "Новые возможности"), ("/sources", "Источники"), ("/reports", "Отчёты"), ("/settings", "Настройки")] %}
