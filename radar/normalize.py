@@ -6,7 +6,7 @@ import json
 import re
 import unicodedata
 
-PRICE_RE = re.compile(r"(?<!\d)(\d{1,3}(?:[\s\u00a0\u202f]\d{3})+(?:[.,]\d{1,2})?|\d+(?:[.,]\d{1,2})?)\s*(?:₽|руб\.?|р\.|RUB|rub)", re.I)
+PRICE_RE = re.compile(r"(?<!\d)(\d{1,3}(?:[\s\u00a0\u202f]\d{3})+(?:[.,]\d{1,2})?|\d{1,3}(?:\.\d{3})+|\d+(?:[.,]\d{1,2})?)\s*(?:₽|руб\.?|р\.|RUB|rub)", re.I)
 
 
 def parse_price(text: str | None) -> float | None:

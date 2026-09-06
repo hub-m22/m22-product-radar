@@ -33,6 +33,8 @@ def unit_price(name: str, price: float | None, category: str | None, kind: str |
     q = pack_qty(name) if category in UNIT_CATEGORIES else None
     if q and price / q >= 1:
         return round(price / q, 2), q
+    if category == "disposable_headphones" and price > 500:
+        return None, None  # цена явно за упаковку, а количество в названии не указано — за штуку неизвестно
     return price, None
 
 
