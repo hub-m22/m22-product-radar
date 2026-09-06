@@ -34,8 +34,8 @@
   <button class="small">Применить</button> <a class="btn sec small" href="/competitor-matrix">Сбросить</a>
 </form>
 <div class="sub">Позиций: {{ rows|length }}.</div>
-<div class="card compact tbl-wrap"><table>
-<thead><tr><th></th><th>Продавец</th><th>Товар</th><th>Категория</th><th>Тип</th><th>Модель</th><th class="num">Цена</th><th class="num">За ед./место</th>{% for k, n in cols %}<th class="num">{{ n }}</th>{% endfor %}<th>Аналог M22</th><th>Статус</th><th>Снято</th></tr></thead>
+<div class="card compact tbl-wrap"><table style="min-width:1900px">
+<thead><tr><th></th><th style="min-width:150px">Продавец</th><th style="min-width:260px">Товар</th><th>Категория</th><th>Тип</th><th>Модель</th><th class="num">Цена</th><th class="num">За ед./место</th>{% for k, n in cols %}<th class="num">{{ n }}</th>{% endfor %}<th style="min-width:240px">Аналог M22</th><th>Статус</th><th>Снято</th></tr></thead>
 <tbody>
 {% for r in rows %}<tr {% if r.state == 'gone' %}style="opacity:.55"{% endif %}>
   <td>{% if r.image_url %}<img src="{{ r.image_url }}" alt="" referrerpolicy="no-referrer" width="36" height="36" style="width:36px;height:36px;object-fit:contain;border:1px solid var(--line);border-radius:4px">{% endif %}</td>

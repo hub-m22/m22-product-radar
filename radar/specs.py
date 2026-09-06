@@ -48,6 +48,9 @@ def normalize(name: str, description: str | None, specs_json: str | None, price:
     out: dict = {"price": price}
     # дальность
     r = _num(r"(?:дальност|радиус|расстоян|range|до)\D{0,25}?(\d{2,4})\s*(?:м\b|метр|m\b)", text) or _num(r"(\d{2,4})\s*(?:м\b|метров|метра)\s*(?:дальност|радиус|приём)", text)
+    if not r:
+        # в названии: «приёмник, 150 м, USB-C» — число с «м» без ключевого слова
+        r = _num(r"(?<![\d.,])(\d{2,4})\s*(?:м|метров|m)(?![\w])", name)
     if r and 20 <= r <= 3000:
         out["range_m"] = r
     # каналы
