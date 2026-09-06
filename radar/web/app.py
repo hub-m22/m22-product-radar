@@ -403,10 +403,17 @@ def match_review(mid: int, decision: str = Form(...), note: str = Form(""), matc
 
 # ---------------- Сравнение характеристик и цен ----------------
 def _norm_rows(rows: list[dict], side: str) -> list[dict]:
-    out = []
+    out, seen = [], set()
     for r in rows:
+        key = (r.get("model_key"), r.get("kind"), r.get("price"), r.get("capacity")) if side == "m22" else r["id"]
+        if key in seen:
+            continue  # один и тот же товар M22 в двух цветах / на двух сайтах
+        seen.add(key)
+        img = r.get("image_url") or (db.uj(r.get("images_json"), []) or [None])[0]
+        if img and img.startswith("/"):
+            img = f"https://{r.get('site') or 'm22.ru'}{img}"
         out.append({"side": side, "id": r["id"], "name": r["name"], "url": r["url"], "price": r["price"], "seller": r.get("seller") or r.get("site") or "M22",
-                    "image": r.get("image_url") or (db.uj(r.get("images_json"), []) or [None])[0], "fetched_at": r.get("fetched_at"),
+                    "image": img, "fetched_at": r.get("fetched_at"),
                     "norm": specmod.normalize(r["name"], r.get("description"), r.get("specs_json"), r["price"], r.get("capacity")),
                     "specs": specmod.flatten_specs(r.get("specs_json"))})
     return out
