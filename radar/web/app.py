@@ -317,9 +317,14 @@ def competitors_page(request: Request):
             comps = [c for c in comps if (c["tier"] or "C") == f["severity"]]
         comps.sort(key=lambda c: ({"A": 0, "B": 1, "C": 2}.get(c["tier"] or "C", 2), -(c["priced"] or 0)))
         m22p = profmod.m22_profile(conn)
+        roles = profmod.seller_roles(conn)
         for c in comps:
             c["unreachable"] = (c["pages"] or 0) > 0 and (c["ok_pages"] or 0) == 0 and (c["failing"] or 0) > 0
             c["flags"] = profmod.compare_flags(c, m22p)
+            c["role"] = roles.get(c["id"], "—")
+            known = (c["in_stock"] or 0) + (c["out_stock"] or 0)
+            c["stock_pct"] = round((c["in_stock"] or 0) / known * 100) if known else None
+            c["stock_known"] = known
         if f["category"]:
             ids = {r["competitor_id"] for r in db.rows(conn, "SELECT DISTINCT competitor_id FROM competitor_products WHERE category_slug=?", (f["category"],))}
             comps = [c for c in comps if c["id"] in ids]
@@ -359,9 +364,10 @@ def competitor_detail(request: Request, cid: int):
         for p in products:
             p["norm"] = specmod.normalize(p["name"], p["description"], p["specs_json"], p["price"], p["capacity"])
         m22p = profmod.m22_profile(conn)
+        role = profmod.seller_roles(conn).get(cid, "—")
         stock = db.row(conn, "SELECT SUM(availability='InStock') a, SUM(availability IN ('OutOfStock','PreOrder','SoldOut')) b, SUM(availability IS NULL OR availability NOT IN ('InStock','OutOfStock','PreOrder','SoldOut')) u FROM competitor_products WHERE competitor_id=? AND is_active=1", (cid,))
     return render(request, "competitor_detail.html", c=c, pages=pages, products=products, sigs=sigs, comments=comments, cols=cmx.MATRIX_COLS, unreachable=unreachable,
-                  profile=db.uj(c["profile_json"], {}) or {}, flags=profmod.compare_flags(c, m22p), m22p=m22p, stock=stock, prof_fields=profmod.FIELDS,
+                  profile=db.uj(c["profile_json"], {}) or {}, flags=profmod.compare_flags(c, m22p), m22p=m22p, stock=stock, prof_fields=profmod.FIELDS, role=role,
                   types=db.uj(c["types_json"], []) or [], brands=db.uj(c["brands_json"], []) or [], cats=db.uj(c["categories_json"], []) or [], src=db.uj(c["source_urls_json"], []) or [])
 
 

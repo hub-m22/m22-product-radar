@@ -426,3 +426,13 @@
 2026-09-06 20:28:45,521 INFO radar.collectors.competitor_generic: sitemap https://conferencepro.ru/sitemap.xml: +73 страниц
 2026-09-06 20:28:49,457 INFO radar.collectors.competitor_generic: sitemap https://conferencepro.ru/sitemap.xml: +93 страниц
 2026-09-06 20:29:17,088 INFO radar.db: migration applied: 007_competitor_profile
+2026-09-06 20:29:24,451 INFO apscheduler.scheduler: Adding job tentatively -- it will be properly scheduled when the scheduler starts
+2026-09-06 20:29:24,451 INFO apscheduler.scheduler: Adding job tentatively -- it will be properly scheduled when the scheduler starts
+2026-09-06 20:29:24,452 INFO apscheduler.scheduler: Adding job tentatively -- it will be properly scheduled when the scheduler starts
+2026-09-06 20:29:24,452 INFO apscheduler.scheduler: Adding job tentatively -- it will be properly scheduled when the scheduler starts
+2026-09-06 20:29:24,453 INFO apscheduler.scheduler: Added job "_run_job" to job store "default"
+2026-09-06 20:29:24,455 INFO apscheduler.scheduler: Added job "_run_job" to job store "default"
+2026-09-06 20:29:24,455 INFO apscheduler.scheduler: Added job "_run_job" to job store "default"
+2026-09-06 20:29:24,455 INFO apscheduler.scheduler: Added job "_run_job" to job store "default"
+2026-09-06 20:29:24,455 INFO apscheduler.scheduler: Scheduler started
+2026-09-06 20:29:24,455 INFO radar.scheduler: scheduler started

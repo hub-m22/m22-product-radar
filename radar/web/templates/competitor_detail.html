@@ -7,6 +7,7 @@
 <div class="sub"><a href="{{ c.website }}" target="_blank" rel="noopener">{{ c.website }}</a> · проверен {{ c.checked_at or '—' }} · добавлен: {{ c.added_by }} · доступность: {{ c.scrapable or '?' }}</div>
 <div class="grid grid-2">
   <div class="card"><dl class="kv">
+    <dt>Роль на рынке</dt><dd><b>{{ role }}</b></dd>
     <dt>Типы</dt><dd>{% for t in types %}<span class="pill">{{ TYPE_NAMES.get(t, t) }}</span> {% endfor %}</dd>
     <dt>География</dt><dd>{{ c.geography or '—' }}</dd>
     <dt>Категории</dt><dd>{{ cats | join(', ') or '—' }}</dd>
@@ -17,7 +18,7 @@
     <dt>Подменный фонд</dt><dd class="{% if flags.replacement_fund %}better{% endif %}">{{ {'yes':'да','no':'нет'}.get(c.replacement_fund, 'не найдено') }}{% if profile.get('replacement_fund') %}<div class="small muted">{{ profile.replacement_fund.snippet[:200] }} <a href="{{ profile.replacement_fund.url }}" target="_blank" rel="noopener">↗</a></div>{% endif %}</dd>
     <dt>Бесплатная доставка</dt><dd class="{% if flags.free_delivery %}better{% endif %}">{{ {'yes':'да','no':'нет'}.get(c.free_delivery, 'не найдено') }}{% if profile.get('free_delivery') %}<div class="small muted">{{ profile.free_delivery.snippet[:200] }} <a href="{{ profile.free_delivery.url }}" target="_blank" rel="noopener">↗</a></div>{% endif %}</dd>
     <dt>УТП (с сайта)</dt><dd>{{ c.usp or '—' }}</dd>
-    <dt>Наличие товаров</dt><dd>в наличии {{ stock.a or 0 }} · нет в наличии {{ stock.b or 0 }} · не указано {{ stock.u or 0 }}</dd>
+    <dt>Наличие товаров</dt><dd>{% set known = (stock.a or 0) + (stock.b or 0) %}{% if known %}<b>{{ ((stock.a or 0) / known * 100) | round | int }}%</b> в наличии ({{ stock.a or 0 }} из {{ known }} позиций с указанным наличием){% else %}сайт не указывает наличие{% endif %}{% if stock.u %}; у {{ stock.u }} позиций наличие не указано{% endif %}</dd>
     <dt>Профиль проверен</dt><dd>{{ c.profile_checked_at or 'ещё не сканировался' }}{% if profile.get('_checked') %} <span class="small muted">({{ profile._checked | length }} страниц: {{ profile._checked | join(', ') | truncate(200) }})</span>{% endif %}
       <form method="post" action="/competitors/{{ c.id }}/profile-scan" class="inline"><button class="sec small">Пересканировать сайт</button></form></dd>
     <dt>Преимущества / позиционирование</dt><dd>{{ c.advantages or '—' }}</dd>

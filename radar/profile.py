@@ -158,6 +158,54 @@ def m22_profile(conn: sqlite3.Connection) -> dict:
     return out
 
 
+OWN_BRANDS = {"crystalsound": "CrystalSound", "crystal sound": "CrystalSound", "reinvox": "Reinvox", "retekess": "Retekess", "radiosync": "Radiosync (M22)", "kromix": "Kromix (M22)",
+              "radioguide": "Radioguide (ООО «Радио Гид»)", "conferencepro": "ConferencePro", "conference pro": "ConferencePro", "touraudio": "TourAudio", "sennheiser": "Sennheiser",
+              "bosch": "Bosch", "beyerdynamic": "Beyerdynamic", "okayo": "OKAYO", "williams": "Williams AV", "disaudio": "DisAudio", "spbaudio": "SPBAUDIO"}
+
+
+def seller_roles(conn: sqlite3.Connection) -> dict[int, str]:
+    """Роль продавца: производитель/владелец бренда, реселлер чужих брендов, прямой продавец, аренда, маркетплейс, заменитель."""
+    roles: dict[int, str] = {}
+    comps = db.rows(conn, "SELECT id, name, website, types_json, brands_json, group_name FROM competitors WHERE is_active=1")
+    group_brands: dict[str, str] = {}
+    for c in comps:
+        if c["group_name"]:
+            group_brands[c["group_name"]] = group_brands.get(c["group_name"], "") + " " + " ".join(db.uj(c["brands_json"], []) or []).lower() + " " + c["name"].lower() + " " + c["website"].lower()
+    for c in comps:
+        types = db.uj(c["types_json"], []) or []
+        own_brands = " ".join(db.uj(c["brands_json"], []) or []).lower() + " " + c["name"].lower() + " " + c["website"].lower() + " " + group_brands.get(c["group_name"] or "", "")
+        is_aggregator = any(w in c["website"].lower() for w in ("wildberries", "ozon.ru", "market.yandex", "avito", "etpgpb"))
+        prods = db.rows(conn, "SELECT brand, name FROM competitor_products WHERE competitor_id=? AND is_active=1", (c["id"],))
+        found: dict[str, int] = {}
+        for p in prods:
+            text = ((p["brand"] or "") + " " + p["name"]).lower()
+            for key, label in OWN_BRANDS.items():
+                if key in text and key not in own_brands:
+                    found[label] = found.get(label, 0) + 1
+                    break
+        foreign_share = (sum(found.values()) / len(prods)) if prods else 0
+        top = sorted(found.items(), key=lambda x: -x[1])[:3]
+        if "substitute" in types:
+            roles[c["id"]] = "технологический заменитель"
+        elif "brand_owner" in types and foreign_share < 0.5:
+            roles[c["id"]] = "производитель / владелец бренда" + (f" (также перепродаёт: {', '.join(k for k, _ in top)})" if top else "")
+        elif is_aggregator:
+            roles[c["id"]] = "продавцы на площадке"
+        elif prods and foreign_share >= 0.5:
+            roles[c["id"]] = "реселлер: " + ", ".join(k for k, _ in top)
+        elif "rental" in types and "direct_seller" not in types:
+            roles[c["id"]] = "аренда"
+        elif "direct_seller" in types or prods:
+            roles[c["id"]] = "прямой продавец" + (f" (в т.ч. {', '.join(k for k, _ in top)})" if top else "")
+        else:
+            roles[c["id"]] = TYPE_LABELS_SHORT.get(types[0], types[0]) if types else "—"
+    return roles
+
+
+TYPE_LABELS_SHORT = {"integrator": "интегратор", "b2b_solutions": "B2B-решения", "museum_supplier": "оборудование для музеев", "sync_translation_supplier": "синхронный перевод",
+                     "events_supplier": "оборудование для мероприятий", "foreign": "зарубежный бренд", "indirect": "косвенный", "rental": "аренда"}
+
+
 def compare_flags(comp: dict, m22: dict) -> dict:
     """Где конкурент сильнее M22 (True) / слабее (False) / нет данных (None) по каждому признаку."""
     flags = {}
