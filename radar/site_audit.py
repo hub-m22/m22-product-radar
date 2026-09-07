@@ -114,11 +114,7 @@ def check_prices_and_stock(prods: list[dict]) -> list[dict]:
         if p["price"] is None and cat != "rental":
             out.append(_item("P1", "price", "Карточка без цены", "Указать цену или убрать карточку из каталога: карточка без цены не участвует в поиске по цене и не даёт положить товар в корзину.",
                              site=p["site"], product_id=p["id"], name=p["name"], url=p["url"], sku=p["sku"], key=f"noprice:{p['id']}"))
-        if p["availability"] in ("OutOfStock", "SoldOut"):
-            pr = "P1" if (cat in KEY_CATEGORIES and (cat != "charging_cases" or re.search(r"кейс|док", p["name"], re.I))) else "P2"
-            out.append(_item(pr, "price", "Нет в наличии", ("Ключевой товар: пополнить остаток или показать срок поставки и кнопку «Предзаказ», чтобы не терять заявки." if pr == "P1"
-                                                            else "Пополнить остаток или скрыть карточку; если товар снят — перенаправить на замену."),
-                             site=p["site"], product_id=p["id"], name=p["name"], url=p["url"], sku=p["sku"], evidence=f"статус: {AVAIL.get(p['availability'], p['availability'])}", key=f"oos:{p['id']}"))
+        # «нет в наличии» — не ошибка, а отдельная вкладка «Наличие» (stock_report)
         if p["old_price"] and p["price"] and p["old_price"] <= p["price"]:
             out.append(_item("P2", "price", "Старая цена не выше новой", "Убрать зачёркнутую цену или поставить реальную старую цену — иначе скидка выглядит фальшивой.",
                              site=p["site"], product_id=p["id"], name=p["name"], url=p["url"], sku=p["sku"], evidence=f"{p['price']:.0f} / старая {p['old_price']:.0f}", key=f"oldprice:{p['id']}"))
@@ -500,3 +496,36 @@ def run(conn: sqlite3.Connection) -> dict:
 def export_rows(conn: sqlite3.Connection) -> list[dict]:
     return [{"приоритет": i["priority"], "группа": i["group_name"], "сайт": i["site"], "товар": i["name"], "артикул": i["sku"], "что не так": i["what"], "что сделать": i["fix"],
              "категория": i["category"], "подтверждение": i["evidence"], "ссылка": i["url"], "карточки": " | ".join(f"{c['name']} ({c['url']})" for c in i["cards"]), "скрыто": "да" if i["dismissed"] else ""} for i in run(conn)["items"]]
+
+
+def stock_report(conn: sqlite3.Connection) -> dict:
+    """Что сейчас нельзя купить: нет в наличии, предзаказ, без цены, наличие не указано. По категориям, с фото и ссылками."""
+    prods = db.rows(conn, "SELECT * FROM m22_products WHERE is_active=1 AND parent_url IS NULL AND category_slug != 'rental' ORDER BY category_slug, name")
+    status_of = {"OutOfStock": "нет в наличии", "SoldOut": "распродано", "PreOrder": "предзаказ", "Discontinued": "снят с продажи"}
+    rows = []
+    for p in prods:
+        st = status_of.get(p["availability"])
+        if not st and p["price"] is None:
+            st = "без цены"
+        if not st and p["availability"] is None:
+            st = "наличие не указано"
+        if not st:
+            continue
+        twin = None
+        if p["sku"]:
+            twin = db.row(conn, "SELECT id, site, url, availability, price FROM m22_products WHERE is_active=1 AND sku=? AND site!=? AND id!=? LIMIT 1", (p["sku"], p["site"], p["id"]))
+        last_in = db.row(conn, "SELECT MAX(observed_at) t FROM m22_price_history WHERE product_id=? AND availability='InStock'", (p["id"],))
+        rows.append({**_card(p), "status": st, "category_slug": p["category_slug"] or "", "category": CATEGORY_NAMES.get(p["category_slug"] or "", "без категории"), "kind": p["kind"],
+                     "twin": ({**twin, "availability": AVAIL.get(twin["availability"], twin["availability"])} if twin else None), "last_in_stock": (last_in or {}).get("t"),
+                     "core": (p["category_slug"] in CORE_CATEGORIES)})
+    cats: dict[str, dict] = {}
+    cat_order = {sl: n for n, sl in enumerate(CATEGORY_NAMES)}
+    for r in rows:
+        c = cats.setdefault(r["category_slug"], {"slug": r["category_slug"], "name": r["category"], "core": r["core"], "rows": [], "total": 0})
+        c["rows"].append(r)
+    totals = {r["category_slug"]: r["n"] for r in db.rows(conn, "SELECT category_slug, COUNT(*) n FROM m22_products WHERE is_active=1 AND parent_url IS NULL GROUP BY 1")}
+    for c in cats.values():
+        c["total"] = totals.get(c["slug"], 0)
+    by_status = Counter(r["status"] for r in rows)
+    return {"cats": sorted(cats.values(), key=lambda c: (not c["core"], cat_order.get(c["slug"], 99))), "rows": rows, "by_status": by_status,
+            "by_site": Counter(r["site"] for r in rows), "total": len(rows), "products": len(prods)}

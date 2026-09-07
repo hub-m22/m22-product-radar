@@ -5,6 +5,7 @@
 <div class="sub">Проверка собственных сайтов по данным последнего сбора ({{ d.last_fetch | dt }}): цены и наличие, расхождения между сайтами, дубли, неполные карточки, единообразие названий, опечатки, структура каталога. Всего карточек: {{ d.products }}. По умолчанию показаны только основные категории (радиогиды, аудиогиды, синхроперевод, наушники, микрофоны, кейсы, комплекты, аренда).</div></div>
 <div class="actions-row"><a class="btn sec small" href="/export/site_audit.xlsx">XLSX</a> <a class="btn sec small" href="/export/site_audit.csv">CSV</a></div></div>
 
+{% include "_site_audit_tabs.html" %}
 <div class="kpis">
   <div class="kpi"><div class="kpi-v" style="color:#b91c1c">{{ d.counts.P1 }}</div><div class="kpi-l">P1 · срочно: теряем деньги или доверие</div></div>
   <div class="kpi"><div class="kpi-v" style="color:#b45309">{{ d.counts.P2 }}</div><div class="kpi-l">P2 · важно: мешает продаже и поиску</div></div>

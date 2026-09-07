@@ -1,0 +1,35 @@
+{% extends "base.html" %}
+{% block title %}Наличие — Наши сайты — M22 Product Radar{% endblock %}
+{% block content %}
+<div class="topbar"><div><h1>Наши сайты: наличие</h1>
+<div class="sub">Что сейчас нельзя купить на m22.ru и radiosync.ru: нет в наличии, предзаказ, без цены. По категориям, с фото; у каждого товара — ссылка на сайт и статус двойника на втором сайте. Всего карточек: {{ d.products }}, из них недоступны: {{ d.total }}.</div></div></div>
+{% include "_site_audit_tabs.html" %}
+<div class="kpis">
+  {% for st, n in d.by_status.most_common() %}<div class="kpi"><div class="kpi-v" style="color:{{ '#b91c1c' if st in ('нет в наличии','распродано') else ('#b45309' if st == 'без цены' else 'inherit') }}">{{ n }}</div><div class="kpi-l">{{ st }}</div></div>{% endfor %}
+  <div class="kpi"><div class="kpi-v">{{ d.by_site.get('m22.ru', 0) }} / {{ d.by_site.get('radiosync.ru', 0) }}</div><div class="kpi-l">m22.ru / radiosync.ru</div></div>
+</div>
+<form class="filters" method="get">
+  <label>Категория<select name="category"><option value="core" {% if f.category == 'core' %}selected{% endif %}>основные категории</option><option value="all" {% if f.category == 'all' %}selected{% endif %}>все</option>{% for c in d.cats %}<option value="{{ c.slug }}" {% if f.category == c.slug %}selected{% endif %}>{{ c.name }}</option>{% endfor %}</select></label>
+  <label>Статус<select name="status"><option value="">все</option>{% for st, n in d.by_status.most_common() %}<option value="{{ st }}" {% if f.status == st %}selected{% endif %}>{{ st }} ({{ n }})</option>{% endfor %}</select></label>
+  <label>Сайт<select name="site"><option value="">оба</option><option value="m22.ru" {% if f.site == 'm22.ru' %}selected{% endif %}>m22.ru</option><option value="radiosync.ru" {% if f.site == 'radiosync.ru' %}selected{% endif %}>radiosync.ru</option></select></label>
+  <button class="small">Применить</button> <a class="btn sec small" href="/site-audit/stock">Сбросить</a>
+</form>
+<div class="sub">Показано: {{ shown }}.</div>
+{% for c in cats %}
+<div class="card" style="margin-bottom:12px"><h3 style="margin:0 0 8px"><a href="/categories/{{ c.slug }}">{{ c.name }}</a> <span class="small muted">недоступно {{ c.rows|length }} из {{ c.total }} карточек{% if not c.core %} · не основная категория{% endif %}</span></h3>
+<div class="audit-cards">
+{% for r in c.rows %}
+  <div class="audit-card">
+    {% if r.image %}<a href="{{ r.url }}" target="_blank" rel="noopener"><img src="{{ r.image }}" alt="" referrerpolicy="no-referrer" loading="lazy"></a>{% else %}<div class="audit-noimg">нет фото</div>{% endif %}
+    <div class="audit-card-body">
+      <a href="{{ r.url }}" target="_blank" rel="noopener"><b>{{ r.name[:80] }}</b> ↗</a>
+      <div><span class="badge {{ 'sev-high' if r.status in ('нет в наличии','распродано') else ('sev-medium' if r.status == 'без цены' else 'sev-low') }}">{{ r.status }}</span> <span class="small">{% if r.price %}{{ r.price | money }}{% endif %}</span></div>
+      <div class="small muted">{{ r.site }}{% if r.sku %} · арт. {{ r.sku }}{% endif %}{% if r.color %} · {{ r.color }}{% endif %}{% if r.section %} · {{ r.section }}{% endif %}</div>
+      <div class="small muted">{% if r.twin %}на {{ r.twin.site }}: <a href="{{ r.twin.url }}" target="_blank" rel="noopener">{{ r.twin.availability }}{% if r.twin.price %}, {{ r.twin.price | money }}{% endif %}</a>{% else %}на втором сайте карточки нет{% endif %}{% if r.last_in_stock %} · был в наличии {{ r.last_in_stock | dt }}{% endif %} · <a href="/matrix/{{ r.id }}">в радаре</a></div>
+    </div>
+  </div>
+{% endfor %}
+</div></div>
+{% else %}<div class="card muted">По выбранным фильтрам всё в наличии.</div>{% endfor %}
+<p class="small muted">Статус берётся из микроразметки карточек при ночном сборе (m22.ru 05:00). «Был в наличии» — последний замер, когда карточка показывала «в наличии».</p>
+{% endblock %}

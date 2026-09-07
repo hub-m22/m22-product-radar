@@ -726,6 +726,22 @@ def site_audit_page(request: Request, priority: str = "", site: str = "", group:
     return render(request, "site_audit.html", d=d, rows=rows, f=f, priorities=site_audit.PRIORITY_NAMES, groups=site_audit.GROUPS, recs=recs, usecases=usecases, core=site_audit.CORE_CATEGORIES, categories=lists["categories"])
 
 
+@app.get("/site-audit/stock", response_class=HTMLResponse)
+def site_audit_stock(request: Request, site: str = "", status: str = "", category: str = "core"):
+    with db.session() as conn:
+        d = site_audit.stock_report(conn)
+    cats = []
+    for c in d["cats"]:
+        if category == "core" and not c["core"]:
+            continue
+        if category not in ("core", "all") and c["slug"] != category:
+            continue
+        rows = [r for r in c["rows"] if (not site or r["site"] == site) and (not status or r["status"] == status)]
+        if rows:
+            cats.append({**c, "rows": rows})
+    return render(request, "site_audit_stock.html", d=d, cats=cats, f={"site": site, "status": status, "category": category}, shown=sum(len(c["rows"]) for c in cats))
+
+
 @app.post("/site-audit/dismiss")
 def site_audit_dismiss(key: str = Form(...), undo: str = Form(""), back: str = Form("/site-audit")):
     with db.session() as conn:

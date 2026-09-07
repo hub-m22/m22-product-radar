@@ -1,0 +1,4 @@
+<div class="tabs section-tabs" style="margin:6px 0 12px">
+  <a href="/site-audit" class="{% if request.url.path == '/site-audit' %}active{% endif %}">Ошибки и замечания</a>
+  <a href="/site-audit/stock" class="{% if request.url.path.startswith('/site-audit/stock') %}active{% endif %}">Наличие</a>
+</div>
