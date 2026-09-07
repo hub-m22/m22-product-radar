@@ -1,5 +1,18 @@
 // Небольшие удобства интерфейса: автосабмит фильтров, подтверждение отклонения, спарклайны.
 document.addEventListener('DOMContentLoaded', function () {
+  // светлая/тёмная тема: атрибут на <html>, выбор в localStorage
+  function applyTheme(dark) {
+    if (dark) document.documentElement.setAttribute('data-theme', 'dark'); else document.documentElement.removeAttribute('data-theme');
+    document.querySelectorAll('.js-theme-icon').forEach(function (el) { el.textContent = dark ? '☀️' : '🌙'; });
+    document.querySelectorAll('.js-theme-label').forEach(function (el) { el.textContent = dark ? 'Светлая тема' : 'Тёмная тема'; });
+    try { localStorage.setItem('radar_theme', dark ? 'dark' : 'light'); } catch (e) {}
+  }
+  var isDark = document.documentElement.getAttribute('data-theme') === 'dark';
+  document.querySelectorAll('.js-theme-icon').forEach(function (el) { el.textContent = isDark ? '☀️' : '🌙'; });
+  document.querySelectorAll('.js-theme-label').forEach(function (el) { el.textContent = isDark ? 'Светлая тема' : 'Тёмная тема'; });
+  document.querySelectorAll('.js-theme-toggle').forEach(function (b) {
+    b.addEventListener('click', function () { applyTheme(document.documentElement.getAttribute('data-theme') !== 'dark'); });
+  });
   // перетаскивание границы заголовка меняет ширину колонки
   document.querySelectorAll('table').forEach(function (table) {
     table.querySelectorAll('thead th').forEach(function (th) {

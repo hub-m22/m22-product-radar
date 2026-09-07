@@ -2,7 +2,7 @@
 {% block title %}Главная — M22 Product Radar{% endblock %}
 {% block content %}
 <div class="topbar">
-  <div><h1><img src="/static/m22-logo.svg" alt="M22" class="page-logo">Что происходит на рынке экскурсионного оборудования</h1>
+  <div><button type="button" class="theme-toggle js-theme-toggle" style="float:right;margin-left:12px" title="Переключить светлую/тёмную тему"><span class="js-theme-icon">🌙</span> <span class="js-theme-label">Тёмная тема</span></button><h1><img src="/static/m22-logo.svg" alt="M22" class="page-logo">Что происходит на рынке экскурсионного оборудования</h1>
   <div class="sub">Данные обновлены: <b>{{ last_update | dt }}</b> · Товаров M22 в контуре: {{ counts.m22 }} · Конкурентов: {{ counts.comp }} · Предложений конкурентов с ценой: {{ counts.cp }}</div></div>
   <div class="actions-row no-print">
     <form method="get" class="inline filters" style="padding:4px 8px;margin:0"><label>Категория<select name="category" onchange="this.form.submit()"><option value="">все категории</option>{% for c in cat_list %}<option value="{{ c.slug }}" {% if category == c.slug %}selected{% endif %}>{{ c.name_ru }}</option>{% endfor %}</select></label></form>
