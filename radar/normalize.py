@@ -170,14 +170,68 @@ HEAD_RULES = [
 ]
 
 
+# Подсказки по кодам моделей известных брендов: (регулярное выражение по названию в нижнем регистре, категория, тип изделия).
+# Проверяются до общих ключевых слов — у многих продавцов название состоит из одного кода («Reinvox A-200», «SPBAUDIO MAX-1»).
+MODEL_HINTS: list[tuple[re.Pattern, str | None, str]] = [(re.compile(p, re.I), c, k) for p, c, k in [
+    (r"reinvox\s*(?:it|rt|lt|upl)-?\d", "audiogid", "case_charger"),
+    (r"reinvox\s*a-?(?:150|210|410)", "audiogid", "case_charger"),
+    (r"reinvox\s*a-?\d", "audiogid", "audioguide"),
+    (r"reinvox\s*r-?\d", "radiogid", "receiver"),
+    (r"reinvox\s*(?:t|wt)-?\d+t?\b", "radiogid", "transmitter"),
+    (r"reinvox\s*s-?\d", "sync_translation", "transmitter"),
+    (r"reinvox\s*c-?\d", "charging_cases", "case_charger"),
+    (r"reinvox\s*de-?\d", "disposable_headphones", "headphones"),
+    (r"reinvox\s*p-?\d", "reusable_headphones", "headphones"),
+    (r"reinvox\s*m-?\d", "microphones_guide", "microphone"),
+    (r"reinvox\s*(?:cs-?\d|concept|elegant)", None, "other"),
+    (r"spbaudio\s*(?:a-1|di-?\d|b-10)", "audiogid", "audioguide"),
+    (r"spbaudio\s*m-1|маячок", "audiogid", "accessory"),
+    (r"spbaudio\s*b-?\d{2,}", "charging_cases", "case_charger"),
+    (r"spbaudio\s*(?:max|ec|eurocab|co-|c-9000|v-1)", "sync_translation", "other"),
+    (r"spbaudio\s*tiflo|тифло", "sync_translation", "other"),
+    (r"spbaudio\s*nl-|индукционн\w+ петл", "adjacent_new", "other"),
+    (r"soolai\s*(?:ag|sa|rft)", "audiogid", "audioguide"),
+    (r"synexis\s*c\s?\d", "charging_cases", "case_charger"),
+    (r"synexis\s*(?:th|tp)", "radiogid", "transmitter"),
+    (r"synexis\s*rp", "radiogid", "receiver"),
+    (r"synexis\s*chp|dt394", "reusable_headphones", "headphones"),
+    (r"synexis", "radiogid", "system"),
+    (r"iris\s*rp", "sync_translation", "receiver"),
+    (r"iris\s*(?:ts|ef)", "sync_translation", "transmitter"),
+    (r"iris\s*c\s?\d", "charging_cases", "case_charger"),
+    (r"beyerdynamic\s*iris", "sync_translation", "system"),
+    (r"cromi\s*r-?\d", "sync_translation", "receiver"),
+    (r"cromi\s*\d{3}t", "sync_translation", "transmitter"),
+    (r"cromi\s*(?:cab|sl\s*in|sm-|h-)", "sync_translation", "other"),
+    (r"whisper\s*cube|multi-caisses|кабин[аы]\s+(?:для\s+)?(?:синхронн\w+\s+)?перевод|eurocab|\bec-\d|пульт\w*\s+(?:синхронн\w+\s+)?переводчик", "sync_translation", "other"),
+    (r"retekess\s*(?:tt|t1\d\d)", "radiogid", "system"),
+    (r"громкоговоритель|мегафон|усилитель голоса|rolton|rоlton|shidu|zoweetek", "voice_amplifier", "other"),
+]]
+OUT_OF_SCOPE_HEADS = ("видеопроектор", "проектор", "конференц-систем", "кнопка вызова", "хост-ресивер", "часы ", "пейджер", "система вызова", "система беспроводных вызовов",
+                      "кнопка экстренного", "система контроля доступа", "портативное радио", "экранный дисплей", "pos-", "антенна для пейджер")
+
+
+def model_hint(name: str) -> tuple[str | None, str] | None:
+    low = clean_text(name).lower()
+    for rx, cat, kind in MODEL_HINTS:
+        if rx.search(low):
+            return cat, kind
+    return None
+
+
 def classify_category(name: str, description: str | None = None, site_path: str | None = None) -> str | None:
-    """Категория: сначала по началу названия (тип изделия), затем по ключевым словам названия, разделу сайта, описанию."""
+    """Категория: сначала по началу названия (тип изделия), затем по коду модели, ключевым словам названия, разделу сайта, описанию."""
     head = clean_text(name).lower()[:45]
+    if head.startswith(OUT_OF_SCOPE_HEADS):
+        return None
     if re.match(r"^(?:нет бренда\s+)?(?:\w+\s+){0,2}наушник", head) or head.startswith(("одноразов", "многоразов")):
         return "disposable_headphones" if "одноразов" in head else "reusable_headphones"
     for slug, starts in HEAD_RULES:
         if head.startswith(starts):
             return slug
+    hint = model_hint(name)
+    if hint is not None:
+        return hint[0]
     for text in (name, site_path, description):
         if not text:
             continue
@@ -198,6 +252,11 @@ def detect_kind(name: str) -> str:
     has_tx = "передатчик" in low or "transmitter" in low
     has_rx = "приёмник" in low or "приемник" in low or "receiver" in low
     head = low.split(" для ")[0].split(" к ")[0]
+    # аксессуары: «шнурок для радиогида», «чехол для приёмника», «антенна», «кабель», «адаптер» — по началу названия, до «для»
+    if head.startswith(("шнурок", "шейный шнурок", "ремешок", "чехол", "чехлы", "накладк", "амбушюр", "кабель", "шнур", "антенна", "адаптер", "блок питания",
+                        "аккумулятор", "батаре", "клипса", "крепление", "держатель", "лямка", "ремень", "лента", "стойка", "подставка", "ветрозащит", "поролон")) \
+            or any(w in head for w in (" чехол", " шнурок", " ремешок", " накладк", " амбушюр", " клипса", " крепление", " антенна", " адаптер", " аккумулятор")):
+        return "accessory"
     if head.startswith(("передатчик", "transmitter")) and not has_rx:
         return "transmitter"
     if head.startswith(("приёмник", "приемник", "receiver")) and not has_tx:
@@ -222,6 +281,9 @@ def detect_kind(name: str) -> str:
         return "accessory"
     if "аренда" in low or "rent" in low:
         return "rental"
+    hint = model_hint(name)
+    if hint is not None:
+        return hint[1]
     if any(k in low for k in ("система", "system", "радиогид", "radioguide", "tour guide", "комплект", "kit", "set")):
         return "system"
     return "other"
