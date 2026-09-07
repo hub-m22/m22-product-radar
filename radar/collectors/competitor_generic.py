@@ -385,7 +385,8 @@ def collect_page(conn: sqlite3.Connection, page: dict, run_id: int) -> tuple[int
 
 SLUG_KEYWORDS = ("radiogu", "radio-gu", "radiogid", "audiogu", "audiogid", "earphone", "headphone", "headset", "naushnik", "charg", "zaryad", "case", "keis", "bag", "sumk",
                  "mic", "mikrofon", "lavalier", "petlich", "synchron", "sinhron", "translat", "perevod", "transmit", "peredat", "receiv", "priem", "tour", "guide", "gid",
-                 "reinvox", "retekess", "whisper", "sheptal", "komplekt", "kit", "set", "accessor", "aksessuar", "product", "tovar", "catalog", "shop", "rent", "arenda")
+                 "reinvox", "retekess", "whisper", "sheptal", "komplekt", "kit", "set", "accessor", "aksessuar", "product", "tovar", "catalog", "shop", "rent", "arenda",
+                 "beyerdynamic", "sennheiser", "bosch", "soolai", "spbaudio", "cromi", "touraudio", "crystal", "kabina", "pult", "konferenc", "conference", "usilitel", "gromkogovor", "tproduct")
 SLUG_EXCLUDE = ("/en/", "/page", "privacy", "offer", "return", "support", "review", "thank", "contact", "about", "news", "blog", "article", "delivery", "payment",
                 "policy", "oferta", "vacanc", "sitemap", "login", "cart", "search", "tag/", "faq", "warranty", "garant")
 

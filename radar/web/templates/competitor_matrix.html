@@ -40,7 +40,7 @@
 {% for r in rows %}<tr {% if r.state == 'gone' %}style="opacity:.55"{% endif %}>
   <td>{% if r.image_url %}<img src="{{ r.image_url }}" alt="" referrerpolicy="no-referrer" width="36" height="36" style="width:36px;height:36px;object-fit:contain;border:1px solid var(--line);border-radius:4px">{% endif %}</td>
   <td class="small"><a href="/competitors/{{ r.competitor_id }}">{{ r.seller[:28] }}</a></td>
-  <td><a href="{{ r.url }}" target="_blank" rel="noopener">{{ r.name[:60] }}</a></td>
+  <td><a href="{{ r.url }}" target="_blank" rel="noopener">{{ r.name[:60] }}</a>{% if r.dup_count and r.dup_count > 1 %} <span class="small muted" title="та же позиция с той же ценой на других страницах сайта: {{ r.dup_urls | join(', ') }}">({{ r.dup_count }} стр.)</span>{% endif %}</td>
   <td class="small">{{ r.category_name[:24] }}</td><td class="small">{{ r.kind_name }}</td><td class="small">{{ r.model_key or '—' }}</td>
   <td class="num">{% if r.price %}{{ r.price | money }}{% if r.currency != 'RUB' %} {{ r.currency }}{% endif %}{% else %}<span class="muted">цена по запросу</span>{% endif %}<div class="small muted">{{ {'InStock':'в наличии','OutOfStock':'нет в наличии','PreOrder':'предзаказ','SoldOut':'распродано'}.get(r.availability, 'наличие не указано') }}</div></td>
   <td class="num small">{% if r.unit_price and r.unit_price != r.price %}{{ r.unit_price | money }}{% if r.pack_qty %} <span class="muted">/{{ r.pack_qty }}</span>{% endif %}{% else %}<span class="muted">—</span>{% endif %}</td>

@@ -1,6 +1,7 @@
 """Матрица конкурентов: все товары всех конкурентов с нормализованными параметрами, покрытие категорий, изменения."""
 from __future__ import annotations
 
+import re
 import sqlite3
 
 from . import categories as catmod
@@ -45,6 +46,33 @@ def rows(conn: sqlite3.Connection, competitor_id: int | None = None, category: s
         r["state"] = "gone" if not r["is_active"] else ("new" if baseline and (r["first_seen_at"] or "")[:10] > baseline else "ok")
         r["category_name"] = CATEGORY_NAMES.get(r["category_slug"], r["category_slug"] or "—")
         r["kind_name"] = KIND_LABELS.get(r["kind"], r["kind"] or "—")
+    return _collapse_duplicates(out)
+
+
+def _dup_key(r: dict) -> tuple:
+    """Одна и та же позиция, попавшая с двух страниц сайта (раздел + магазин): продавец, нормализованное имя, цена."""
+    name = re.sub(r"[^a-zа-я0-9]+", " ", (r["name"] or "").lower()).strip()
+    name = re.sub(r"(радиогид|аудиогид|система|комплект|шт|штук)", " ", name)
+    name = re.sub(r"\s+", " ", name).strip()
+    return (r["competitor_id"], name, round(r["price"] or 0))
+
+
+def _collapse_duplicates(rows_: list[dict]) -> list[dict]:
+    seen: dict[tuple, dict] = {}
+    out = []
+    for r in rows_:
+        if not r["is_active"] or not r["price"]:
+            out.append(r)
+            continue
+        k = _dup_key(r)
+        if k[1] and k in seen:
+            keep = seen[k]
+            keep["dup_count"] = keep.get("dup_count", 1) + 1
+            keep.setdefault("dup_urls", []).append(r["url"])
+            continue
+        r["dup_count"] = 1
+        seen[k] = r
+        out.append(r)
     return out
 
 
