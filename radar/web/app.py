@@ -678,22 +678,29 @@ def match_review(mid: int, decision: str = Form(...), note: str = Form(""), matc
 
 # ---------------- Матрица конкурентов ----------------
 @app.get("/competitor-matrix", response_class=HTMLResponse)
-def competitor_matrix(request: Request, view: str = "matrix", competitor: str = "", category: str = "", kind: str = "", state: str = "", q: str = ""):
-    f = {"competitor": competitor, "category": category, "kind": kind, "state": state, "q": q}
+def competitor_matrix(request: Request, view: str = "matrix", competitor: str = "", category: str = "", kind: str = "", state: str = "", q: str = "", tier: str = "",
+                      scope: str = "in", specs: str = ""):
+    f = {"competitor": competitor, "category": category, "kind": kind, "state": state, "q": q, "tier": tier, "scope": scope, "specs": specs}
     with db.session() as conn:
         lists = _lists(conn)
         cov = cmx.coverage(conn) if view == "coverage" else None
         ch = cmx.changes(conn) if view == "changes" else None
+        summ = cmx.summary(conn) if view == "summary" else None
         rows = []
         if view == "matrix":
-            rows = cmx.rows(conn, int(competitor) if competitor else None, category or None, kind or None, include_inactive=(state != "active"), q=q or None)
+            rows = cmx.rows(conn, int(competitor) if competitor else None, category or None, kind or None, include_inactive=(state != "active"), q=q or None,
+                            tier=tier or None, in_scope_only=(scope != "all"))
+            if specs == "yes":
+                rows = [r for r in rows if r["spec_count"]]
+            elif specs == "no":
+                rows = [r for r in rows if not r["spec_count"]]
             if state == "gone":
                 rows = [r for r in rows if r["state"] == "gone"]
             elif state == "new":
                 rows = [r for r in rows if r["state"] == "new"]
             elif state == "nomatch":
                 rows = [r for r in rows if not r["m22_id"]]
-    return render(request, "competitor_matrix.html", view=view, f=f, rows=rows, cov=cov, ch=ch, cols=cmx.MATRIX_COLS, kinds=cmx.KIND_LABELS, **lists)
+    return render(request, "competitor_matrix.html", view=view, f=f, rows=rows, cov=cov, ch=ch, summ=summ, cols=cmx.MATRIX_COLS, kinds=cmx.KIND_LABELS, **lists)
 
 
 # ---------------- Наши сайты (аудит m22.ru и radiosync.ru) ----------------

@@ -14,11 +14,21 @@ MATRIX_COLS = [("range_m", "Дальность, м"), ("channels", "Канало
                ("weight_g", "Вес, г"), ("two_way", "Двустор. связь"), ("capacity", "Вместимость")]
 
 
-def rows(conn: sqlite3.Connection, competitor_id: int | None = None, category: str | None = None, kind: str | None = None, include_inactive: bool = True, q: str | None = None) -> list[dict]:
+SPEC_FIELDS = ("range_m", "channels", "freq_band", "battery_h", "weight_g")  # поля, по которым считаем «характеристики сняты»
+TIER_ORDER = {"A": 0, "B": 1, "C": 2}
+
+
+def rows(conn: sqlite3.Connection, competitor_id: int | None = None, category: str | None = None, kind: str | None = None, include_inactive: bool = True, q: str | None = None,
+         tier: str | None = None, in_scope_only: bool = False) -> list[dict]:
     where, params = ["c.is_active=1"], []
     if competitor_id:
         where.append("cp.competitor_id=?")
         params.append(competitor_id)
+    if tier:
+        where.append("c.tier=?")
+        params.append(tier)
+    if in_scope_only:
+        where.append("cp.category_slug IS NOT NULL")
     if category:
         where.append("cp.category_slug=?")
         params.append(category)
@@ -31,7 +41,7 @@ def rows(conn: sqlite3.Connection, competitor_id: int | None = None, category: s
         where.append("(cp.name LIKE ? OR cp.model_key LIKE ? OR c.name LIKE ?)")
         params += [f"%{q}%"] * 3
     baseline = (db.get_setting(conn, "baseline_date") or "")[:10]
-    out = db.rows(conn, f"""SELECT cp.*, c.name AS competitor_name, COALESCE(c.group_name, c.name) AS seller, c.website,
+    out = db.rows(conn, f"""SELECT cp.*, c.name AS competitor_name, COALESCE(c.group_name, c.name) AS seller, c.website, c.tier,
                            (SELECT COUNT(*) FROM competitor_price_history h WHERE h.competitor_product_id=cp.id) AS obs,
                            (SELECT m.id FROM product_matches pm JOIN m22_products m ON m.id=pm.m22_product_id WHERE pm.competitor_product_id=cp.id AND pm.review_status!='rejected' ORDER BY pm.confidence DESC LIMIT 1) AS m22_id,
                            (SELECT m.name FROM product_matches pm JOIN m22_products m ON m.id=pm.m22_product_id WHERE pm.competitor_product_id=cp.id AND pm.review_status!='rejected' ORDER BY pm.confidence DESC LIMIT 1) AS m22_name,
@@ -39,14 +49,46 @@ def rows(conn: sqlite3.Connection, competitor_id: int | None = None, category: s
                            (SELECT pm.match_type FROM product_matches pm WHERE pm.competitor_product_id=cp.id AND pm.review_status!='rejected' ORDER BY pm.confidence DESC LIMIT 1) AS match_type,
                            (SELECT pm.confidence FROM product_matches pm WHERE pm.competitor_product_id=cp.id AND pm.review_status!='rejected' ORDER BY pm.confidence DESC LIMIT 1) AS match_conf
                            FROM competitor_products cp JOIN competitors c ON c.id=cp.competitor_id WHERE {' AND '.join(where)}
-                           ORDER BY seller, cp.category_slug, cp.kind, cp.price""", params)
+                           ORDER BY c.tier, seller, cp.category_slug, cp.kind, cp.price""", params)
     for r in out:
         r["norm"] = specmod.normalize(r["name"], r["description"], r["specs_json"], r["price"], r["capacity"])
         r["unit_price"], r["pack_qty"] = catmod.unit_price(r["name"], r["price"], r["category_slug"], r["kind"], r["capacity"])
         r["state"] = "gone" if not r["is_active"] else ("new" if baseline and (r["first_seen_at"] or "")[:10] > baseline else "ok")
-        r["category_name"] = CATEGORY_NAMES.get(r["category_slug"], r["category_slug"] or "—")
-        r["kind_name"] = KIND_LABELS.get(r["kind"], r["kind"] or "—")
+        r["category_name"] = CATEGORY_NAMES.get(r["category_slug"], r["category_slug"] or "без категории")
+        r["kind_name"] = KIND_LABELS.get(r["kind"], r["kind"] or "не определён")
+        r["spec_count"] = sum(1 for f in SPEC_FIELDS if r["norm"].get(f) is not None)
+        r["raw_spec_count"] = len(specmod.flatten_specs(r["specs_json"]))
     return _collapse_duplicates(out)
+
+
+def summary(conn: sqlite3.Connection) -> dict:
+    """Сводка по продавцам: сколько товаров, с ценой, с характеристиками (по каждому полю), категории, дата последнего снятия."""
+    sellers: dict[str, dict] = {}
+    for r in rows(conn, include_inactive=False):
+        s = sellers.setdefault(r["seller"], {"seller": r["seller"], "competitor_id": r["competitor_id"], "tier": r["tier"], "website": r["website"], "n": 0, "priced": 0,
+                                             "in_scope": 0, "any_spec": 0, "fields": {f: 0 for f, _ in MATRIX_COLS}, "cats": set(), "last": None, "matched": 0, "new": 0})
+        s["n"] += 1
+        s["priced"] += 1 if r["price"] else 0
+        s["in_scope"] += 1 if r["category_slug"] else 0
+        s["any_spec"] += 1 if r["spec_count"] else 0
+        s["matched"] += 1 if r["m22_id"] else 0
+        s["new"] += 1 if r["state"] == "new" else 0
+        for f, _ in MATRIX_COLS:
+            v = r["norm"].get(f)
+            if v is not None and v is not False:
+                s["fields"][f] += 1
+        if r["category_slug"]:
+            s["cats"].add(r["category_slug"])
+        if r["fetched_at"] and (not s["last"] or r["fetched_at"] > s["last"]):
+            s["last"] = r["fetched_at"]
+    out = sorted(sellers.values(), key=lambda s: (TIER_ORDER.get(s["tier"], 9), -s["n"]))
+    for s in out:
+        s["cats"] = sorted(CATEGORY_NAMES.get(c, c) for c in s["cats"])
+        s["spec_pct"] = round(s["any_spec"] / s["n"] * 100) if s["n"] else 0
+        s["priced_pct"] = round(s["priced"] / s["n"] * 100) if s["n"] else 0
+    totals = {"n": sum(s["n"] for s in out), "priced": sum(s["priced"] for s in out), "any_spec": sum(s["any_spec"] for s in out), "sellers": len(out),
+              "fields": {f: sum(s["fields"][f] for s in out) for f, _ in MATRIX_COLS}}
+    return {"sellers": out, "totals": totals}
 
 
 def _dup_key(r: dict) -> tuple:
