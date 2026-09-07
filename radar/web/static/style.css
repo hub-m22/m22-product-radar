@@ -126,3 +126,17 @@ html[data-theme="dark"] .rec { border-color:var(--line); }
 html[data-theme="dark"] .kpi-v { color:var(--text); }
 html[data-theme="dark"] a.btn.small, html[data-theme="dark"] .btn.small { color:var(--accent); }
 html[data-theme="dark"] .btn:not(.sec), html[data-theme="dark"] button:not(.sec):not(.danger):not(.theme-toggle) { background:var(--accent); color:#0b1119; }
+/* Наши сайты: список замечаний с карточками */
+.audit-list { display:flex; flex-direction:column; gap:10px; }
+.audit { padding:10px 14px; border-left:4px solid var(--line); }
+.audit-P1 { border-left-color:var(--high); } .audit-P2 { border-left-color:var(--medium); } .audit-P3 { border-left-color:var(--low); }
+.audit-dismissed { opacity:.55; }
+.audit-head { display:flex; gap:10px; align-items:center; flex-wrap:wrap; } .audit-dismiss { margin-left:auto; }
+.audit-what { font-weight:600; margin:6px 0 2px; font-size:14px; } .audit-fix { font-size:13px; color:#374151; }
+.audit-cards { display:grid; grid-template-columns:repeat(auto-fit, minmax(300px, 1fr)); gap:8px; margin-top:8px; }
+.audit-card { display:flex; gap:10px; border:1px solid var(--line); border-radius:8px; padding:6px 8px; background:#fff; }
+.audit-card img { width:72px; height:72px; object-fit:contain; border:1px solid var(--line); border-radius:6px; background:#fff; flex:none; }
+.audit-noimg { width:72px; height:72px; border:1px dashed var(--line); border-radius:6px; font-size:11px; color:var(--muted); display:flex; align-items:center; justify-content:center; flex:none; }
+.audit-card-body { min-width:0; } .audit-card-body a b { font-size:13px; }
+.audit-ev { margin-top:6px; word-break:break-word; }
+html[data-theme="dark"] .audit-card { background:var(--card); } html[data-theme="dark"] .audit-fix { color:#c9d3df; }

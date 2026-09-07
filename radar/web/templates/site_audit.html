@@ -2,7 +2,7 @@
 {% block title %}Наши сайты — M22 Product Radar{% endblock %}
 {% block content %}
 <div class="topbar"><div><h1>Наши сайты: m22.ru и radiosync.ru</h1>
-<div class="sub">Проверка собственных сайтов по данным последнего сбора ({{ d.last_fetch | dt }}): цены и наличие, расхождения между сайтами, дубли, неполные карточки, единообразие названий, опечатки, структура каталога. Всего карточек: {{ d.products }}. Каждое замечание — со ссылкой на карточку и конкретным действием.</div></div>
+<div class="sub">Проверка собственных сайтов по данным последнего сбора ({{ d.last_fetch | dt }}): цены и наличие, расхождения между сайтами, дубли, неполные карточки, единообразие названий, опечатки, структура каталога. Всего карточек: {{ d.products }}. По умолчанию показаны только основные категории (радиогиды, аудиогиды, синхроперевод, наушники, микрофоны, кейсы, комплекты, аренда).</div></div>
 <div class="actions-row"><a class="btn sec small" href="/export/site_audit.xlsx">XLSX</a> <a class="btn sec small" href="/export/site_audit.csv">CSV</a></div></div>
 
 <div class="kpis">
@@ -13,16 +13,16 @@
   <div class="kpi"><div class="kpi-v">{{ d.dismissed }}</div><div class="kpi-l">скрыто как исправленное или неважное</div></div>
 </div>
 
-<div class="card recs-card"><h3 style="margin-top:0">С чего начать</h3>
-<ol class="small" style="margin:0;padding-left:18px">
-  <li><b>Цены и наличие</b> — разные цены и статусы одного артикула на двух сайтах, карточки без цены, ключевые товары «нет в наличии». Это прямые потери заявок и доверия.</li>
-  <li><b>Дубли</b> — две карточки с одним названием (а иногда и с разной ценой): покупатель не понимает разницы, поисковики понижают обе.</li>
-  <li><b>Единообразие</b> — одна модель написана по-разному (AG300 / AG‑300, UG10 / UG‑10, SGTR 11 / SGTR11): поиск по сайту и поисковый спрос делятся на два запроса.</li>
-  <li><b>Косметика</b> — латинские буквы в русских словах, пробелы вокруг дефисов, склеенные предложения в описании для поисковиков. Правится за один проход по шаблону.</li>
-</ol>
-<p class="small muted" style="margin:6px 0 0">Кнопка «Скрыть» убирает замечание из списка (исправлено или сознательно так). Скрытые можно показать фильтром. После следующего сбора данных список пересчитывается сам.</p></div>
+<div class="card compact tbl-wrap" style="margin-bottom:12px"><h3 style="padding:10px 12px 0">По категориям</h3>
+<table class="nosort"><thead><tr><th>Категория</th><th class="num">P1</th><th class="num">P2</th><th class="num">P3</th><th class="num">Всего</th><th></th></tr></thead><tbody>
+{% for c in d.cats %}<tr {% if c.slug not in core %}style="opacity:.6"{% endif %}>
+  <td><a href="/site-audit?category={{ c.slug or 'none' }}">{{ c.name }}</a>{% if c.slug and c.slug not in core %} <span class="small muted">не основная</span>{% endif %}</td>
+  <td class="num">{% if c.P1 %}<b style="color:#b91c1c">{{ c.P1 }}</b>{% else %}<span class="muted">0</span>{% endif %}</td><td class="num">{{ c.P2 }}</td><td class="num">{{ c.P3 }}</td><td class="num">{{ c.n }}</td>
+  <td class="small muted">{% if c.slug %}<a href="/categories/{{ c.slug }}">раздел категории</a>{% else %}замечания ко всему сайту (термины, единицы, характеристики){% endif %}</td>
+</tr>{% endfor %}</tbody></table></div>
 
 <form class="filters" method="get">
+  <label>Категория<select name="category"><option value="core" {% if f.category == 'core' %}selected{% endif %}>основные категории</option><option value="all" {% if f.category == 'all' %}selected{% endif %}>все</option><option value="none" {% if f.category == 'none' %}selected{% endif %}>общие (без товара)</option>{% for c in categories %}<option value="{{ c.slug }}" {% if f.category == c.slug %}selected{% endif %}>{{ c.name_ru }}</option>{% endfor %}</select></label>
   <label>Приоритет<select name="priority"><option value="">все</option>{% for p, n in priorities.items() %}<option value="{{ p }}" {% if f.priority == p %}selected{% endif %}>{{ p }} — {{ n }}</option>{% endfor %}</select></label>
   <label>Сайт<select name="site"><option value="">все</option><option value="m22.ru" {% if f.site == 'm22.ru' %}selected{% endif %}>m22.ru</option><option value="radiosync.ru" {% if f.site == 'radiosync.ru' %}selected{% endif %}>radiosync.ru</option><option value="оба" {% if f.site == 'оба' %}selected{% endif %}>оба сайта</option></select></label>
   <label>Группа<select name="group"><option value="">все</option>{% for g, n in groups.items() %}<option value="{{ g }}" {% if f.group == g %}selected{% endif %}>{{ n }}</option>{% endfor %}</select></label>
@@ -30,22 +30,37 @@
   <label>Поиск<input type="text" name="q" value="{{ f.q }}" placeholder="товар, артикул, что не так"></label>
   <button class="small">Применить</button> <a class="btn sec small" href="/site-audit">Сбросить</a>
 </form>
-<div class="sub">Замечаний: {{ rows|length }}.</div>
+<div class="sub">Замечаний: {{ rows|length }}. Кнопка «Скрыть» убирает замечание из списка (исправлено или сознательно так); после следующего сбора данных список пересчитывается сам.</div>
 
-<div class="card compact tbl-wrap"><table>
-<thead><tr><th>Приоритет</th><th>Группа</th><th>Сайт</th><th style="min-width:220px">Карточка</th><th style="min-width:220px">Что не так</th><th style="min-width:360px">Что сделать</th><th style="min-width:200px">Подтверждение</th><th></th></tr></thead>
-<tbody>
-{% for r in rows %}<tr {% if r.dismissed %}style="opacity:.55"{% endif %}>
-  <td><span class="badge {{ {'P1':'sev-high','P2':'sev-medium','P3':'sev-low'}[r.priority] }}">{{ r.priority }}</span> <span class="small muted">{{ r.priority_name }}</span></td>
-  <td class="small">{{ r.group_name }}</td>
-  <td class="small nowrap">{{ r.site }}</td>
-  <td class="small">{% if r.product_id %}<a href="/matrix/{{ r.product_id }}">{{ r.name[:70] }}</a>{% else %}{{ r.name }}{% endif %}{% if r.url %} <a href="{{ r.url }}" target="_blank" rel="noopener" title="открыть на сайте">↗</a>{% endif %}{% if r.sku %}<div class="muted">арт. {{ r.sku }}</div>{% endif %}{% if r.category %}<div class="muted">{{ r.category }}</div>{% endif %}</td>
-  <td class="small"><b>{{ r.what }}</b></td>
-  <td class="small">{{ r.fix }}</td>
-  <td class="small muted" style="max-width:320px;word-break:break-word">{{ r.evidence }}</td>
-  <td class="nowrap"><form method="post" action="/site-audit/dismiss" style="display:inline"><input type="hidden" name="key" value="{{ r.key }}"><input type="hidden" name="undo" value="{{ '1' if r.dismissed else '' }}"><input type="hidden" name="back" value="{{ request.url.path }}?{{ request.url.query }}"><button class="small sec">{{ 'Вернуть' if r.dismissed else 'Скрыть' }}</button></form></td>
-</tr>{% else %}<tr><td colspan="8" class="muted">Замечаний по выбранным фильтрам нет.</td></tr>{% endfor %}
-</tbody></table></div>
+<div class="audit-list">
+{% for r in rows %}
+<div class="card audit {% if r.dismissed %}audit-dismissed{% endif %} audit-{{ r.priority }}">
+  <div class="audit-head">
+    <span class="badge {{ {'P1':'sev-high','P2':'sev-medium','P3':'sev-low'}[r.priority] }}">{{ r.priority }} · {{ r.priority_name }}</span>
+    <span class="small muted">{{ r.group_name }} · {{ r.site }}{% if r.category %} · {{ r.category }}{% endif %}</span>
+    <form method="post" action="/site-audit/dismiss" class="audit-dismiss"><input type="hidden" name="key" value="{{ r.key }}"><input type="hidden" name="undo" value="{{ '1' if r.dismissed else '' }}"><input type="hidden" name="back" value="{{ request.url.path }}?{{ request.url.query }}"><button class="small sec">{{ 'Вернуть' if r.dismissed else 'Скрыть' }}</button></form>
+  </div>
+  <div class="audit-what">{{ r.what }}</div>
+  <div class="audit-fix">{{ r.fix }}</div>
+  {% if r.cards %}
+  <div class="audit-cards">
+    {% for c in r.cards %}
+    <div class="audit-card">
+      {% if c.image %}<a href="{{ c.url }}" target="_blank" rel="noopener"><img src="{{ c.image }}" alt="" referrerpolicy="no-referrer" loading="lazy"></a>{% else %}<div class="audit-noimg">нет фото</div>{% endif %}
+      <div class="audit-card-body">
+        <a href="{{ c.url }}" target="_blank" rel="noopener"><b>{{ c.name[:80] }}</b> ↗</a>
+        <div class="small muted">{{ c.site }}{% if c.sku %} · арт. {{ c.sku }}{% endif %}{% if c.color %} · цвет: {{ c.color }}{% endif %}</div>
+        <div class="small">{% if c.price %}<b>{{ c.price | money }}</b>{% else %}<span class="muted">без цены</span>{% endif %} · {{ c.availability }}{% if c.section %} · раздел: {{ c.section }}{% endif %}</div>
+        <div class="small muted">описание {{ c.desc_len }} зн. · характеристик {{ c.specs_n }} · <a href="/matrix/{{ c.id }}">карточка в радаре</a></div>
+      </div>
+    </div>
+    {% endfor %}
+  </div>
+  {% endif %}
+  {% if r.evidence %}<div class="small muted audit-ev">{{ r.evidence }}</div>{% endif %}
+</div>
+{% else %}<div class="card muted">Замечаний по выбранным фильтрам нет.</div>{% endfor %}
+</div>
 
 {% if recs %}
 <div style="margin-top:14px">{% with title="Чего не хватает на сайтах по сравнению с конкурентами", intro="Не ошибки, а разрывы: конкуренты уровня A заявляют это на своих сайтах, а на m22.ru и radiosync.ru этого нет. Подробнее — в разделе «Конкуренты» → «Сравнительная таблица»." %}{% include "_site_recs.html" %}{% endwith %}</div>

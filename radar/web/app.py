@@ -698,13 +698,19 @@ def competitor_matrix(request: Request, view: str = "matrix", competitor: str = 
 
 # ---------------- Наши сайты (аудит m22.ru и radiosync.ru) ----------------
 @app.get("/site-audit", response_class=HTMLResponse)
-def site_audit_page(request: Request, priority: str = "", site: str = "", group: str = "", hidden: str = "", q: str = ""):
-    f = {"priority": priority, "site": site, "group": group, "hidden": hidden, "q": q}
+def site_audit_page(request: Request, priority: str = "", site: str = "", group: str = "", hidden: str = "", q: str = "", category: str = "core"):
+    f = {"priority": priority, "site": site, "group": group, "hidden": hidden, "q": q, "category": category}
     with db.session() as conn:
         d = site_audit.run(conn)
         rows = d["items"]
         if not hidden:
             rows = [r for r in rows if not r["dismissed"]]
+        if category == "core":
+            rows = [r for r in rows if not r["category_slug"] or r["category_slug"] in site_audit.CORE_CATEGORIES]
+        elif category == "none":
+            rows = [r for r in rows if not r["category_slug"]]
+        elif category and category != "all":
+            rows = [r for r in rows if r["category_slug"] == category]
         if priority:
             rows = [r for r in rows if r["priority"] == priority]
         if site:
@@ -716,7 +722,8 @@ def site_audit_page(request: Request, priority: str = "", site: str = "", group:
             rows = [r for r in rows if ql in (r["name"] + " " + (r["sku"] or "") + " " + r["what"] + " " + r["fix"]).lower()]
         recs = profmod.site_recommendations(conn, ("A",))
         usecases = db.rows(conn, "SELECT id, title FROM signals WHERE type='new_use_case' AND status NOT IN ('rejected','done') ORDER BY created_at DESC LIMIT 12")
-    return render(request, "site_audit.html", d=d, rows=rows, f=f, priorities=site_audit.PRIORITY_NAMES, groups=site_audit.GROUPS, recs=recs, usecases=usecases)
+        lists = _lists(conn)
+    return render(request, "site_audit.html", d=d, rows=rows, f=f, priorities=site_audit.PRIORITY_NAMES, groups=site_audit.GROUPS, recs=recs, usecases=usecases, core=site_audit.CORE_CATEGORIES, categories=lists["categories"])
 
 
 @app.post("/site-audit/dismiss")

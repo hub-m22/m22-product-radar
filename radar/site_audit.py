@@ -26,6 +26,8 @@ GROUPS = {
     "source": "Доступность страниц для сбора",
 }
 KEY_CATEGORIES = {"radiogid", "kits_solutions", "sync_translation", "audiogid", "charging_cases"}
+# основные категории бизнеса: по умолчанию раздел показывает только их
+CORE_CATEGORIES = ["radiogid", "audiogid", "sync_translation", "disposable_headphones", "reusable_headphones", "microphones_guide", "charging_cases", "kits_solutions", "rental"]
 BRAND_CATEGORIES = {"radiogid", "audiogid", "charging_cases", "disposable_headphones", "reusable_headphones", "microphones_guide", "kits_solutions", "sync_translation", "voice_amplifier"}
 
 AVAIL = {"InStock": "в наличии", "OutOfStock": "нет в наличии", "PreOrder": "предзаказ", "SoldOut": "распродано", None: "наличие не указано"}
@@ -63,9 +65,43 @@ def _model_forms(name: str) -> dict[str, str]:
     return out
 
 
-def _item(priority: str, group: str, what: str, fix: str, *, site: str = "", product_id: int | None = None, name: str = "", url: str = "", sku: str | None = None, evidence: str = "", key: str = "") -> dict:
+def _flat_specs(p: dict) -> dict[str, str]:
+    out = {}
+    for g, v in (db.uj(p.get("specs_json"), {}) or {}).items():
+        if isinstance(v, dict):
+            out.update({str(k).strip(): str(x).strip() for k, x in v.items()})
+        else:
+            out[str(g).strip()] = str(v).strip()
+    return out
+
+
+def _spec(p: dict, *names: str) -> str | None:
+    fl = {_norm_spec_key(k): v for k, v in _flat_specs(p).items()}
+    for n in names:
+        if fl.get(_norm_spec_key(n)):
+            return fl[_norm_spec_key(n)]
+    return None
+
+
+def _image(p: dict) -> str | None:
+    imgs = db.uj(p.get("images_json"), []) or []
+    if not imgs:
+        return None
+    img = imgs[0]
+    return f"https://{p['site']}{img}" if img.startswith("/") else img
+
+
+def _card(p: dict) -> dict:
+    """Короткая карточка товара для показа в замечании: фото, ссылка на сайт и в радар, цена, наличие, цвет, раздел."""
+    return {"id": p["id"], "name": p["name"], "url": p["url"], "site": p["site"], "sku": p["sku"], "price": p["price"], "availability": AVAIL.get(p["availability"], p["availability"]),
+            "image": _image(p), "color": _spec(p, "Цвет"), "section": (p.get("site_category_path") or "").strip(" /"), "desc_len": len(p.get("description") or ""),
+            "specs_n": len(_flat_specs(p))}
+
+
+def _item(priority: str, group: str, what: str, fix: str, *, site: str = "", product_id: int | None = None, name: str = "", url: str = "", sku: str | None = None, evidence: str = "", key: str = "",
+          cards: list[dict] | None = None, category: str = "") -> dict:
     return {"key": key or f"{group}:{site}:{product_id}:{what[:60]}", "priority": priority, "priority_name": PRIORITY_NAMES[priority], "group": group, "group_name": GROUPS[group],
-            "site": site, "product_id": product_id, "name": name, "url": url, "sku": sku, "what": what, "fix": fix, "evidence": evidence}
+            "site": site, "product_id": product_id, "name": name, "url": url, "sku": sku, "what": what, "fix": fix, "evidence": evidence, "cards": cards or [], "category_slug": category}
 
 
 # ---------------------------------------------------------------- проверки
@@ -99,7 +135,7 @@ def check_prices_and_stock(prods: list[dict]) -> list[dict]:
         rx = min((x["price"] for x in kinds.get("receiver", [])), default=None)
         for s in kinds.get("system", []):
             if (tx and s["price"] < tx) or (rx and abs(s["price"] - rx) < 1):
-                out.append(_item("P1", "price", "Цена системы ниже цены её компонентов", f"Проверить цену: система {_rub(s['price'])}, передатчик {mk} {_rub(tx)}, приёмник {_rub(rx)}. Похоже, в базовой карточке подставлена цена приёмника.",
+                out.append(_item("P1", "price", "Цена системы ниже цены её компонентов", f"Проверить цену: система {_rub(s['price'])}, передатчик {mk} {_rub(tx)}, приёмник {_rub(rx)}. Похоже, в базовой карточке подставлена цена приёмника.", cards=[_card(s)] + [_card(x) for x in kinds.get("transmitter", [])[:1] + kinds.get("receiver", [])[:1]],
                                  site=site, product_id=s["id"], name=s["name"], url=s["url"], sku=s["sku"], key=f"sysprice:{s['id']}"))
     return out
 
@@ -116,13 +152,13 @@ def check_cross_site(prods: list[dict]) -> list[dict]:
             continue
         pa, pb = a[0], b[0]
         if pa["price"] and pb["price"] and abs(pa["price"] - pb["price"]) >= 1:
-            out.append(_item("P1", "dup", "Разная цена на m22.ru и radiosync.ru", f"Выровнять цену: m22.ru {_rub(pa['price'])}, radiosync.ru {_rub(pb['price'])} (артикул {sku}). Клиент, открывший оба сайта, теряет доверие; в тендерных прайсах цены должны совпадать.",
+            out.append(_item("P1", "dup", "Разная цена на m22.ru и radiosync.ru", f"Выровнять цену: m22.ru {_rub(pa['price'])}, radiosync.ru {_rub(pb['price'])} (артикул {sku}). Клиент, открывший оба сайта, теряет доверие; в тендерных прайсах цены должны совпадать.", cards=[_card(pa), _card(pb)],
                              site="оба", product_id=pa["id"], name=pa["name"], url=pa["url"], sku=sku, evidence=f"radiosync: {pb['url']}", key=f"xprice:{sku}"))
         if pa["availability"] != pb["availability"] and pa["availability"] and pb["availability"]:
-            out.append(_item("P1", "dup", "Разный статус наличия на двух сайтах", f"На m22.ru — {AVAIL.get(pa['availability'])}, на radiosync.ru — {AVAIL.get(pb['availability'])}. Свести остатки к одному источнику (учётная система → оба сайта).",
+            out.append(_item("P1", "dup", "Разный статус наличия на двух сайтах", f"На m22.ru — {AVAIL.get(pa['availability'])}, на radiosync.ru — {AVAIL.get(pb['availability'])}. Свести остатки к одному источнику (учётная система → оба сайта).", cards=[_card(pa), _card(pb)],
                              site="оба", product_id=pa["id"], name=pa["name"], url=pa["url"], sku=sku, evidence=f"radiosync: {pb['url']}", key=f"xstock:{sku}"))
         if _norm_name(pa["name"]) != _norm_name(pb["name"]) and " — " not in pb["name"]:
-            out.append(_item("P3", "naming", "Один артикул назван по-разному на двух сайтах", f"m22.ru: «{pa['name']}»; radiosync.ru: «{pb['name']}». Привести к одному названию — так проще искать и сверять прайсы.",
+            out.append(_item("P3", "naming", "Один артикул назван по-разному на двух сайтах", f"m22.ru: «{pa['name']}»; radiosync.ru: «{pb['name']}». Привести к одному названию — так проще искать и сверять прайсы.", cards=[_card(pa), _card(pb)],
                              site="оба", product_id=pa["id"], name=pa["name"], url=pa["url"], sku=sku, key=f"xname:{sku}"))
     # есть только на одном сайте (товары бренда Radiosync в основных категориях)
     m22_skus = {p["sku"].strip().upper() for p in prods if p["site"] == "m22.ru" and p["sku"]}
@@ -147,12 +183,56 @@ def check_cross_site(prods: list[dict]) -> list[dict]:
             continue
         prices = {x["price"] for x in items}
         skus = ", ".join(str(x["sku"]) for x in items)
-        if len(prices) > 1:
-            out.append(_item("P1", "dup", "Две карточки с одним названием и разной ценой", f"Артикулы {skus}, цены {' / '.join(_rub(x) for x in sorted(p for p in prices if p))}. Оставить одну карточку либо дописать в названии, чем они отличаются (цвет, комплектация, версия).",
-                             site=site, product_id=items[0]["id"], name=items[0]["name"], url=items[0]["url"], sku=skus, evidence="; ".join(x["url"] for x in items[1:]), key=f"dupname_price:{site}:{_n}"))
+        cards = [_card(x) for x in items]
+        colors = [c["color"] for c in cards]
+        # чем отличаются карточки по характеристикам (кроме цвета)
+        specs = [{k: v for k, v in _flat_specs(x).items() if _norm_spec_key(k) != "цвет"} for x in items]
+        diff_keys = sorted({k for sp in specs for k in sp if any(sp2.get(k) != sp.get(k) for sp2 in specs)})
+        diff_txt = "; ".join(f"{k}: " + " / ".join(str(sp.get(k) or "—") for sp in specs) for k in diff_keys[:6])
+        common = {"site": site, "product_id": items[0]["id"], "name": items[0]["name"], "url": items[0]["url"], "sku": skus, "cards": cards, "category": items[0]["category_slug"]}
+        price_txt = " / ".join(_rub(x) for x in sorted(p for p in prices if p))
+        if all(colors) and len(set(colors)) == len(colors) and len(diff_keys) <= 2:
+            out.append(_item("P2", "dup", f"Варианты по цвету ({' / '.join(colors)}) под одним названием",
+                             f"Это один товар в {len(items)} цветах, но из названия и списка каталога этого не видно. Дописать цвет в название («…, {colors[0].lower()}») или объединить в одну карточку с выбором цвета."
+                             + (f" Цены при этом разные: {price_txt} — если это не намеренно, выровнять." if len(prices) > 1 else ""),
+                             evidence=("Отличия в характеристиках: " + diff_txt) if diff_txt else "Характеристики совпадают, отличается только цвет.", key=f"dupcolor:{site}:{_n}", **common))
+        elif len(diff_keys) >= 3:
+            out.append(_item("P1", "dup", "Разные товары под одним названием",
+                             f"Артикулы {skus}: характеристики отличаются существенно ({len(diff_keys)} параметров), значит это разные изделия, а называются одинаково"
+                             + (f" и стоят по-разному: {price_txt}" if len(prices) > 1 else "") + ". Переименовать так, чтобы отличие было в названии (например, мощность и число портов), и проверить, что код модели в названии верен.",
+                             evidence="Отличия: " + diff_txt, key=f"dupdiff:{site}:{_n}", **common))
+        elif len(prices) > 1:
+            out.append(_item("P1", "dup", "Одинаковые карточки с разной ценой", f"Артикулы {skus}, цены {price_txt}, характеристики совпадают. Оставить одну карточку или выровнять цену.",
+                             evidence=("Отличия: " + diff_txt) if diff_txt else "Характеристики совпадают.", key=f"dupname_price:{site}:{_n}", **common))
         else:
-            out.append(_item("P2", "dup", "Две карточки с одинаковым названием", f"Артикулы {skus}. Покупатель не понимает разницы, поисковики считают дублем. Объединить в одну карточку с выбором варианта или дописать отличие в название.",
-                             site=site, product_id=items[0]["id"], name=items[0]["name"], url=items[0]["url"], sku=skus, evidence="; ".join(x["url"] for x in items[1:]), key=f"dupname:{site}:{_n}"))
+            out.append(_item("P2", "dup", "Две карточки с одинаковым названием и ценой", f"Артикулы {skus}. Покупатель не понимает разницы, поисковики считают дублем. Объединить в одну карточку или дописать отличие в название.",
+                             evidence=("Отличия: " + diff_txt) if diff_txt else "Характеристики совпадают полностью.", key=f"dupname:{site}:{_n}", **common))
+    # однотипные карточки (одна модель, один тип изделия) заполнены неодинаково: у одной есть характеристика, у другой нет
+    by_series: dict[tuple, list[dict]] = defaultdict(list)
+    for p in prods:
+        if not p["parent_url"] and p["model_key"] and p["site"] == "m22.ru" and p["kind"] in ("system", "receiver", "transmitter"):
+            by_series[(p["model_key"], p["kind"], p["category_slug"])].append(p)
+    for (mk, kind, _cat), items in by_series.items():
+        if len(items) < 2:
+            continue
+        orig: dict[str, str] = {}
+        for x in items:
+            for k in _flat_specs(x):
+                orig.setdefault(_norm_spec_key(k), k)
+        keysets = [set(_norm_spec_key(k) for k in _flat_specs(x)) for x in items]
+        union = set().union(*keysets)
+        if not union:
+            continue
+        missing = []
+        for x, ks in zip(items, keysets):
+            lack = sorted(union - ks)
+            if lack and len(lack) <= max(3, len(union) // 3):
+                missing.append((x, lack))
+        if missing:
+            ev = "; ".join(f"«{x['name'][:40]}» (арт. {x['sku']}): нет «{'», «'.join(orig.get(k, k) for k in l[:4])}»" for x, l in missing[:4])
+            out.append(_item("P2", "structure", f"Однотипные карточки {mk} заполнены неодинаково", "Заполнить характеристики по одному шаблону для всех карточек модели: у части карточек параметры пропущены, из-за чего сравнение и фильтры работают неровно.",
+                             site="m22.ru", product_id=missing[0][0]["id"], name=missing[0][0]["name"], url=missing[0][0]["url"], sku=missing[0][0]["sku"], evidence=ev, key=f"specset:{mk}:{kind}",
+                             cards=[_card(x) for x in items[:6]], category=items[0]["category_slug"]))
     return out
 
 
@@ -378,7 +458,7 @@ def _aggregate(items: list[dict]) -> list[dict]:
             first = its[0]
             names = "; ".join(i["name"][:45] for i in its[:12]) + (f" … и ещё {len(its) - 12}" if len(its) > 12 else "")
             out.append({**first, "what": f"{what} — {len(its)} карточек", "name": f"{len(its)} карточек ({first['site']})", "product_id": None, "url": first["url"], "sku": None,
-                        "evidence": names, "key": f"agg:{what}", "agg_ids": [i["product_id"] for i in its]})
+                        "evidence": names, "key": f"agg:{what}", "agg_ids": [i["product_id"] for i in its], "cards": [c for i in its[:8] for c in i["cards"][:1]]})
         else:
             out.extend(its)
     return out
@@ -391,17 +471,30 @@ def run(conn: sqlite3.Connection) -> dict:
     dismissed = set(db.uj(db.get_setting(conn, "site_audit_dismissed"), []) or [])
     for it in items:
         it["dismissed"] = it["key"] in dismissed
-        it["category"] = CATEGORY_NAMES.get(next((p["category_slug"] for p in prods if p["id"] == it["product_id"]), ""), "") if it["product_id"] else ""
+        if not it.get("category_slug") and it["product_id"]:
+            it["category_slug"] = next((p["category_slug"] for p in prods if p["id"] == it["product_id"]), "") or ""
+        it["category"] = CATEGORY_NAMES.get(it.get("category_slug") or "", "общее" if not it.get("category_slug") else it["category_slug"])
+        if it["product_id"] and not it["cards"]:
+            pp = next((p for p in prods if p["id"] == it["product_id"]), None)
+            if pp:
+                it["cards"] = [_card(pp)]
     order = {"P1": 0, "P2": 1, "P3": 2}
     items.sort(key=lambda x: (order[x["priority"]], x["group_name"], x["site"], x["name"]))
     active = [i for i in items if not i["dismissed"]]
     counts = {p: sum(1 for i in active if i["priority"] == p) for p in ("P1", "P2", "P3")}
     by_site = Counter(i["site"] for i in active)
     by_group = Counter(i["group_name"] for i in active)
-    return {"items": items, "counts": counts, "total": len(active), "dismissed": len(items) - len(active), "by_site": by_site, "by_group": by_group,
+    by_cat: dict[str, dict] = {}
+    for i in active:
+        c = by_cat.setdefault(i.get("category_slug") or "", {"slug": i.get("category_slug") or "", "name": i["category"], "P1": 0, "P2": 0, "P3": 0, "n": 0})
+        c[i["priority"]] += 1
+        c["n"] += 1
+    cat_order = {s: n for n, s in enumerate(CATEGORY_NAMES)}
+    cats = sorted(by_cat.values(), key=lambda c: (c["slug"] not in CORE_CATEGORIES, cat_order.get(c["slug"], 99)))
+    return {"items": items, "counts": counts, "total": len(active), "dismissed": len(items) - len(active), "by_site": by_site, "by_group": by_group, "cats": cats,
             "products": len([p for p in prods if not p["parent_url"]]), "last_fetch": max((p["fetched_at"] or "" for p in prods), default=None)}
 
 
 def export_rows(conn: sqlite3.Connection) -> list[dict]:
     return [{"приоритет": i["priority"], "группа": i["group_name"], "сайт": i["site"], "товар": i["name"], "артикул": i["sku"], "что не так": i["what"], "что сделать": i["fix"],
-             "подтверждение": i["evidence"], "ссылка": i["url"], "скрыто": "да" if i["dismissed"] else ""} for i in run(conn)["items"]]
+             "категория": i["category"], "подтверждение": i["evidence"], "ссылка": i["url"], "карточки": " | ".join(f"{c['name']} ({c['url']})" for c in i["cards"]), "скрыто": "да" if i["dismissed"] else ""} for i in run(conn)["items"]]
