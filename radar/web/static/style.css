@@ -75,3 +75,5 @@ table.sticky-col tr.usp-row td:nth-child(2) { position:static; box-shadow:none; 
 .grid2 { display:grid; grid-template-columns:1fr 1fr; gap:12px; margin-bottom:12px; } @media (max-width:1100px) { .grid2 { grid-template-columns:1fr; } }
 .section-tabs a { padding:5px 12px; }
 .attr-line { display:flex; flex-wrap:wrap; gap:4px 6px; } .attr { display:inline-block; padding:1px 7px; border-radius:8px; background:#eef2f7; font-size:11px; color:#1f2937; white-space:nowrap; } .attr.better { background:#d7efdb; } .attr.worse { background:#fde7c8; } .attr.nodata { background:#f3f4f6; color:#9ca3af; }
+
+th.sortable { cursor:pointer; user-select:none; padding-right:16px; } th.sortable:hover { color:var(--accent); } th.sort-asc::after { content:' ▲'; font-size:9px; color:var(--accent); } th.sort-desc::after { content:' ▼'; font-size:9px; color:var(--accent); }
