@@ -133,13 +133,26 @@ templates.env.globals.update({"CATEGORY_NAMES": CATEGORY_NAMES, "SIGNAL_TYPES": 
                               "MATCH_NAMES": MATCH_NAMES, "SOURCE_STATUS": SOURCE_STATUS, "MVP_NAMES": MVP_NAMES, "TYPE_NAMES": TYPE_NAMES, "app_version": __import__("radar").get_version(), "asset_version": str(int(__import__("time").time()))})
 
 
+_STATIC_DIR = Path(__file__).parent / "static"
+
+
+def _asset_version() -> str:
+    """Максимальное время изменения файлов static/ — меняется при любой правке CSS/JS."""
+    try:
+        return str(int(max(f.stat().st_mtime for f in _STATIC_DIR.iterdir() if f.is_file())))
+    except (ValueError, OSError):
+        return "0"
+
+
 def render(request: Request, name: str, **ctx) -> HTMLResponse:
     with db.session() as conn:
         last_collect = db.row(conn, "SELECT MAX(finished_at) AS t FROM source_runs WHERE status IN ('ok','partial')")
         errors = db.row(conn, "SELECT COUNT(*) AS n FROM sources WHERE status='error'")["n"]
         owners = (db.get_setting(conn, "owners") or "").split(";")
     ctx.update({"request": request, "last_update": last_collect["t"] if last_collect else None, "source_errors": errors, "owners": [o for o in owners if o],
-                "now": datetime.now().strftime("%d.%m.%Y %H:%M"), "path": request.url.path})
+                "now": datetime.now().strftime("%d.%m.%Y %H:%M"), "path": request.url.path,
+                # версия и метка статики — при каждом запросе, чтобы после обновления кода/файлов не требовался перезапуск и не мешал кэш браузера
+                "app_version": __import__("radar").get_version(), "asset_version": _asset_version()})
     return templates.TemplateResponse(request, name, ctx)
 
 
