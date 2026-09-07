@@ -14,6 +14,5 @@ else:
     patch += 1
     if patch > 99:
         minor, patch = minor + 1, 0
-VF.write_text(f"{major}.{minor}.{patch}
-", encoding="utf-8")
+VF.write_text(f"{major}.{minor}.{patch}" + chr(10), encoding="utf-8")
 print(f"{major}.{minor}.{patch}")
