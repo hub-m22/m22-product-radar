@@ -55,14 +55,16 @@ def normalize(name: str, description: str | None, specs_json: str | None, price:
         out["range_m"] = r
     # каналы
     c = _num(r"(\d{1,4})\s*(?:канал|channel|ch\b)", text) or _num(r"(?:канал\w*|channels?)\D{0,15}?(\d{1,4})\b", text)
-    if c and 1 < c <= 2000:
+    if c and 1 < c <= 20000:
         out["channels"] = c
     # автономность
-    b = _num(r"(?:приёмник\w*|приемник\w*|receiver)\D{0,40}?(\d{1,3})\s*(?:ч\b|час|h\b|hours?)", text) or _num(r"(?:до|until|up to)\s*(\d{1,3})\s*(?:ч\b|час|h\b|hours?)", text) or _num(r"(\d{1,3})\s*(?:ч\b|час)\w*\s*(?:работ|автоном)", text)
+    b = (_num(r"(?:приёмник\w*|приемник\w*|receiver)\D{0,40}?(\d{1,3})\s*(?:ч\b|час|h\b|hours?)", text)
+         or _num(r"(?:аккумулятор\w*|автономн\w*|время работы|battery life)\D{0,15}?(\d{1,3})\s*(?:ч\b|час|h\b|hours?)", text)
+         or _num(r"(?:до|until|up to)\s*(\d{1,3})\s*(?:ч\b|час|h\b|hours?)", text) or _num(r"(\d{1,3})\s*(?:ч\b|час)\w*\s*(?:работ|автоном)", text))
     if b and 1 <= b <= 200:
         out["battery_h"] = b
     # диапазон
-    if re.search(r"2[.,]4\s*(?:ггц|ghz|g\b)", low) or re.search(r"\b2[34]\d\d\s*[-–]\s*2[45]\d\d\s*(?:мгц|mhz)", low):
+    if re.search(r"2[.,]4\d*\s*(?:ггц|ghz|g\b)", low) or re.search(r"2[.,]4\d*\s*(?:—|-|–)\s*2[.,]4\d*\s*(?:ггц|ghz)", low) or re.search(r"\b2[34]\d\d\s*[-–]\s*2[45]\d\d\s*(?:мгц|mhz)", low):
         out["freq_band"] = "2.4 ГГц"
     elif "uhf" in low or re.search(r"\b(4\d\d|5\d\d|8\d\d|9\d\d)\s*[-–]\s*\d{3}\s*(?:мгц|mhz)", low) or re.search(r"\b(4\d\d|8\d\d|9\d\d)\s*(?:мгц|mhz)", low):
         out["freq_band"] = "UHF"
@@ -81,7 +83,11 @@ def normalize(name: str, description: str | None, specs_json: str | None, price:
     if cap:
         out["capacity"] = int(cap)
     out["two_way"] = bool(re.search(r"двустор|двухстор|two[- ]way|обратн\w* связ|full[- ]duplex", low))
-    out["display"] = bool(re.search(r"дисплей|экран|display|lcd|oled", low))
+    disp_val = next((str(v).lower() for k, v in flat.items() if re.search(r"экран|дисплей|display", str(k), re.I)), None)
+    if disp_val is not None:
+        out["display"] = not re.match(r"\s*(нет|отсутств|без|no\b|none)", disp_val)
+    else:
+        out["display"] = bool(re.search(r"дисплей|экран(?!ированн)|display|lcd|oled", low))
     out["charging_case"] = bool(re.search(r"кейс|докстанц|док-станц|charging case|dock", low))
     return out
 
