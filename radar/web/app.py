@@ -77,7 +77,7 @@ def fmt_dt(v):
 
 templates.env.filters.update({"money": fmt_money, "pct": fmt_pct, "dt": fmt_dt, "uj": lambda t, d=None: db.uj(t, d)})
 templates.env.globals.update({"CATEGORY_NAMES": CATEGORY_NAMES, "SIGNAL_TYPES": SIGNAL_TYPES, "STATUS_NAMES": STATUS_NAMES, "SEV_NAMES": SEV_NAMES, "FACT_NAMES": FACT_NAMES,
-                              "MATCH_NAMES": MATCH_NAMES, "SOURCE_STATUS": SOURCE_STATUS, "MVP_NAMES": MVP_NAMES, "TYPE_NAMES": TYPE_NAMES, "app_version": "0.1.0", "asset_version": str(int(__import__("time").time()))})
+                              "MATCH_NAMES": MATCH_NAMES, "SOURCE_STATUS": SOURCE_STATUS, "MVP_NAMES": MVP_NAMES, "TYPE_NAMES": TYPE_NAMES, "app_version": __import__("radar").__version__, "asset_version": str(int(__import__("time").time()))})
 
 
 def render(request: Request, name: str, **ctx) -> HTMLResponse:
@@ -1009,4 +1009,4 @@ def analyze_now():
 def health():
     with db.session() as conn:
         n = db.row(conn, "SELECT COUNT(*) n FROM m22_products")["n"]
-    return {"status": "ok", "m22_products": n, "version": "0.1.0"}
+    return {"status": "ok", "m22_products": n, "version": __import__("radar").__version__}
