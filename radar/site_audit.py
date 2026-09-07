@@ -238,9 +238,11 @@ def check_cross_site(prods: list[dict]) -> list[dict]:
 
 def check_cards(prods: list[dict]) -> list[dict]:
     out = []
+    parents_with_variants = {p["parent_url"] for p in prods if p["parent_url"]}
     for p in prods:
         if p["parent_url"] or p["category_slug"] == "rental":
             continue
+        has_variants = p["url"] in parents_with_variants  # карточка с выбором варианта: артикул у каждого варианта свой
         specs = db.uj(p["specs_json"], {}) or {}
         n_specs = sum(len(v) if isinstance(v, dict) else 1 for v in specs.values())
         images = db.uj(p["images_json"], []) or []
@@ -253,7 +255,7 @@ def check_cards(prods: list[dict]) -> list[dict]:
             problems.append(("P3", "Нет характеристик (Tilda)", "Добавить в карточку блок «Характеристики» хотя бы с 5 ключевыми параметрами."))
         if len(p["description"] or "") < 250:
             problems.append(("P2", "Короткое описание", f"Описание {len(p['description'] or '')} знаков: дописать сценарии применения, состав комплекта, отличие от соседних моделей (300–800 знаков)."))
-        if not p["sku"] or not p["sku"].strip():
+        if (not p["sku"] or not p["sku"].strip()) and not has_variants:
             problems.append(("P2", "Нет артикула", "Указать артикул — без него нельзя сверить товар между сайтами и с прайсом."))
         if p["site"] == "m22.ru" and (not p["site_category_path"] or p["site_category_path"].strip(" /") == ""):
             problems.append(("P2", "Карточка вне раздела каталога", "Привязать товар к разделу и подразделу каталога — сейчас он находится только по прямой ссылке/поиску."))
