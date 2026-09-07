@@ -568,3 +568,39 @@
 2026-09-07 15:33:15,808 INFO httpx: HTTP Request: GET http://testserver/competitors/dashboard?tiers=A,B,C "HTTP/1.1 200 OK"
 2026-09-07 15:33:16,262 INFO httpx: HTTP Request: GET http://testserver/competitors "HTTP/1.1 200 OK"
 2026-09-07 15:33:16,309 INFO httpx: HTTP Request: GET http://testserver/competitors/compare "HTTP/1.1 200 OK"
+2026-09-07 15:33:45,243 INFO apscheduler.scheduler: Adding job tentatively -- it will be properly scheduled when the scheduler starts
+2026-09-07 15:33:45,243 INFO apscheduler.scheduler: Adding job tentatively -- it will be properly scheduled when the scheduler starts
+2026-09-07 15:33:45,244 INFO apscheduler.scheduler: Adding job tentatively -- it will be properly scheduled when the scheduler starts
+2026-09-07 15:33:45,244 INFO apscheduler.scheduler: Adding job tentatively -- it will be properly scheduled when the scheduler starts
+2026-09-07 15:33:45,245 INFO apscheduler.scheduler: Added job "_run_job" to job store "default"
+2026-09-07 15:33:45,245 INFO apscheduler.scheduler: Added job "_run_job" to job store "default"
+2026-09-07 15:33:45,245 INFO apscheduler.scheduler: Added job "_run_job" to job store "default"
+2026-09-07 15:33:45,246 INFO apscheduler.scheduler: Added job "_run_job" to job store "default"
+2026-09-07 15:33:45,246 INFO apscheduler.scheduler: Scheduler started
+2026-09-07 15:33:45,246 INFO radar.scheduler: scheduler started
+2026-09-07 15:37:57,296 INFO apscheduler.scheduler: Adding job tentatively -- it will be properly scheduled when the scheduler starts
+2026-09-07 15:37:57,297 INFO apscheduler.scheduler: Adding job tentatively -- it will be properly scheduled when the scheduler starts
+2026-09-07 15:37:57,297 INFO apscheduler.scheduler: Adding job tentatively -- it will be properly scheduled when the scheduler starts
+2026-09-07 15:37:57,297 INFO apscheduler.scheduler: Adding job tentatively -- it will be properly scheduled when the scheduler starts
+2026-09-07 15:37:57,300 INFO apscheduler.scheduler: Added job "_run_job" to job store "default"
+2026-09-07 15:37:57,300 INFO apscheduler.scheduler: Added job "_run_job" to job store "default"
+2026-09-07 15:37:57,300 INFO apscheduler.scheduler: Added job "_run_job" to job store "default"
+2026-09-07 15:37:57,300 INFO apscheduler.scheduler: Added job "_run_job" to job store "default"
+2026-09-07 15:37:57,300 INFO apscheduler.scheduler: Scheduler started
+2026-09-07 15:37:57,301 INFO radar.scheduler: scheduler started
+2026-09-07 15:37:57,395 INFO httpx: HTTP Request: GET http://testserver/competitors/dashboard "HTTP/1.1 200 OK"
+2026-09-07 15:37:57,460 INFO httpx: HTTP Request: GET http://testserver/competitors/compare "HTTP/1.1 200 OK"
+2026-09-07 15:38:11,220 INFO apscheduler.scheduler: Adding job tentatively -- it will be properly scheduled when the scheduler starts
+2026-09-07 15:38:11,220 INFO apscheduler.scheduler: Adding job tentatively -- it will be properly scheduled when the scheduler starts
+2026-09-07 15:38:11,221 INFO apscheduler.scheduler: Adding job tentatively -- it will be properly scheduled when the scheduler starts
+2026-09-07 15:38:11,221 INFO apscheduler.scheduler: Adding job tentatively -- it will be properly scheduled when the scheduler starts
+2026-09-07 15:38:11,222 INFO apscheduler.scheduler: Added job "_run_job" to job store "default"
+2026-09-07 15:38:11,222 INFO apscheduler.scheduler: Added job "_run_job" to job store "default"
+2026-09-07 15:38:11,222 INFO apscheduler.scheduler: Added job "_run_job" to job store "default"
+2026-09-07 15:38:11,222 INFO apscheduler.scheduler: Added job "_run_job" to job store "default"
+2026-09-07 15:38:11,222 INFO apscheduler.scheduler: Scheduler started
+2026-09-07 15:38:11,223 INFO radar.scheduler: scheduler started
+2026-09-07 15:38:11,286 INFO httpx: HTTP Request: GET http://testserver/competitors/dashboard "HTTP/1.1 200 OK"
+2026-09-07 15:38:11,341 INFO httpx: HTTP Request: GET http://testserver/competitors/compare "HTTP/1.1 200 OK"
+2026-09-07 15:38:11,445 INFO httpx: HTTP Request: GET http://testserver/competitors/7 "HTTP/1.1 200 OK"
+2026-09-07 15:38:11,585 INFO httpx: HTTP Request: GET http://testserver/competitors/1 "HTTP/1.1 200 OK"

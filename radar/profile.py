@@ -374,6 +374,75 @@ def dashboard_data(conn: sqlite3.Connection, tiers: tuple = ("A",)) -> dict:
     return d
 
 
+# что именно написать на сайте, если признак решено добавить
+SITE_ACTIONS = {
+    "warranty_years": "Указать срок гарантии на каждой карточке товара и на отдельной странице «Гарантия»; если можно дать больше 2 лет на ключевые модели — это прямой аргумент против {names}.",
+    "service_center": "Страница «Сервисный центр»: адрес, сроки ремонта, что делаем по гарантии и после неё.",
+    "replacement_fund": "Написать про подменный фонд: «на время ремонта выдаём подменное оборудование» — ни один конкурент это не заявляет, будет уникальным УТП.",
+    "free_delivery": "Условия доставки на видном месте: от какой суммы бесплатно, сроки по регионам.",
+    "test_drive": "Кнопка «Взять на бесплатный тест-драйв» в каталоге и на главной; форма заявки с выбором комплекта и дат.",
+    "installation": "Услуга «Монтаж и настройка на объекте» с ценой или «от … ₽» и примерами объектов.",
+    "event_support": "Услуга «Техническое сопровождение мероприятия»: инженер на площадке, что входит, стоимость за смену.",
+    "warehouse": "Блок «Собственный склад в …, отгрузка в день оплаты» + остатки «в наличии» в карточках.",
+    "production": "Блок «Собственное производство / разработка»: фото, что делаем сами, срок изготовления партии.",
+    "branding": "Услуга «Брендирование»: логотип на приёмниках и чехлах, минимальный тираж, сроки.",
+    "training": "«Обучаем персонал»: формат (онлайн/на объекте), длительность, бесплатно при покупке комплекта от N устройств.",
+    "tender": "Страница «Для госзаказчиков»: работа по 44-ФЗ/223-ФЗ, реестр контрактов, документы для закупки.",
+    "leasing": "Блок «Лизинг и рассрочка»: партнёры, условия, калькулятор ежемесячного платежа.",
+    "showroom": "«Шоурум / демозал»: адрес, часы, запись на демонстрацию.",
+    "delivery_russia": "«Доставка по всей России»: сроки и стоимость по федеральным округам, ТК-партнёры.",
+    "support_247": "Круглосуточная поддержка: телефон/чат на видном месте, обещание времени ответа.",
+    "multilang": "Раздел «Многоязычные решения / синхронный перевод»: сценарии, комплекты.",
+    "years_on_market": "Цифра «N лет на рынке» в шапке и в блоке «О компании» (у {names}: {values}).",
+    "clients_count": "Цифра «N клиентов / проектов» + логотипы заказчиков (у {names}: {values}).",
+}
+
+
+def site_recommendations(conn: sqlite3.Connection, tiers: tuple = ("A",), only_competitor: int | None = None) -> list[dict]:
+    """Что есть у конкурентов и не заявлено на m22.ru / radiosync.ru. Отсортировано по числу конкурентов (рычаг)."""
+    table = comparison_table(conn, tiers)
+    m22 = table["columns"][0]
+    labels = {k: n for k, n, _t in table["rows"]}
+    kinds = {k: t for k, _n, t in table["rows"]}
+    out = []
+    for key, label in labels.items():
+        mv = m22["vals"].get(key)
+        claimers = []
+        for col in table["columns"][1:]:
+            if only_competitor is not None and col["id"] != only_competitor:
+                continue
+            cv = col["vals"].get(key)
+            if cv is None:
+                continue
+            if kinds[key] == "num":
+                if mv is None or cv > mv:
+                    claimers.append((col["name"], cv))
+            elif cv == "yes" and mv != "yes":
+                claimers.append((col["name"], cv))
+        if not claimers:
+            continue
+        names = ", ".join(n.split(" (")[0].split(" — ")[0][:26] for n, _ in claimers[:4]) + (f" и ещё {len(claimers) - 4}" if len(claimers) > 4 else "")
+        values = ", ".join(str(v) for _, v in claimers[:4]) if kinds[key] == "num" else ""
+        if kinds[key] == "num":
+            m22_status = f"на сайтах M22: {mv}" if mv is not None else "на сайтах M22 не указано"
+        else:
+            m22_status = "на сайтах M22 не заявлено" if mv is None else "на сайтах M22: нет"
+        out.append({"key": key, "label": label, "count": len(claimers), "names": names, "values": values, "m22_status": m22_status,
+                    "action": SITE_ACTIONS.get(key, "Заявить на сайте, если есть; если нет — оценить, стоит ли добавить.").format(names=names, values=values or "—"),
+                    "unique": key == "replacement_fund"})
+    # особые выводы из юрлиц: тендеры и масштаб
+    if only_competitor is None:
+        t = db.rows(conn, f"SELECT legal_name, tenders_count, tenders_sum_rub FROM competitors WHERE is_active=1 AND tier IN ({','.join('?' * len(tiers))}) AND tenders_count > 0 GROUP BY inn ORDER BY tenders_sum_rub DESC", list(tiers))
+        if t and (m22["vals"].get("tender") != "yes"):
+            out.append({"key": "tender_proof", "label": "Госзакупки как канал", "count": len(t), "names": ", ".join((r["legal_name"] or "")[:26] for r in t[:3]), "values": "", "m22_status": "на сайтах M22 не заявлено",
+                        "action": "Страница для госзаказчиков и участие в закупках: у конкурентов это заметный канал (" + "; ".join(f"{r['legal_name']}: {r['tenders_count']} закупок на {(r['tenders_sum_rub'] or 0) / 1e6:.0f} млн ₽" for r in t[:3]) + ").", "unique": False})
+    out.sort(key=lambda r: (-r["count"], r["label"]))
+    if only_competitor is None and m22["vals"].get("replacement_fund") != "yes" and not any(r["key"] == "replacement_fund" for r in out):
+        out.append({"key": "replacement_fund", "label": "Подменный фонд", "count": 0, "names": "никто из конкурентов не заявляет", "values": "", "m22_status": "на сайтах M22 не заявлено",
+                    "action": SITE_ACTIONS["replacement_fund"], "unique": True})
+    return out
+
+
 def compare_flags(comp: dict, m22: dict) -> dict:
     """Где конкурент сильнее M22 (True) / слабее (False) / нет данных (None) по каждому признаку."""
     flags = {}

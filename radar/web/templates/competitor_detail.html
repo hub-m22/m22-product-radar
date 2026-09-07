@@ -66,6 +66,7 @@
 </tbody></table></div>
 <p><a class="btn sec small" href="/competitor-matrix?competitor={{ c.id }}">Открыть в матрице конкурентов</a></p>
 <div class="grid grid-2" style="margin-top:14px">
+  <div>{% with title='Есть у этого конкурента, нет на сайтах M22', intro='Что заявлено на сайте конкурента и не заявлено на m22.ru / radiosync.ru. Проверьте: если у M22 это есть — напишите на сайте; если нет — решите, добавлять ли.' %}{% include "_site_recs.html" %}{% endwith %}</div>
   <div><h2>Сигналы по конкуренту</h2>{% for s in sigs %}{{ m.signal_card(s, compact=True) }}{% else %}<div class="muted">Сигналов нет.</div>{% endfor %}</div>
   <div>{{ m.comments_block(comments, "/competitors/" ~ c.id ~ "/update", None, [], []) }}
     <form method="post" action="/competitors/{{ c.id }}/update" class="form-grid" style="margin-top:8px">

@@ -5,6 +5,7 @@
 <div class="sub">Юрлица, выручка, госзакупки, суды и риски по данным ЕГРЮЛ / ФНС / Казначейства через Rusprofile. Данные вносятся по карточке компании (ссылка «↗» у каждой строки); ИП бухотчётность не сдают — для них есть только госзакупки и арбитраж.</div></div>
 <div class="tabs" style="margin:0">{% for t, n in [("A","A"),("A,B","A + B"),("A,B,C","все")] %}<a href="/competitors/dashboard?tiers={{ t }}" class="{% if tiers | join(',') == t %}active{% endif %}">{{ n }}</a>{% endfor %}</div></div>
 {% include "_competitors_tabs.html" %}
+{% with title='Выводы: что добавить на m22.ru и radiosync.ru' %}{% include "_site_recs.html" %}{% endwith %}
 
 <div class="kpis">
   <div class="kpi"><div class="kpi-v">{{ d.with_inn }}<span class="muted"> / {{ d.total }}</span></div><div class="kpi-l">компаний с установленным юрлицом</div></div>

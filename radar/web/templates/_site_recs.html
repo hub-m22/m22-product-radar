@@ -1,0 +1,15 @@
+{# Блок рекомендаций для сайтов M22: что есть у конкурентов и не заявлено на m22.ru / radiosync.ru #}
+<div class="card recs-card">
+  <h3 style="margin-top:0">{{ title or 'Что добавить на m22.ru и radiosync.ru' }}</h3>
+  <p class="small muted">{{ intro or 'Признаки, которые конкуренты заявляют на своих сайтах, а на сайтах M22 их нет или они не написаны. Порядок — по числу конкурентов: чем больше игроков это заявляют, тем важнее закрыть разрыв. Сначала проверьте, есть ли это у M22 на самом деле: если есть — просто напишите об этом на сайте; если нет — решите, добавлять ли услугу.' }}</p>
+  {% if recs %}
+  <div class="rec-list">
+  {% for r in recs %}
+    <div class="rec {% if r.unique %}rec-unique{% endif %}">
+      <div class="rec-head"><span class="attr better">{{ r.label }}</span> <span class="small muted">{% if r.count == 0 %}{{ r.names }} — возможное уникальное УТП{% else %}{{ r.count }} {% if r.count == 1 %}конкурент{% elif r.count < 5 %}конкурента{% else %}конкурентов{% endif %}: {{ r.names }}{% endif %}{% if r.values %} ({{ r.values }}){% endif %} · {{ r.m22_status }}</span></div>
+      <div class="small rec-action">{{ r.action }}</div>
+    </div>
+  {% endfor %}
+  </div>
+  {% else %}<p class="muted">Разрывов не найдено: всё, что заявляют конкуренты, заявлено и на сайтах M22.</p>{% endif %}
+</div>

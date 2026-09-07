@@ -361,7 +361,8 @@ def competitors_dashboard(request: Request, tiers: str = "A"):
     ts = tuple(t for t in tiers.split(",") if t in ("A", "B", "C")) or ("A",)
     with db.session() as conn:
         d = profmod.dashboard_data(conn, ts)
-    return render(request, "competitors_dashboard.html", d=d, tiers=ts)
+        recs = profmod.site_recommendations(conn, ts)
+    return render(request, "competitors_dashboard.html", d=d, tiers=ts, recs=recs)
 
 
 @app.get("/competitors/compare", response_class=HTMLResponse)
@@ -369,7 +370,8 @@ def competitors_compare(request: Request, tiers: str = "A"):
     ts = tuple(t for t in tiers.split(",") if t in ("A", "B", "C")) or ("A",)
     with db.session() as conn:
         table = profmod.comparison_table(conn, ts)
-    return render(request, "competitors_compare.html", table=table, tiers=ts, extra=profmod.EXTRA_FIELDS)
+        recs = profmod.site_recommendations(conn, ts)
+    return render(request, "competitors_compare.html", table=table, tiers=ts, extra=profmod.EXTRA_FIELDS, recs=recs)
 
 
 @app.post("/competitors/profile-scan-all")
@@ -402,9 +404,11 @@ def competitor_detail(request: Request, cid: int):
             p["norm"] = specmod.normalize(p["name"], p["description"], p["specs_json"], p["price"], p["capacity"])
         m22p = profmod.m22_profile(conn)
         role = profmod.seller_roles(conn).get(cid, "—")
+        recs = profmod.site_recommendations(conn, ("A", "B", "C"), only_competitor=cid)
         stock = db.row(conn, "SELECT SUM(availability='InStock') a, SUM(availability IN ('OutOfStock','PreOrder','SoldOut')) b, SUM(availability IS NULL OR availability NOT IN ('InStock','OutOfStock','PreOrder','SoldOut')) u FROM competitor_products WHERE competitor_id=? AND is_active=1", (cid,))
     return render(request, "competitor_detail.html", c=c, pages=pages, products=products, sigs=sigs, comments=comments, cols=cmx.MATRIX_COLS, unreachable=unreachable,
                   profile=db.uj(c["profile_json"], {}) or {}, flags=profmod.compare_flags(c, m22p), m22p=m22p, stock=stock, prof_fields=profmod.FIELDS, role=role, extra_fields=profmod.EXTRA_FIELDS,
+                  recs=recs,
                   types=db.uj(c["types_json"], []) or [], brands=db.uj(c["brands_json"], []) or [], cats=db.uj(c["categories_json"], []) or [], src=db.uj(c["source_urls_json"], []) or [])
 
 
