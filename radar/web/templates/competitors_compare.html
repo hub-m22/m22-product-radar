@@ -10,7 +10,7 @@
 {% include "_competitors_tabs.html" %}
 {% include "_site_recs.html" %}
 <div class="card compact tbl-wrap"><table style="min-width:{{ 260 + table.columns|length * 150 }}px">
-<thead><tr><th style="min-width:230px">Признак</th>{% for c in table.columns %}<th style="min-width:140px;{% if c.is_m22 %}background:#e8f0fc{% endif %}">
+<thead><tr><th style="min-width:230px">Признак</th>{% for c in table.columns %}<th style="min-width:140px;{% if c.is_m22 %}background:var(--accent-bg){% endif %}">
   {% if c.is_m22 %}<b>M22</b>{% else %}<a href="/competitors/{{ c.id }}"><b>{{ c.name[:34] }}</b></a><div class="small muted">кат. {{ c.tier }} · {{ c.role[:40] }}</div>{% endif %}</th>{% endfor %}</tr></thead>
 <tbody>
 <tr><td><b>Товаров в матрице</b></td>{% for c in table.columns %}<td class="num">{{ c.products }}{% if not c.is_m22 %}<span class="small muted"> ({{ c.priced }} с ценой)</span>{% endif %}</td>{% endfor %}</tr>

@@ -10,7 +10,7 @@
 </div>
 {% if not cols %}<div class="card muted">Нечего сравнивать.</div>{% else %}
 <div class="card compact tbl-wrap"><table>
-  <thead><tr><th style="min-width:160px">Параметр</th>{% for c in cols %}<th style="min-width:170px;{% if c.side == 'm22' %}background:#e8f0fc{% endif %}">
+  <thead><tr><th style="min-width:160px">Параметр</th>{% for c in cols %}<th style="min-width:170px;{% if c.side == 'm22' %}background:var(--accent-bg){% endif %}">
     {% if c.image %}<img src="{{ c.image }}" alt="" referrerpolicy="no-referrer" width="72" height="72" style="width:72px;height:72px;object-fit:contain;display:block;border:1px solid var(--line);border-radius:6px;background:#fff;margin-bottom:4px">{% endif %}
     <div class="small muted">{{ 'M22' if c.side == 'm22' else c.seller[:40] }}</div>
     <div>{% if c.side == 'm22' %}<a href="/matrix/{{ c.id }}">{{ c.name[:70] }}</a>{% else %}<a href="{{ c.url }}" target="_blank" rel="noopener">{{ c.name[:70] }} ↗</a>{% endif %}</div>

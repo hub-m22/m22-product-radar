@@ -102,3 +102,27 @@ html[data-theme="dark"] .note, html[data-theme="dark"] .hint, html[data-theme="d
 html[data-theme="dark"] .act { background:#2a1d1f; border-color:#5a2a2e; color:var(--text); }
 html[data-theme="dark"] .filters select, html[data-theme="dark"] .filters input, html[data-theme="dark"] button.danger { background:#111927; color:var(--text); }
 html[data-theme="dark"] .sidebar .theme-toggle { color:#dfe7f1; }
+
+/* тёмная тема: элементы с фиксированным светлым фоном */
+html[data-theme="dark"] .pill { background:#243042; color:var(--text); }
+html[data-theme="dark"] .st, html[data-theme="dark"] .st-rejected { background:#243042; color:var(--text); }
+html[data-theme="dark"] .fk { background:#243042; color:var(--text); }
+html[data-theme="dark"] .conf { background:#2a3546; }
+html[data-theme="dark"] .col-grip:hover { background:#31425a; }
+html[data-theme="dark"] table.sticky-col th:nth-child(2), html[data-theme="dark"] table.sticky-col td:nth-child(2) { background:var(--card); box-shadow:2px 0 0 var(--line); }
+html[data-theme="dark"] table.sticky-col th:nth-child(2) { background:#1c2634; }
+html[data-theme="dark"] .note { background:#3a2e17; border-color:#5a4a20; color:var(--text); }
+html[data-theme="dark"] .badge.st { background:#243042; color:var(--text); }
+html[data-theme="dark"] .sig .act { background:#1c2634; }
+html[data-theme="dark"] .sig .act b { color:var(--high); }
+html[data-theme="dark"] .q-answer .card { background:var(--card); }
+html[data-theme="dark"] button, html[data-theme="dark"] .btn { border-color:var(--line); }
+html[data-theme="dark"] button.sec:hover, html[data-theme="dark"] .btn.sec:hover { background:#243042; }
+html[data-theme="dark"] .brand-text, html[data-theme="dark"] .sidebar nav a { color:#dfe7f1; }
+html[data-theme="dark"] .sidebar .meta { color:#93a1b3; }
+html[data-theme="dark"] hr { border-color:var(--line); }
+html[data-theme="dark"] .thumb, html[data-theme="dark"] .offer img { background:#fff; }
+html[data-theme="dark"] .rec { border-color:var(--line); }
+html[data-theme="dark"] .kpi-v { color:var(--text); }
+html[data-theme="dark"] a.btn.small, html[data-theme="dark"] .btn.small { color:var(--accent); }
+html[data-theme="dark"] .btn:not(.sec), html[data-theme="dark"] button:not(.sec):not(.danger):not(.theme-toggle) { background:var(--accent); color:#0b1119; }

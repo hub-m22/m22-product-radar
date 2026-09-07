@@ -5,7 +5,7 @@
 <h1>{{ s.title }}</h1>
 <div class="sub">{{ m.sev(s.severity) }} {{ m.fact(s.fact_kind) }} {{ m.status(s.status) }} · {{ SIGNAL_TYPES.get(s.type, s.type) }} · уверенность {{ m.conf(s.confidence) }}
   · ручных проверок по этому типу сигналов: <b>{{ fb_type.c }}</b> подтверждено, <b>{{ fb_type.r }}</b> отклонено{% if fb_this %} · этот сигнал: {% for f in fb_this %}{{ 'подтверждён' if f.decision == 'confirmed' else 'отклонён' }} ({{ f.author or 'пользователь' }}, {{ f.created_at[:10] }}){% if not loop.last %}, {% endif %}{% endfor %}{% endif %}</div>
-{% if s.status == 'new' %}<div class="note" style="background:#e8f0fc;border-color:#c5d6f2">Ваше решение «Принять» или «Отклонить» записывается как ручная проверка: оно калибрует уверенность будущих сигналов этого типа и закрепляет сопоставления товаров, на которых сигнал построен.</div>{% endif %}
+{% if s.status == 'new' %}<div class="note" style="background:var(--accent-bg);border-color:var(--line)">Ваше решение «Принять» или «Отклонить» записывается как ручная проверка: оно калибрует уверенность будущих сигналов этого типа и закрепляет сопоставления товаров, на которых сигнал построен.</div>{% endif %}
 <div class="grid grid-2">
   <div class="card">
     <h3>Что произошло</h3><p>{{ s.what_happened }}</p>
@@ -25,7 +25,7 @@
   </div>
   <div class="card">
     <h3>Почему это важно для M22</h3><p>{{ s.why_matters or '—' }}</p>
-    <h3>Рекомендуемое действие</h3><p class="act" style="background:#f5f8fc;padding:8px;border-radius:6px">{{ s.recommended_action or '—' }}</p>
+    <h3>Рекомендуемое действие</h3><p class="act" style="background:var(--accent-bg);padding:8px;border-radius:6px">{{ s.recommended_action or '—' }}</p>
     {% if s.type in ('multi_competitor_product','m22_price_above_market','m22_price_below_market','competitor_price_change','product_appeared','new_kit_solution') %}<p><a class="btn small" href="/compare?signal={{ s.id }}">Сравнить характеристики и цены с M22</a></p>{% endif %}
     {% if evidence.justification %}<h3>Обоснование</h3><p><b>{{ evidence.justification.verdict }}.</b></p>{% if evidence.justification.reasons %}<ul>{% for r in evidence.justification.reasons %}<li>{{ r.text }}</li>{% endfor %}</ul>{% endif %}
     {% if evidence.m22_candidates %}<div class="small muted">Сопоставлено с моделями M22: {% for c in evidence.m22_candidates %}<a href="/matrix/{{ c.id }}">{{ c.name[:45] }}</a> ({{ c.price | money }}){% if not loop.last %}; {% endif %}{% endfor %}</div>{% endif %}{% endif %}
