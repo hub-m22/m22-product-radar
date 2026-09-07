@@ -3,6 +3,7 @@ from __future__ import annotations
 
 import re
 import sqlite3
+from urllib.parse import urljoin
 
 from . import categories as catmod
 from . import db
@@ -59,7 +60,10 @@ def rows(conn: sqlite3.Connection, competitor_id: int | None = None, category: s
         r["category_name"] = CATEGORY_NAMES.get(r["category_slug"], r["category_slug"] or "без категории")
         r["kind_name"] = KIND_LABELS.get(r["kind"], r["kind"] or "не определён")
         imgs = db.uj(r.get("m22_images_json"), []) or []
-        r["m22_image"] = imgs[0] if imgs and isinstance(imgs[0], str) else (imgs[0].get("url") if imgs and isinstance(imgs[0], dict) else None)
+        img = imgs[0] if imgs and isinstance(imgs[0], str) else (imgs[0].get("url") if imgs and isinstance(imgs[0], dict) else None)
+        if img and not img.startswith("http"):
+            img = urljoin(r.get("m22_url") or "https://m22.ru/", img)  # на m22.ru пути к фото относительные
+        r["m22_image"] = img
         r["spec_count"] = sum(1 for f in SPEC_FIELDS if r["norm"].get(f) is not None)
         r["raw_spec_count"] = len(specmod.flatten_specs(r["specs_json"]))
     return _collapse_duplicates(out)
