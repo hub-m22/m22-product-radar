@@ -18,6 +18,7 @@ from fastapi.templating import Jinja2Templates
 
 from .. import categories as catmod
 from .. import competitor_matrix as cmx
+from .. import site_audit
 from .. import profile as profmod
 from .. import config, db, discovery, feedback, importers, matching, recommendations, reports, scheduler, seed, signals
 from .. import specs as specmod
@@ -695,6 +696,38 @@ def competitor_matrix(request: Request, view: str = "matrix", competitor: str = 
     return render(request, "competitor_matrix.html", view=view, f=f, rows=rows, cov=cov, ch=ch, cols=cmx.MATRIX_COLS, kinds=cmx.KIND_LABELS, **lists)
 
 
+# ---------------- Наши сайты (аудит m22.ru и radiosync.ru) ----------------
+@app.get("/site-audit", response_class=HTMLResponse)
+def site_audit_page(request: Request, priority: str = "", site: str = "", group: str = "", hidden: str = "", q: str = ""):
+    f = {"priority": priority, "site": site, "group": group, "hidden": hidden, "q": q}
+    with db.session() as conn:
+        d = site_audit.run(conn)
+        rows = d["items"]
+        if not hidden:
+            rows = [r for r in rows if not r["dismissed"]]
+        if priority:
+            rows = [r for r in rows if r["priority"] == priority]
+        if site:
+            rows = [r for r in rows if r["site"] == site]
+        if group:
+            rows = [r for r in rows if r["group"] == group]
+        if q:
+            ql = q.lower()
+            rows = [r for r in rows if ql in (r["name"] + " " + (r["sku"] or "") + " " + r["what"] + " " + r["fix"]).lower()]
+        recs = profmod.site_recommendations(conn, ("A",))
+        usecases = db.rows(conn, "SELECT id, title FROM signals WHERE type='new_use_case' AND status NOT IN ('rejected','done') ORDER BY created_at DESC LIMIT 12")
+    return render(request, "site_audit.html", d=d, rows=rows, f=f, priorities=site_audit.PRIORITY_NAMES, groups=site_audit.GROUPS, recs=recs, usecases=usecases)
+
+
+@app.post("/site-audit/dismiss")
+def site_audit_dismiss(key: str = Form(...), undo: str = Form(""), back: str = Form("/site-audit")):
+    with db.session() as conn:
+        keys = set(db.uj(db.get_setting(conn, "site_audit_dismissed"), []) or [])
+        (keys.discard if undo else keys.add)(key)
+        db.set_setting(conn, "site_audit_dismissed", db.j(sorted(keys)))
+    return RedirectResponse(back if back.startswith("/site-audit") else "/site-audit", status_code=303)
+
+
 # ---------------- Категории ----------------
 @app.get("/categories", response_class=HTMLResponse)
 def categories_page(request: Request):
@@ -1074,6 +1107,7 @@ def export_backup():
 
 EXPORTS = {
     "competitor_matrix": None,
+    "site_audit": None,
     "signals": SIGNAL_SQL + " ORDER BY s.created_at DESC",
     "recommendations": "SELECT r.*, m.name AS m22_name FROM recommendations r LEFT JOIN m22_products m ON m.id=r.m22_product_id ORDER BY r.priority",
     "matrix": "SELECT * FROM m22_products WHERE is_active=1 ORDER BY site, category_slug, name",
@@ -1094,7 +1128,7 @@ def export(what: str, fmt: str):
     if what not in EXPORTS:
         raise HTTPException(404)
     with db.session() as conn:
-        rows = cmx.export_rows(conn) if what == "competitor_matrix" else db.rows(conn, EXPORTS[what])
+        rows = cmx.export_rows(conn) if what == "competitor_matrix" else (site_audit.export_rows(conn) if what == "site_audit" else db.rows(conn, EXPORTS[what]))
     return _xlsx_response(rows, f"m22-radar-{what}") if fmt == "xlsx" else _csv_response(rows, f"m22-radar-{what}")
 
 

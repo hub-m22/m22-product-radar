@@ -1,0 +1,58 @@
+{% extends "base.html" %}
+{% block title %}Наши сайты — M22 Product Radar{% endblock %}
+{% block content %}
+<div class="topbar"><div><h1>Наши сайты: m22.ru и radiosync.ru</h1>
+<div class="sub">Проверка собственных сайтов по данным последнего сбора ({{ d.last_fetch | dt }}): цены и наличие, расхождения между сайтами, дубли, неполные карточки, единообразие названий, опечатки, структура каталога. Всего карточек: {{ d.products }}. Каждое замечание — со ссылкой на карточку и конкретным действием.</div></div>
+<div class="actions-row"><a class="btn sec small" href="/export/site_audit.xlsx">XLSX</a> <a class="btn sec small" href="/export/site_audit.csv">CSV</a></div></div>
+
+<div class="kpis">
+  <div class="kpi"><div class="kpi-v" style="color:#b91c1c">{{ d.counts.P1 }}</div><div class="kpi-l">P1 · срочно: теряем деньги или доверие</div></div>
+  <div class="kpi"><div class="kpi-v" style="color:#b45309">{{ d.counts.P2 }}</div><div class="kpi-l">P2 · важно: мешает продаже и поиску</div></div>
+  <div class="kpi"><div class="kpi-v">{{ d.counts.P3 }}</div><div class="kpi-l">P3 · косметика: типографика, единообразие</div></div>
+  <div class="kpi"><div class="kpi-v">{{ d.by_site.get('m22.ru', 0) }} / {{ d.by_site.get('radiosync.ru', 0) }} / {{ d.by_site.get('оба', 0) }}</div><div class="kpi-l">m22.ru / radiosync.ru / оба сайта</div></div>
+  <div class="kpi"><div class="kpi-v">{{ d.dismissed }}</div><div class="kpi-l">скрыто как исправленное или неважное</div></div>
+</div>
+
+<div class="card recs-card"><h3 style="margin-top:0">С чего начать</h3>
+<ol class="small" style="margin:0;padding-left:18px">
+  <li><b>Цены и наличие</b> — разные цены и статусы одного артикула на двух сайтах, карточки без цены, ключевые товары «нет в наличии». Это прямые потери заявок и доверия.</li>
+  <li><b>Дубли</b> — две карточки с одним названием (а иногда и с разной ценой): покупатель не понимает разницы, поисковики понижают обе.</li>
+  <li><b>Единообразие</b> — одна модель написана по-разному (AG300 / AG‑300, UG10 / UG‑10, SGTR 11 / SGTR11): поиск по сайту и поисковый спрос делятся на два запроса.</li>
+  <li><b>Косметика</b> — латинские буквы в русских словах, пробелы вокруг дефисов, склеенные предложения в описании для поисковиков. Правится за один проход по шаблону.</li>
+</ol>
+<p class="small muted" style="margin:6px 0 0">Кнопка «Скрыть» убирает замечание из списка (исправлено или сознательно так). Скрытые можно показать фильтром. После следующего сбора данных список пересчитывается сам.</p></div>
+
+<form class="filters" method="get">
+  <label>Приоритет<select name="priority"><option value="">все</option>{% for p, n in priorities.items() %}<option value="{{ p }}" {% if f.priority == p %}selected{% endif %}>{{ p }} — {{ n }}</option>{% endfor %}</select></label>
+  <label>Сайт<select name="site"><option value="">все</option><option value="m22.ru" {% if f.site == 'm22.ru' %}selected{% endif %}>m22.ru</option><option value="radiosync.ru" {% if f.site == 'radiosync.ru' %}selected{% endif %}>radiosync.ru</option><option value="оба" {% if f.site == 'оба' %}selected{% endif %}>оба сайта</option></select></label>
+  <label>Группа<select name="group"><option value="">все</option>{% for g, n in groups.items() %}<option value="{{ g }}" {% if f.group == g %}selected{% endif %}>{{ n }}</option>{% endfor %}</select></label>
+  <label>Скрытые<select name="hidden"><option value="">не показывать</option><option value="1" {% if f.hidden == '1' %}selected{% endif %}>показать</option></select></label>
+  <label>Поиск<input type="text" name="q" value="{{ f.q }}" placeholder="товар, артикул, что не так"></label>
+  <button class="small">Применить</button> <a class="btn sec small" href="/site-audit">Сбросить</a>
+</form>
+<div class="sub">Замечаний: {{ rows|length }}.</div>
+
+<div class="card compact tbl-wrap"><table>
+<thead><tr><th>Приоритет</th><th>Группа</th><th>Сайт</th><th style="min-width:220px">Карточка</th><th style="min-width:220px">Что не так</th><th style="min-width:360px">Что сделать</th><th style="min-width:200px">Подтверждение</th><th></th></tr></thead>
+<tbody>
+{% for r in rows %}<tr {% if r.dismissed %}style="opacity:.55"{% endif %}>
+  <td><span class="badge {{ {'P1':'sev-high','P2':'sev-medium','P3':'sev-low'}[r.priority] }}">{{ r.priority }}</span> <span class="small muted">{{ r.priority_name }}</span></td>
+  <td class="small">{{ r.group_name }}</td>
+  <td class="small nowrap">{{ r.site }}</td>
+  <td class="small">{% if r.product_id %}<a href="/matrix/{{ r.product_id }}">{{ r.name[:70] }}</a>{% else %}{{ r.name }}{% endif %}{% if r.url %} <a href="{{ r.url }}" target="_blank" rel="noopener" title="открыть на сайте">↗</a>{% endif %}{% if r.sku %}<div class="muted">арт. {{ r.sku }}</div>{% endif %}{% if r.category %}<div class="muted">{{ r.category }}</div>{% endif %}</td>
+  <td class="small"><b>{{ r.what }}</b></td>
+  <td class="small">{{ r.fix }}</td>
+  <td class="small muted" style="max-width:320px;word-break:break-word">{{ r.evidence }}</td>
+  <td class="nowrap"><form method="post" action="/site-audit/dismiss" style="display:inline"><input type="hidden" name="key" value="{{ r.key }}"><input type="hidden" name="undo" value="{{ '1' if r.dismissed else '' }}"><input type="hidden" name="back" value="{{ request.url.path }}?{{ request.url.query }}"><button class="small sec">{{ 'Вернуть' if r.dismissed else 'Скрыть' }}</button></form></td>
+</tr>{% else %}<tr><td colspan="8" class="muted">Замечаний по выбранным фильтрам нет.</td></tr>{% endfor %}
+</tbody></table></div>
+
+{% if recs %}
+<div style="margin-top:14px">{% with title="Чего не хватает на сайтах по сравнению с конкурентами", intro="Не ошибки, а разрывы: конкуренты уровня A заявляют это на своих сайтах, а на m22.ru и radiosync.ru этого нет. Подробнее — в разделе «Конкуренты» → «Сравнительная таблица»." %}{% include "_site_recs.html" %}{% endwith %}</div>
+{% endif %}
+{% if usecases %}
+<div class="card" style="margin-top:12px"><h3 style="margin-top:0">Сценарии применения, которых нет в описаниях</h3>
+<p class="small muted">Конкуренты упоминают эти сценарии в карточках, на сайтах M22 их нет: дописать в описания и сделать посадочные страницы (см. сигналы «Новый сценарий применения»).</p>
+<div class="attr-line">{% for s in usecases %}<a class="attr" href="/signals/{{ s.id }}">{{ s.title.split('«')[1].split('»')[0] if '«' in s.title else s.title[:40] }}</a>{% endfor %}</div></div>
+{% endif %}
+{% endblock %}
