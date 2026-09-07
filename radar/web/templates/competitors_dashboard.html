@@ -9,28 +9,28 @@
 
 <div class="kpis">
   <div class="kpi"><div class="kpi-v">{{ d.with_inn }}<span class="muted"> / {{ d.total }}</span></div><div class="kpi-l">компаний с установленным юрлицом</div></div>
-  <div class="kpi"><div class="kpi-v">{{ (d.revenue_sum / 1e6) | round(0) | int }} млн ₽</div><div class="kpi-l">суммарная выручка {{ d.entities_with_revenue }} юрлиц за {{ d.revenue_year or '—' }}</div></div>
-  <div class="kpi"><div class="kpi-v">{{ d.tenders_count }}</div><div class="kpi-l">госзакупок как поставщик, на {{ (d.tenders_sum / 1e6) | round(0) | int }} млн ₽ ({{ d.entities_with_tenders }} юрлиц)</div></div>
-  <div class="kpi"><div class="kpi-v">{{ d.arbitration_count }}</div><div class="kpi-l">арбитражных дел на {{ (d.arbitration_sum / 1e6) | round(1) }} млн ₽</div></div>
+  <div class="kpi"><div class="kpi-v">{{ d.revenue_sum | rub }}</div><div class="kpi-l">суммарная выручка {{ d.entities_with_revenue }} юрлиц за {{ d.revenue_year or '—' }}</div></div>
+  <div class="kpi"><div class="kpi-v">{{ d.tenders_count }}</div><div class="kpi-l">госзакупок как поставщик, на {{ d.tenders_sum | rub }} ({{ d.entities_with_tenders }} юрлиц)</div></div>
+  <div class="kpi"><div class="kpi-v">{{ d.arbitration_count }}</div><div class="kpi-l">арбитражных дел на {{ d.arbitration_sum | rub }}</div></div>
   <div class="kpi"><div class="kpi-v">{{ d.employees_sum }}</div><div class="kpi-l">сотрудников суммарно (где известно)</div></div>
 </div>
 
 <div class="grid2">
-<div class="card"><h3>Выручка за год, млн ₽</h3><p class="small muted">Одно юрлицо на строку: сайты одной группы объединены. Серым — динамика к предыдущему году.</p>
+<div class="card"><h3>Выручка за год</h3><p class="small muted">Одно юрлицо на строку: сайты одной группы объединены. Серым — динамика к предыдущему году.</p>
 {% if d.revenue_bars %}<svg viewBox="0 0 520 {{ 26 * d.revenue_bars|length + 6 }}" width="100%" style="max-width:560px;font-family:inherit">
 {% set mx = d.revenue_bars[0].value %}{% for b in d.revenue_bars %}{% set y = loop.index0 * 26 %}
 <text x="0" y="{{ y + 16 }}" font-size="11" fill="#374151">{{ b.label[:24] }}</text>
 <rect x="160" y="{{ y + 4 }}" width="{{ (b.value / mx * 260) | round(1) if mx else 0 }}" height="17" rx="3" fill="{{ '#2f6fdd' if not b.uncertain else '#9db7e8' }}"><title>{{ b.title }}</title></rect>
-<text x="{{ 164 + (b.value / mx * 260 if mx else 0) | round(1) }}" y="{{ y + 16 }}" font-size="11" fill="#111827">{{ (b.value / 1e6) | round(1) }}{% if b.growth is not none %} <tspan fill="{{ '#15803d' if b.growth >= 0 else '#b45309' }}">{{ '+' if b.growth > 0 else '' }}{{ b.growth | int }}%</tspan>{% endif %}</text>
+<text x="{{ 164 + (b.value / mx * 260 if mx else 0) | round(1) }}" y="{{ y + 16 }}" font-size="11" fill="#111827">{{ b.value | rub }}{% if b.growth is not none %} <tspan fill="{{ '#15803d' if b.growth >= 0 else '#b45309' }}">{{ '+' if b.growth > 0 else '' }}{{ b.growth | int }}%</tspan>{% endif %}</text>
 {% endfor %}</svg>{% else %}<p class="muted">Нет данных о выручке.</p>{% endif %}
 {% if d.no_revenue %}<p class="small muted">Без опубликованной выручки: {{ d.no_revenue | join('; ') }}.</p>{% endif %}</div>
 
-<div class="card"><h3>Госзакупки как поставщик, млн ₽ (сумма закупок)</h3><p class="small muted">Число закупок — в подписи. Это накопленная история участия, а не год.</p>
+<div class="card"><h3>Госзакупки как поставщик (сумма закупок)</h3><p class="small muted">Число закупок — в подписи. Это накопленная история участия, а не год.</p>
 {% if d.tender_bars %}<svg viewBox="0 0 520 {{ 26 * d.tender_bars|length + 6 }}" width="100%" style="max-width:560px;font-family:inherit">
 {% set mx = d.tender_bars[0].value %}{% for b in d.tender_bars %}{% set y = loop.index0 * 26 %}
 <text x="0" y="{{ y + 16 }}" font-size="11" fill="#374151">{{ b.label[:24] }}</text>
 <rect x="160" y="{{ y + 4 }}" width="{{ (b.value / mx * 260) | round(1) if mx else 0 }}" height="17" rx="3" fill="#2a9d6b"><title>{{ b.title }}</title></rect>
-<text x="{{ 164 + (b.value / mx * 260 if mx else 0) | round(1) }}" y="{{ y + 16 }}" font-size="11" fill="#111827">{{ (b.value / 1e6) | round(1) }} <tspan fill="#6b7280">({{ b.count }} зак.)</tspan></text>
+<text x="{{ 164 + (b.value / mx * 260 if mx else 0) | round(1) }}" y="{{ y + 16 }}" font-size="11" fill="#111827">{{ b.value | rub }} <tspan fill="#6b7280">({{ b.count }} зак.)</tspan></text>
 {% endfor %}</svg>{% else %}<p class="muted">Нет данных о госзакупках.</p>{% endif %}</div>
 </div>
 
@@ -41,12 +41,12 @@
   <td class="small">{% for s in e.sites %}<a href="/competitors/{{ s.id }}">{{ s.name[:28] }}</a>{% if not loop.last %}<br>{% endif %}{% endfor %}</td>
   <td class="num small">{{ e.reg_date[-4:] if e.reg_date else 'нет данных' }}</td>
   <td class="num" title="{{ e.employees_history or '' }}">{{ e.employees if e.employees is not none else 'нет данных' }}</td>
-  <td class="num">{% if e.revenue_rub %}<b>{{ (e.revenue_rub / 1e6) | round(1) }} млн</b><div class="small muted">{{ e.revenue_year }}</div>{% elif e.is_ip %}<span class="muted">ИП, не публикуется</span>{% else %}<span class="muted">нет данных</span>{% endif %}</td>
+  <td class="num">{% if e.revenue_rub %}<b>{{ e.revenue_rub | rub }}</b><div class="small muted">{{ e.revenue_year }}</div>{% elif e.is_ip %}<span class="muted">ИП, не публикуется</span>{% else %}<span class="muted">нет данных</span>{% endif %}</td>
   <td class="num">{% if e.revenue_growth_pct is not none %}<span style="color:{{ '#15803d' if e.revenue_growth_pct >= 0 else '#b45309' }}">{{ '+' if e.revenue_growth_pct > 0 else '' }}{{ e.revenue_growth_pct | int }}%</span>{% else %}<span class="muted">—</span>{% endif %}</td>
-  <td class="num small">{% if e.taxes_rub is not none %}{{ (e.taxes_rub / 1e6) | round(2) }} / {{ ((e.contributions_rub or 0) / 1e6) | round(2) }} млн{% else %}<span class="muted">нет данных</span>{% endif %}</td>
-  <td class="num">{% if e.tenders_count is not none %}<b>{{ e.tenders_count }}</b>{% if e.tenders_sum_rub %}<div class="small muted">{{ (e.tenders_sum_rub / 1e6) | round(1) }} млн ₽</div>{% endif %}{% else %}<span class="muted">нет данных</span>{% endif %}</td>
+  <td class="num small">{% if e.taxes_rub is not none %}{{ e.taxes_rub | rub }} / {{ (e.contributions_rub or 0) | rub }}{% else %}<span class="muted">нет данных</span>{% endif %}</td>
+  <td class="num">{% if e.tenders_count is not none %}<b>{{ e.tenders_count }}</b>{% if e.tenders_sum_rub %}<div class="small muted">{{ e.tenders_sum_rub | rub }}</div>{% endif %}{% else %}<span class="muted">нет данных</span>{% endif %}</td>
   <td class="small">{{ e.tenders_top_customers or 'нет данных' }}</td>
-  <td class="num" title="{{ e.arbitration_note or '' }}">{% if e.arbitration_count is not none %}{{ e.arbitration_count }}{% if e.arbitration_sum_rub %}<div class="small muted">{{ (e.arbitration_sum_rub / 1e6) | round(1) }} млн ₽</div>{% endif %}{% else %}<span class="muted">нет данных</span>{% endif %}</td>
+  <td class="num" title="{{ e.arbitration_note or '' }}">{% if e.arbitration_count is not none %}{{ e.arbitration_count }}{% if e.arbitration_sum_rub %}<div class="small muted">{{ e.arbitration_sum_rub | rub }}</div>{% endif %}{% else %}<span class="muted">нет данных</span>{% endif %}</td>
   <td class="num" title="{{ e.enforcement_note or '' }}">{% if e.enforcement_count is not none %}{{ e.enforcement_count }}{% else %}<span class="muted">нет данных</span>{% endif %}</td>
   <td class="small">{{ e.fin_state or 'нет данных' }}</td>
   <td class="small">{{ e.trademarks or 'нет данных' }}</td>

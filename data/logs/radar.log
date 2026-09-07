@@ -728,3 +728,28 @@
 2026-09-07 17:44:47,566 INFO httpx: HTTP Request: GET http://testserver/competitors?category=disposable_headphones "HTTP/1.1 200 OK"
 2026-09-07 17:44:47,613 INFO httpx: HTTP Request: GET http://testserver/competitors/dashboard?tiers=A,B "HTTP/1.1 200 OK"
 2026-09-07 17:44:47,683 INFO httpx: HTTP Request: GET http://testserver/competitors/compare?tiers=A,B "HTTP/1.1 200 OK"
+2026-09-07 17:45:06,846 INFO apscheduler.scheduler: Adding job tentatively -- it will be properly scheduled when the scheduler starts
+2026-09-07 17:45:06,847 INFO apscheduler.scheduler: Adding job tentatively -- it will be properly scheduled when the scheduler starts
+2026-09-07 17:45:06,847 INFO apscheduler.scheduler: Adding job tentatively -- it will be properly scheduled when the scheduler starts
+2026-09-07 17:45:06,847 INFO apscheduler.scheduler: Adding job tentatively -- it will be properly scheduled when the scheduler starts
+2026-09-07 17:45:06,848 INFO apscheduler.scheduler: Added job "_run_job" to job store "default"
+2026-09-07 17:45:06,849 INFO apscheduler.scheduler: Added job "_run_job" to job store "default"
+2026-09-07 17:45:06,849 INFO apscheduler.scheduler: Added job "_run_job" to job store "default"
+2026-09-07 17:45:06,849 INFO apscheduler.scheduler: Added job "_run_job" to job store "default"
+2026-09-07 17:45:06,849 INFO apscheduler.scheduler: Scheduler started
+2026-09-07 17:45:06,850 INFO radar.scheduler: scheduler started
+2026-09-07 17:49:06,275 INFO apscheduler.scheduler: Adding job tentatively -- it will be properly scheduled when the scheduler starts
+2026-09-07 17:49:06,275 INFO apscheduler.scheduler: Adding job tentatively -- it will be properly scheduled when the scheduler starts
+2026-09-07 17:49:06,275 INFO apscheduler.scheduler: Adding job tentatively -- it will be properly scheduled when the scheduler starts
+2026-09-07 17:49:06,275 INFO apscheduler.scheduler: Adding job tentatively -- it will be properly scheduled when the scheduler starts
+2026-09-07 17:49:06,276 INFO apscheduler.scheduler: Added job "_run_job" to job store "default"
+2026-09-07 17:49:06,276 INFO apscheduler.scheduler: Added job "_run_job" to job store "default"
+2026-09-07 17:49:06,277 INFO apscheduler.scheduler: Added job "_run_job" to job store "default"
+2026-09-07 17:49:06,277 INFO apscheduler.scheduler: Added job "_run_job" to job store "default"
+2026-09-07 17:49:06,277 INFO apscheduler.scheduler: Scheduler started
+2026-09-07 17:49:06,277 INFO radar.scheduler: scheduler started
+2026-09-07 17:49:06,323 INFO httpx: HTTP Request: GET http://testserver/competitors/tenders "HTTP/1.1 200 OK"
+2026-09-07 17:49:06,399 INFO httpx: HTTP Request: GET http://testserver/competitors/dashboard?tiers=A,B "HTTP/1.1 200 OK"
+2026-09-07 17:49:06,477 INFO httpx: HTTP Request: GET http://testserver/competitors/compare "HTTP/1.1 200 OK"
+2026-09-07 17:49:06,580 INFO httpx: HTTP Request: GET http://testserver/competitors "HTTP/1.1 200 OK"
+2026-09-07 17:49:06,669 INFO httpx: HTTP Request: GET http://testserver/competitors/9 "HTTP/1.1 200 OK"

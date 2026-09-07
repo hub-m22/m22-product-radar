@@ -108,6 +108,26 @@ app.mount("/static", StaticFiles(directory=str(HERE / "static")), name="static")
 templates = Jinja2Templates(directory=str(HERE / "templates"))
 
 
+def fmt_rub(v, sign=True):
+    """Сумма в удобной единице: 17 млрд ₽ / 242 млн ₽ / 327 тыс. ₽ / 850 ₽ — без «21 030 млн»."""
+    try:
+        v = float(v)
+    except (TypeError, ValueError):
+        return "нет данных"
+    a = abs(v)
+    if a >= 1e9:
+        n, unit = v / 1e9, "млрд"
+    elif a >= 1e6:
+        n, unit = v / 1e6, "млн"
+    elif a >= 1e3:
+        n, unit = v / 1e3, "тыс."
+    else:
+        n, unit = v, ""
+    txt = f"{n:.1f}".rstrip("0").rstrip(".") if a >= 1e3 else f"{int(round(n))}"
+    txt = txt.replace(".", ",")
+    return f"{txt} {unit} ₽".replace("  ", " ") if sign else f"{txt} {unit}".strip()
+
+
 def fmt_money(v):
     if v is None or v == "":
         return "—"
@@ -128,7 +148,7 @@ def fmt_dt(v):
     return s[:16]
 
 
-templates.env.filters.update({"money": fmt_money, "pct": fmt_pct, "dt": fmt_dt, "uj": lambda t, d=None: db.uj(t, d)})
+templates.env.filters.update({"money": fmt_money, "rub": fmt_rub, "pct": fmt_pct, "dt": fmt_dt, "uj": lambda t, d=None: db.uj(t, d)})
 templates.env.globals.update({"CATEGORY_NAMES": CATEGORY_NAMES, "SIGNAL_TYPES": SIGNAL_TYPES, "STATUS_NAMES": STATUS_NAMES, "SEV_NAMES": SEV_NAMES, "FACT_NAMES": FACT_NAMES,
                               "MATCH_NAMES": MATCH_NAMES, "SOURCE_STATUS": SOURCE_STATUS, "MVP_NAMES": MVP_NAMES, "TYPE_NAMES": TYPE_NAMES, "app_version": __import__("radar").get_version(), "asset_version": str(int(__import__("time").time()))})
 
