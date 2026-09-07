@@ -1105,6 +1105,25 @@ def analyze_now():
     return RedirectResponse("/", status_code=303)
 
 
+@app.get("/changelog", response_class=HTMLResponse)
+def changelog_page(request: Request):
+    """Журнал версий из docs/ЖУРНАЛ_ВЕРСИЙ.md: заголовки «## версия — дата» и пункты «- …»."""
+    import re as _re
+
+    path = Path(__file__).resolve().parent.parent.parent / "docs" / "ЖУРНАЛ_ВЕРСИЙ.md"
+    entries: list[dict] = []
+    try:
+        for line in path.read_text(encoding="utf-8").splitlines():
+            m = _re.match(r"^## (.+?) — (.+)$", line.strip())
+            if m:
+                entries.append({"version": m.group(1), "date": m.group(2), "items": []})
+            elif line.startswith("- ") and entries:
+                entries[-1]["items"].append(line[2:].strip().replace("`", ""))
+    except OSError:
+        pass
+    return render(request, "changelog.html", entries=entries)
+
+
 @app.get("/health")
 def health():
     with db.session() as conn:
