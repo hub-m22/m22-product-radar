@@ -46,6 +46,8 @@ def rows(conn: sqlite3.Connection, competitor_id: int | None = None, category: s
                            (SELECT m.id FROM product_matches pm JOIN m22_products m ON m.id=pm.m22_product_id WHERE pm.competitor_product_id=cp.id AND pm.review_status!='rejected' ORDER BY pm.confidence DESC LIMIT 1) AS m22_id,
                            (SELECT m.name FROM product_matches pm JOIN m22_products m ON m.id=pm.m22_product_id WHERE pm.competitor_product_id=cp.id AND pm.review_status!='rejected' ORDER BY pm.confidence DESC LIMIT 1) AS m22_name,
                            (SELECT m.price FROM product_matches pm JOIN m22_products m ON m.id=pm.m22_product_id WHERE pm.competitor_product_id=cp.id AND pm.review_status!='rejected' ORDER BY pm.confidence DESC LIMIT 1) AS m22_price,
+                           (SELECT m.images_json FROM product_matches pm JOIN m22_products m ON m.id=pm.m22_product_id WHERE pm.competitor_product_id=cp.id AND pm.review_status!='rejected' ORDER BY pm.confidence DESC LIMIT 1) AS m22_images_json,
+                           (SELECT m.url FROM product_matches pm JOIN m22_products m ON m.id=pm.m22_product_id WHERE pm.competitor_product_id=cp.id AND pm.review_status!='rejected' ORDER BY pm.confidence DESC LIMIT 1) AS m22_url,
                            (SELECT pm.match_type FROM product_matches pm WHERE pm.competitor_product_id=cp.id AND pm.review_status!='rejected' ORDER BY pm.confidence DESC LIMIT 1) AS match_type,
                            (SELECT pm.confidence FROM product_matches pm WHERE pm.competitor_product_id=cp.id AND pm.review_status!='rejected' ORDER BY pm.confidence DESC LIMIT 1) AS match_conf
                            FROM competitor_products cp JOIN competitors c ON c.id=cp.competitor_id WHERE {' AND '.join(where)}
@@ -56,6 +58,8 @@ def rows(conn: sqlite3.Connection, competitor_id: int | None = None, category: s
         r["state"] = "gone" if not r["is_active"] else ("new" if baseline and (r["first_seen_at"] or "")[:10] > baseline else "ok")
         r["category_name"] = CATEGORY_NAMES.get(r["category_slug"], r["category_slug"] or "без категории")
         r["kind_name"] = KIND_LABELS.get(r["kind"], r["kind"] or "не определён")
+        imgs = db.uj(r.get("m22_images_json"), []) or []
+        r["m22_image"] = imgs[0] if imgs and isinstance(imgs[0], str) else (imgs[0].get("url") if imgs and isinstance(imgs[0], dict) else None)
         r["spec_count"] = sum(1 for f in SPEC_FIELDS if r["norm"].get(f) is not None)
         r["raw_spec_count"] = len(specmod.flatten_specs(r["specs_json"]))
     return _collapse_duplicates(out)

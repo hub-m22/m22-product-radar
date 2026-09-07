@@ -680,6 +680,7 @@ def match_review(mid: int, decision: str = Form(...), note: str = Form(""), matc
 @app.get("/competitor-matrix", response_class=HTMLResponse)
 def competitor_matrix(request: Request, view: str = "matrix", competitor: str = "", category: str = "", kind: str = "", state: str = "", q: str = "", tier: str = "",
                       scope: str = "in", specs: str = ""):
+    state = state or "active"  # по умолчанию показываем только товары в продаже; исчезнувшие — по фильтру или на вкладке «Что появилось / исчезло»
     f = {"competitor": competitor, "category": category, "kind": kind, "state": state, "q": q, "tier": tier, "scope": scope, "specs": specs}
     with db.session() as conn:
         lists = _lists(conn)

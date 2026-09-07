@@ -37,6 +37,8 @@ def good_name(text) -> bool:
 
 
 NOT_FOUND_RE = re.compile(r"не существует|не найден|not found|(?<![\w-])404(?![\w-])|нет такой страницы|удал[её]н", re.I)
+SECTION_RE = re.compile(r"^(конференц-системы|оборудование\b.*|аппаратура\b.*|синхронн\w+ перевод\w*|синхронные переводчики|кабин[аы] переводчик\w*|радиогиды?|аудиогиды?|шептало.*|магазин\b.*|каталог.*|"
+                        r"beyerdynamic|reinvox|sennheiser|retekess|bosch|okayo|williams sound|услуги.*|тест-драйв.*|бесплатный тест-драйв.*)$", re.I)
 ARTICLE_RE = re.compile(r"^(как |почему |что такое|что выбрать|зачем |обзор|сравнение|отзыв|новости|статья|инструкция|новый стандарт|преимущества|особенности|стоимость |заказ |организация |правильное |залог |подбор|выбор |топ[- ]\d|\d+ причин|аудиогид или|шушотаж|синхронный перевод[:\s])|[?]$", re.I)
 PRICE_TAGS = ["span", "div", "p", "b", "strong", "ins", "bdi", "td", "li", "a"]
 
@@ -376,6 +378,8 @@ def collect_page(conn: sqlite3.Connection, page: dict, run_id: int) -> tuple[int
         items = [i for i in items if not NOT_FOUND_RE.search(i["name"] or "")]
         # статьи и обзоры — не товары, даже если на странице есть цена из виджета «похожие товары»
         items = [i for i in items if not ARTICLE_RE.search(i["name"] or "")]
+        # разделы сайта и бренд-страницы без цены («Синхронный перевод», «Reinvox») — не товары
+        items = [i for i in items if i.get("price") or not SECTION_RE.search((i["name"] or "").strip())]
     else:
         items = parse_catalog_page(res.text, page["url"], cfg, page.get("category_slug"))
         items = [i for i in items if _relevant(i["name"], i.get("description")) or page.get("category_slug")]
@@ -401,7 +405,7 @@ SLUG_KEYWORDS = ("radiogu", "radio-gu", "radiogid", "audiogu", "audiogid", "earp
                  "beyerdynamic", "sennheiser", "bosch", "soolai", "spbaudio", "cromi", "touraudio", "crystal", "kabina", "pult", "konferenc", "conference", "usilitel", "gromkogovor", "tproduct")
 SLUG_EXCLUDE = ("/en/", "/page", "privacy", "offer", "return", "support", "review", "thank", "contact", "about", "news", "blog", "article", "delivery", "payment",
                 "policy", "oferta", "vacanc", "sitemap", "login", "cart", "search", "tag/", "faq", "warranty", "garant", "stati", "statyi", "/company/",
-                "categories", "product_list_mode", "portfolio", "portfoli", "otzyv", "compare", "wishlist")
+                "categories", "product_list_mode", "portfolio", "portfoli", "otzyv", "compare", "wishlist", "/services/", "test-drive", "/cases", "/art/", "/pro/")
 
 
 GENERIC_KEYWORDS = {"set", "kit", "case", "mic", "bag", "gid", "tour", "shop", "rent", "product", "tovar", "catalog"}  # только как целое слово
