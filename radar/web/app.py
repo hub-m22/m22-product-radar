@@ -356,6 +356,14 @@ def competitor_add(name: str = Form(...), website: str = Form(...), types: list[
     return RedirectResponse(f"/competitors/{cid}", status_code=303)
 
 
+@app.get("/competitors/dashboard", response_class=HTMLResponse)
+def competitors_dashboard(request: Request, tiers: str = "A"):
+    ts = tuple(t for t in tiers.split(",") if t in ("A", "B", "C")) or ("A",)
+    with db.session() as conn:
+        d = profmod.dashboard_data(conn, ts)
+    return render(request, "competitors_dashboard.html", d=d, tiers=ts)
+
+
 @app.get("/competitors/compare", response_class=HTMLResponse)
 def competitors_compare(request: Request, tiers: str = "A"):
     ts = tuple(t for t in tiers.split(",") if t in ("A", "B", "C")) or ("A",)

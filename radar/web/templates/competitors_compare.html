@@ -1,13 +1,13 @@
 {% extends "base.html" %}{% import "_macros.html" as m %}
 {% block title %}Сравнительная таблица конкурентов — M22 Product Radar{% endblock %}
 {% block content %}
-<a href="/competitors">← Конкуренты</a>
 <div class="topbar"><div><h1>Сравнительная таблица конкурентов</h1>
 <div class="sub">Признаки извлечены с сайтов автоматически (наведите на ячейку — фрагмент текста и ссылка) или заданы вручную в карточке конкурента. Зелёная ячейка — у конкурента есть то, чего нет у M22 (или показатель выше). «Нет данных» — на проверенных страницах признак не найден; это не значит, что его нет.</div></div>
 <div class="actions-row">
   <div class="tabs" style="margin:0">{% for t, n in [("A","A"),("A,B","A + B"),("A,B,C","все")] %}<a href="/competitors/compare?tiers={{ t }}" class="{% if tiers | join(',') == t %}active{% endif %}">{{ n }}</a>{% endfor %}</div>
   <form method="post" action="/competitors/profile-scan-all" class="inline"><input type="hidden" name="tier" value="A"><button class="sec small">Пересканировать сайты категории A</button></form>
 </div></div>
+{% include "_competitors_tabs.html" %}
 <div class="card compact tbl-wrap"><table style="min-width:{{ 260 + table.columns|length * 150 }}px">
 <thead><tr><th style="min-width:230px">Признак</th>{% for c in table.columns %}<th style="min-width:140px;{% if c.is_m22 %}background:#e8f0fc{% endif %}">
   {% if c.is_m22 %}<b>M22</b>{% else %}<a href="/competitors/{{ c.id }}"><b>{{ c.name[:34] }}</b></a><div class="small muted">кат. {{ c.tier }} · {{ c.role[:40] }}</div>{% endif %}</th>{% endfor %}</tr></thead>

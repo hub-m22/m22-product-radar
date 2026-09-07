@@ -331,6 +331,49 @@ def m22_extra(conn: sqlite3.Connection) -> dict:
     return out
 
 
+LEGAL_COLS = ("inn", "ogrn", "legal_name", "legal_status", "legal_region", "okved", "reg_date", "employees", "revenue_year", "revenue_rub", "revenue_growth_pct", "profit_rub",
+              "tenders_count", "tenders_sum_rub", "tenders_top_customers", "legal_source_url", "legal_confidence", "legal_note", "arbitration_count", "arbitration_sum_rub", "arbitration_note",
+              "enforcement_count", "enforcement_note", "taxes_rub", "contributions_rub", "fin_state", "trademarks", "risk_flags", "employees_history")
+CONF_RANK = {"подтверждено (ИНН на сайте)": 0, "высокая (адрес/товарный знак)": 1, "средняя (по названию)": 2, "низкая": 3}
+
+
+def dashboard_data(conn: sqlite3.Connection, tiers: tuple = ("A",)) -> dict:
+    """Показатели по юрлицам: сайты одной группы (один ИНН) объединяются в одну строку."""
+    comps = db.rows(conn, f"SELECT * FROM competitors WHERE is_active=1 AND tier IN ({','.join('?' * len(tiers))}) ORDER BY tier, name", list(tiers))
+    entities: dict[str, dict] = {}
+    for c in comps:
+        key = c["inn"] or f"_none_{c['id']}"
+        e = entities.get(key)
+        if e is None:
+            e = {k: c[k] for k in LEGAL_COLS}
+            e["sites"] = []
+            e["is_ip"] = (c["legal_status"] or "").startswith("Действующий ИП") or (c["inn"] or "").__len__() == 12
+            entities[key] = e
+        else:
+            # берём самое уверенное сопоставление
+            if CONF_RANK.get(c["legal_confidence"] or "низкая", 3) < CONF_RANK.get(e["legal_confidence"] or "низкая", 3):
+                e["legal_confidence"] = c["legal_confidence"]
+        e["sites"].append({"id": c["id"], "name": c["name"], "tier": c["tier"]})
+    ents = list(entities.values())
+    ents.sort(key=lambda e: (-(e["revenue_rub"] or 0), -(e["tenders_sum_rub"] or 0), e["legal_name"] or "я"))
+    with_rev = [e for e in ents if e["revenue_rub"]]
+    with_t = [e for e in ents if e["tenders_count"]]
+    years = [e["revenue_year"] for e in with_rev if e["revenue_year"]]
+    d = {
+        "total": len(ents), "with_inn": sum(1 for e in ents if e["inn"]), "entities": ents,
+        "revenue_sum": sum(e["revenue_rub"] for e in with_rev), "entities_with_revenue": len(with_rev), "revenue_year": max(years) if years else None,
+        "tenders_count": sum(e["tenders_count"] or 0 for e in with_t), "tenders_sum": sum(e["tenders_sum_rub"] or 0 for e in with_t), "entities_with_tenders": len(with_t),
+        "arbitration_count": sum(e["arbitration_count"] or 0 for e in ents), "arbitration_sum": sum(e["arbitration_sum_rub"] or 0 for e in ents),
+        "employees_sum": sum(e["employees"] or 0 for e in ents),
+        "revenue_bars": [{"label": e["legal_name"] or e["sites"][0]["name"], "value": e["revenue_rub"], "growth": e["revenue_growth_pct"], "uncertain": (e["legal_confidence"] or "").startswith("средн") or (e["legal_confidence"] or "").startswith("низк"),
+                          "title": f"{e['legal_name']}: {e['revenue_rub'] / 1e6:.1f} млн ₽ за {e['revenue_year']}; сопоставление: {e['legal_confidence']}"} for e in with_rev],
+        "tender_bars": sorted([{"label": e["legal_name"] or e["sites"][0]["name"], "value": e["tenders_sum_rub"] or 0, "count": e["tenders_count"], "title": e["tenders_top_customers"] or ""} for e in with_t], key=lambda b: -b["value"]),
+        "no_revenue": [f"{e['legal_name']} ({'ИП, отчётность не публикуется' if e['is_ip'] else 'нет данных'})" for e in ents if e["inn"] and not e["revenue_rub"]],
+        "arb_notes": [{"name": e["legal_name"], "text": "; ".join(x for x in (e["arbitration_note"], ("исполнительные производства: " + e["enforcement_note"]) if e["enforcement_note"] and e["enforcement_count"] else None) if x)} for e in ents if (e["arbitration_count"] or e["enforcement_count"])],
+    }
+    return d
+
+
 def compare_flags(comp: dict, m22: dict) -> dict:
     """Где конкурент сильнее M22 (True) / слабее (False) / нет данных (None) по каждому признаку."""
     flags = {}
