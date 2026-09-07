@@ -692,3 +692,14 @@
 2026-09-07 17:39:22,665 INFO apscheduler.scheduler: Added job "_run_job" to job store "default"
 2026-09-07 17:39:22,665 INFO apscheduler.scheduler: Scheduler started
 2026-09-07 17:39:22,666 INFO radar.scheduler: scheduler started
+2026-09-07 17:39:45,154 INFO apscheduler.scheduler: Adding job tentatively -- it will be properly scheduled when the scheduler starts
+2026-09-07 17:39:45,154 INFO apscheduler.scheduler: Adding job tentatively -- it will be properly scheduled when the scheduler starts
+2026-09-07 17:39:45,154 INFO apscheduler.scheduler: Adding job tentatively -- it will be properly scheduled when the scheduler starts
+2026-09-07 17:39:45,154 INFO apscheduler.scheduler: Adding job tentatively -- it will be properly scheduled when the scheduler starts
+2026-09-07 17:39:45,155 INFO apscheduler.scheduler: Added job "_run_job" to job store "default"
+2026-09-07 17:39:45,155 INFO apscheduler.scheduler: Added job "_run_job" to job store "default"
+2026-09-07 17:39:45,156 INFO apscheduler.scheduler: Added job "_run_job" to job store "default"
+2026-09-07 17:39:45,156 INFO apscheduler.scheduler: Added job "_run_job" to job store "default"
+2026-09-07 17:39:45,156 INFO apscheduler.scheduler: Scheduler started
+2026-09-07 17:39:45,156 INFO radar.scheduler: scheduler started
+2026-09-07 17:39:45,170 INFO httpx: HTTP Request: GET http://testserver/changelog "HTTP/1.1 200 OK"

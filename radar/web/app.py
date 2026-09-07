@@ -1116,9 +1116,9 @@ def changelog_page(request: Request):
         for line in path.read_text(encoding="utf-8").splitlines():
             m = _re.match(r"^## (.+?) — (.+)$", line.strip())
             if m:
-                entries.append({"version": m.group(1), "date": m.group(2), "items": []})
+                entries.append({"version": m.group(1), "date": m.group(2), "lines": []})
             elif line.startswith("- ") and entries:
-                entries[-1]["items"].append(line[2:].strip().replace("`", ""))
+                entries[-1]["lines"].append(line[2:].strip().replace("`", ""))
     except OSError:
         pass
     return render(request, "changelog.html", entries=entries)

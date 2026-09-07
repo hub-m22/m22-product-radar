@@ -4,7 +4,7 @@
 <div class="topbar"><div><h1>Журнал версий</h1><div class="sub">Текущая версия: <b>{{ app_version }}</b>. Каждый запрос заказчика — новая версия; ниже кратко, что менялось.</div></div></div>
 {% for e in entries %}
 <div class="card" style="margin-bottom:10px"><h3 style="margin:0 0 6px">{{ e.version }} <span class="small muted">— {{ e.date }}</span></h3>
-<ul class="small" style="margin:0;padding-left:18px">{% for it in e.items %}<li>{{ it }}</li>{% endfor %}</ul></div>
+<ul class="small" style="margin:0;padding-left:18px">{% for it in e.lines %}<li>{{ it }}</li>{% endfor %}</ul></div>
 {% endfor %}
 <p class="small muted">Источник: docs/ЖУРНАЛ_ВЕРСИЙ.md в папке радара.</p>
 {% endblock %}
