@@ -604,3 +604,13 @@
 2026-09-07 15:38:11,341 INFO httpx: HTTP Request: GET http://testserver/competitors/compare "HTTP/1.1 200 OK"
 2026-09-07 15:38:11,445 INFO httpx: HTTP Request: GET http://testserver/competitors/7 "HTTP/1.1 200 OK"
 2026-09-07 15:38:11,585 INFO httpx: HTTP Request: GET http://testserver/competitors/1 "HTTP/1.1 200 OK"
+2026-09-07 15:38:49,538 INFO apscheduler.scheduler: Adding job tentatively -- it will be properly scheduled when the scheduler starts
+2026-09-07 15:38:49,539 INFO apscheduler.scheduler: Adding job tentatively -- it will be properly scheduled when the scheduler starts
+2026-09-07 15:38:49,539 INFO apscheduler.scheduler: Adding job tentatively -- it will be properly scheduled when the scheduler starts
+2026-09-07 15:38:49,540 INFO apscheduler.scheduler: Adding job tentatively -- it will be properly scheduled when the scheduler starts
+2026-09-07 15:38:49,541 INFO apscheduler.scheduler: Added job "_run_job" to job store "default"
+2026-09-07 15:38:49,541 INFO apscheduler.scheduler: Added job "_run_job" to job store "default"
+2026-09-07 15:38:49,542 INFO apscheduler.scheduler: Added job "_run_job" to job store "default"
+2026-09-07 15:38:49,542 INFO apscheduler.scheduler: Added job "_run_job" to job store "default"
+2026-09-07 15:38:49,542 INFO apscheduler.scheduler: Scheduler started
+2026-09-07 15:38:49,543 INFO radar.scheduler: scheduler started

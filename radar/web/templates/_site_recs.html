@@ -6,7 +6,7 @@
   <div class="rec-list">
   {% for r in recs %}
     <div class="rec {% if r.unique %}rec-unique{% endif %}">
-      <div class="rec-head"><span class="attr better">{{ r.label }}</span> <span class="small muted">{% if r.count == 0 %}{{ r.names }} — возможное уникальное УТП{% else %}{{ r.count }} {% if r.count == 1 %}конкурент{% elif r.count < 5 %}конкурента{% else %}конкурентов{% endif %}: {{ r.names }}{% endif %}{% if r.values %} ({{ r.values }}){% endif %} · {{ r.m22_status }}</span></div>
+      <div class="rec-head"><span class="attr better">{{ r.label }}</span> <span class="small muted">{% if r.count == 0 %}{{ r.names }} — возможное уникальное УТП{% else %}{{ r.count }} {% if r.count == 1 %}конкурент{% elif r.count < 5 %}конкурента{% else %}конкурентов{% endif %}: {{ r.names }}{% endif %}{% if r.vals_txt %} ({{ r.vals_txt }}){% endif %} · {{ r.m22_status }}</span></div>
       <div class="small rec-action">{{ r.action }}</div>
     </div>
   {% endfor %}

@@ -427,18 +427,18 @@ def site_recommendations(conn: sqlite3.Connection, tiers: tuple = ("A",), only_c
             m22_status = f"на сайтах M22: {mv}" if mv is not None else "на сайтах M22 не указано"
         else:
             m22_status = "на сайтах M22 не заявлено" if mv is None else "на сайтах M22: нет"
-        out.append({"key": key, "label": label, "count": len(claimers), "names": names, "values": values, "m22_status": m22_status,
+        out.append({"key": key, "label": label, "count": len(claimers), "names": names, "vals_txt": values, "m22_status": m22_status,
                     "action": SITE_ACTIONS.get(key, "Заявить на сайте, если есть; если нет — оценить, стоит ли добавить.").format(names=names, values=values or "—"),
                     "unique": key == "replacement_fund"})
     # особые выводы из юрлиц: тендеры и масштаб
     if only_competitor is None:
         t = db.rows(conn, f"SELECT legal_name, tenders_count, tenders_sum_rub FROM competitors WHERE is_active=1 AND tier IN ({','.join('?' * len(tiers))}) AND tenders_count > 0 GROUP BY inn ORDER BY tenders_sum_rub DESC", list(tiers))
         if t and (m22["vals"].get("tender") != "yes"):
-            out.append({"key": "tender_proof", "label": "Госзакупки как канал", "count": len(t), "names": ", ".join((r["legal_name"] or "")[:26] for r in t[:3]), "values": "", "m22_status": "на сайтах M22 не заявлено",
+            out.append({"key": "tender_proof", "label": "Госзакупки как канал", "count": len(t), "names": ", ".join((r["legal_name"] or "")[:26] for r in t[:3]), "vals_txt": "", "m22_status": "на сайтах M22 не заявлено",
                         "action": "Страница для госзаказчиков и участие в закупках: у конкурентов это заметный канал (" + "; ".join(f"{r['legal_name']}: {r['tenders_count']} закупок на {(r['tenders_sum_rub'] or 0) / 1e6:.0f} млн ₽" for r in t[:3]) + ").", "unique": False})
     out.sort(key=lambda r: (-r["count"], r["label"]))
     if only_competitor is None and m22["vals"].get("replacement_fund") != "yes" and not any(r["key"] == "replacement_fund" for r in out):
-        out.append({"key": "replacement_fund", "label": "Подменный фонд", "count": 0, "names": "никто из конкурентов не заявляет", "values": "", "m22_status": "на сайтах M22 не заявлено",
+        out.append({"key": "replacement_fund", "label": "Подменный фонд", "count": 0, "names": "никто из конкурентов не заявляет", "vals_txt": "", "m22_status": "на сайтах M22 не заявлено",
                     "action": SITE_ACTIONS["replacement_fund"], "unique": True})
     return out
 
