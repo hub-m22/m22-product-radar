@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>{% block title %}M22 Product Radar{% endblock %}</title>
-<script>try{var t=localStorage.getItem("radar_theme");if(t==="dark")document.documentElement.setAttribute("data-theme","dark");}catch(e){}</script>
+<script>try{var q=/[?&]theme=(dark|light)/.exec(location.search);var t=q?q[1]:localStorage.getItem("radar_theme");if(q)localStorage.setItem("radar_theme",t);if(t==="dark")document.documentElement.setAttribute("data-theme","dark");}catch(e){}</script>
 <link rel="stylesheet" href="/static/style.css?v={{ asset_version }}">
 <link rel="icon" type="image/svg+xml" href="/static/m22-logo.svg">
 </head>
