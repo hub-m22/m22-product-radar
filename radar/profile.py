@@ -236,7 +236,9 @@ def seller_roles(conn: sqlite3.Connection) -> dict[int, str]:
                     break
         foreign_share = (sum(found.values()) / len(prods)) if prods else 0
         top = sorted(found.items(), key=lambda x: -x[1])[:3]
-        if "substitute" in types:
+        if "tender_supplier" in types and not prods:
+            roles[c["id"]] = "участник госзакупок (без сайта)"
+        elif "substitute" in types:
             roles[c["id"]] = "технологический заменитель"
         elif "brand_owner" in types and foreign_share < 0.5:
             roles[c["id"]] = "производитель / владелец бренда" + (f" (также перепродаёт: {', '.join(k for k, _ in top)})" if top else "")
@@ -253,7 +255,7 @@ def seller_roles(conn: sqlite3.Connection) -> dict[int, str]:
     return roles
 
 
-TYPE_LABELS_SHORT = {"integrator": "интегратор", "b2b_solutions": "B2B-решения", "museum_supplier": "оборудование для музеев", "sync_translation_supplier": "синхронный перевод",
+TYPE_LABELS_SHORT = {"tender_supplier": "участник госзакупок", "integrator": "интегратор", "b2b_solutions": "B2B-решения", "museum_supplier": "оборудование для музеев", "sync_translation_supplier": "синхронный перевод",
                      "events_supplier": "оборудование для мероприятий", "foreign": "зарубежный бренд", "indirect": "косвенный", "rental": "аренда"}
 
 

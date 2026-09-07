@@ -379,6 +379,10 @@ def competitors_page(request: Request):
                                  FROM competitors c WHERE c.is_active=1 ORDER BY priced DESC, products DESC, c.name""")
         if f["type"]:
             comps = [c for c in comps if f["type"] in (db.uj(c["types_json"], []) or [])]
+        if f.get("category"):
+            # конкурент относится к категории, если у него есть товары в ней или категория указана в его карточке (участники тендеров без сайта)
+            with_products = {r["competitor_id"] for r in db.rows(conn, "SELECT DISTINCT competitor_id FROM competitor_products WHERE is_active=1 AND category_slug=?", (f["category"],))}
+            comps = [c for c in comps if c["id"] in with_products or f["category"] in (db.uj(c["categories_json"], []) or [])]
         if f["severity"]:  # фильтр по уровню A/B/C
             comps = [c for c in comps if (c["tier"] or "C") == f["severity"]]
         comps.sort(key=lambda c: ({"A": 0, "B": 1, "C": 2}.get(c["tier"] or "C", 2), -(c["priced"] or 0)))
