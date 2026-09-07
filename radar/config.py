@@ -30,6 +30,10 @@ IMPORT_DIR = _p(os.getenv("RADAR_IMPORT_DIR", "data/imports"))
 LOG_DIR = _p(os.getenv("RADAR_LOG_DIR", "data/logs"))
 
 HOST = os.getenv("RADAR_HOST", "127.0.0.1")
+# Вход по паролю: если RADAR_PASSWORD пустой — доступ без пароля (только для 127.0.0.1)
+PASSWORD = os.getenv("RADAR_PASSWORD", "").strip()
+SECRET = os.getenv("RADAR_SECRET", "").strip() or "dev-secret-change-me"
+SESSION_DAYS = int(os.getenv("RADAR_SESSION_DAYS", "30"))
 PORT = int(os.getenv("RADAR_PORT", "8022"))
 
 USER_AGENT = os.getenv(

@@ -1,0 +1,6 @@
+<!doctype html><html lang="ru"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>Вход — M22 Product Radar</title>
+<link rel="icon" href="/static/m22-logo.svg"><link rel="stylesheet" href="/static/style.css?v={{ asset_version }}">
+<style>body{background:#1b2a3d;display:flex;align-items:center;justify-content:center;min-height:100vh;margin:0}.login{background:#fff;border-radius:12px;padding:28px 32px;width:340px;box-shadow:0 10px 40px rgba(0,0,0,.35)}.login img{height:40px}.login h1{font-size:18px;margin:12px 0 4px}.login input[type=password]{width:100%;font-size:16px;padding:9px 10px;border:1px solid #cbd5e1;border-radius:8px;box-sizing:border-box;margin:10px 0}.login button{width:100%;padding:10px;font-size:15px}.err{color:#b91c1c;font-size:13px}</style></head>
+<body><form class="login" method="post" action="/login"><img src="/static/m22-logo.svg" alt="M22"><h1>M22 Product Radar</h1><div class="small muted">рыночная разведка · v{{ app_version }}</div>
+<input type="hidden" name="next" value="{{ next }}"><input type="password" name="password" placeholder="Пароль" autofocus autocomplete="current-password">
+{% if error %}<div class="err">Неверный пароль</div>{% endif %}<button type="submit">Войти</button></form></body></html>

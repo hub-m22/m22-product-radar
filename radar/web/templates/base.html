@@ -21,7 +21,7 @@
     <div class="meta">
       Последнее обновление данных:<br><b>{{ last_update | dt }}</b><br>
       {% if source_errors %}<span class="warn">Источников с ошибками: {{ source_errors }}</span><br>{% endif %}
-      <span>Сейчас: {{ now }}</span>
+      <span>Сейчас: {{ now }}</span><br><a href="/logout" style="color:#9fb3c8">Выйти из радара</a>
     </div>
   </aside>
   <main>

@@ -51,6 +51,59 @@ async def lifespan(app: FastAPI):
 
 
 app = FastAPI(title="M22 Product Radar", lifespan=lifespan)
+
+# ---------- вход по паролю (RADAR_PASSWORD в .env) ----------
+import hashlib
+import hmac
+import time as _time
+
+AUTH_COOKIE = "radar_auth"
+PUBLIC_PATHS = ("/login", "/health", "/static/")
+
+
+def _token(expires: int) -> str:
+    sig = hmac.new(config.SECRET.encode(), f"{expires}".encode(), hashlib.sha256).hexdigest()[:32]
+    return f"{expires}.{sig}"
+
+
+def _token_ok(tok: str | None) -> bool:
+    if not tok or "." not in tok:
+        return False
+    exp, sig = tok.split(".", 1)
+    if not exp.isdigit() or int(exp) < _time.time():
+        return False
+    return hmac.compare_digest(_token(int(exp)), tok)
+
+
+@app.middleware("http")
+async def require_login(request: Request, call_next):
+    if config.PASSWORD and not request.url.path.startswith(PUBLIC_PATHS) and not _token_ok(request.cookies.get(AUTH_COOKIE)):
+        nxt = request.url.path + (("?" + request.url.query) if request.url.query else "")
+        return RedirectResponse(f"/login?next={nxt}" if request.method == "GET" else "/login", status_code=303)
+    return await call_next(request)
+
+
+@app.get("/login", response_class=HTMLResponse)
+def login_page(request: Request, next: str = "/", error: str = ""):
+    return render(request, "login.html", next=next, error=error, no_nav=True)
+
+
+@app.post("/login")
+def login_submit(request: Request, password: str = Form(""), next: str = Form("/")):
+    if not config.PASSWORD or not hmac.compare_digest(password.strip(), config.PASSWORD):
+        _time.sleep(1.0)  # притормозить перебор
+        return RedirectResponse(f"/login?error=1&next={next}", status_code=303)
+    exp = int(_time.time()) + config.SESSION_DAYS * 86400
+    resp = RedirectResponse(next if next.startswith("/") and not next.startswith("//") else "/", status_code=303)
+    resp.set_cookie(AUTH_COOKIE, _token(exp), max_age=config.SESSION_DAYS * 86400, httponly=True, samesite="lax")
+    return resp
+
+
+@app.get("/logout")
+def logout():
+    resp = RedirectResponse("/login", status_code=303)
+    resp.delete_cookie(AUTH_COOKIE)
+    return resp
 app.mount("/static", StaticFiles(directory=str(HERE / "static")), name="static")
 templates = Jinja2Templates(directory=str(HERE / "templates"))
 

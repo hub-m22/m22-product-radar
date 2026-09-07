@@ -92,7 +92,7 @@ python -m radar serve           # веб-интерфейс: http://127.0.0.1:80
 ## Развёртывание
 
 1. Скопируйте папку проекта на сервер, установите Python 3.11+, выполните `pip install -r requirements.txt`.
-2. Создайте `.env` (см. `.env.example`); при доступе извне поставьте `RADAR_HOST=0.0.0.0` и закройте порт обратным прокси с авторизацией (nginx basic auth) — в приложении нет встроенной аутентификации.
+2. Создайте `.env` (см. `.env.example`); при доступе извне поставьте `RADAR_HOST=0.0.0.0` и задайте `RADAR_PASSWORD` (вход по общему паролю, cookie-сессия на `RADAR_SESSION_DAYS` дней, подпись `RADAR_SECRET`); для интернета дополнительно HTTPS через nginx (см. docs/DEPLOY.md). Порт в брандмауэре Windows открывает `scripts/open_firewall.bat`.
 3. `python -m radar init && python -m radar collect all && python -m radar analyze`.
 4. `python -m radar serve` под supervisor/systemd. Резервные копии: `python -m radar backup` (папка `data/backups`) — также создаются автоматически при еженедельном отчёте.
 
