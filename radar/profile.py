@@ -28,15 +28,15 @@ EXTRA_FIELDS = [("test_drive", "Бесплатный тест-драйв / де�
                 ("support_247", "Поддержка 24/7"), ("years_on_market", "Лет на рынке"), ("clients_count", "Клиентов / проектов (заявлено)"), ("multilang", "Многоязычные / переводческие решения")]
 EXTRA_RX = {
     "test_drive": re.compile(r"(тест-?драйв|бесплатн\w+\s+(?:тест|проб\w+|демонстрац\w+)|попробуйте\s+бесплатно|демо-?комплект|на\s+пробу)", re.I),
-    "installation": re.compile(r"(монтаж\w*|установк\w+\s+(?:и\s+)?настройк\w+|пуско-?наладк\w+|настройк\w+\s+на\s+объекте|инсталляц\w+)", re.I),
-    "event_support": re.compile(r"(техническ\w+\s+сопровожден\w+\s+мероприят\w+|сопровожден\w+\s+(?:на\s+)?мероприят\w+|инженер\w*\s+на\s+мероприят\w+|техник\w*\s+на\s+площадк\w+|под\s+ключ)", re.I),
+    "installation": re.compile(r"((?<!видео)(?<!для\s)монтаж\s+(?:и\s+настройк\w+|оборудовани\w+|радиосистем\w*|системы?\s+на\s+объекте|на\s+объекте|рассчитыва\w+)|осуществ\w+\s+(?:монтаж|инсталляц)\w*|инсталляц\w+\s+(?:оборудовани|систем)\w*|пуско-?наладк\w+|настройк\w+\s+на\s+объекте|выезд\s+(?:инженера|специалиста)\s+на\s+объект)", re.I),
+    "event_support": re.compile(r"(техническ\w+\s+сопровожден\w+\s+мероприят\w+|сопровожден\w+\s+(?:на\s+)?мероприят\w+|инженер\w*\s+на\s+мероприят\w+|инженер\w*\s+на\s+площадк\w+|техник\w*\s+на\s+площадк\w+|техническ\w+\s+обеспечени\w+\s+мероприят\w+|обеспечени\w+\s+мероприят\w+\s+под\s+ключ|мероприят\w+\s+под\s+ключ)", re.I),
     "warehouse": re.compile(r"(собственн\w+\s+склад\w*|со\s+склада\s+в\s+\w+|в\s+наличии\s+на\s+складе|отгрузка\s+со\s+склада)", re.I),
-    "production": re.compile(r"(собственн\w+\s+производств\w+|мы\s+производим|производител\w+\s+(?:радиогид|аудиогид|оборудован))", re.I),
+    "production": re.compile(r"(собственн\w+\s+производств\w+|мы\s+производим\s+(?!дезинф)|производим\s+(?:радиогид|аудиогид|оборудован|наушник|приемник|приёмник)\w*|производител\w+\s+(?:радиогид|аудиогид|оборудован)\w*|разработчик\w*\s+и\s+производител\w*|производится\s+в\s+(?:санкт-петербурге|москве|россии))", re.I),
     "branding": re.compile(r"(брендирован\w+|нанесен\w+\s+логотип\w*|под\s+ваш\w*\s+бренд\w*|кастомизац\w+|индивидуальн\w+\s+дизайн)", re.I),
-    "training": re.compile(r"(обучени\w+\s+(?:персонала|сотрудников|гидов|экскурсоводов)|проводим\s+обучени\w+|инструктаж)", re.I),
+    "training": re.compile(r"(проводим\s+(?:вводный\s+)?(?:инструктаж|обучени\w+)|провед[её]т\s+(?:вводный\s+)?инструктаж|вводн\w+\s+инструктаж|обучаем\s+(?:ваш\w*\s+)?(?:персонал|сотрудник|гид|экскурсовод)\w*|обучени\w+\s+персонала\s+(?:эксплуатации|работе)|бесплатн\w+\s+обучени\w+|инструктаж\s+(?:персонала|сотрудников|гидов))", re.I),
     "tender": re.compile(r"(44-?фз|223-?фз|госзакупк\w+|тендер\w*|для\s+бюджетных\s+организаций|по\s+госконтракт\w+)", re.I),
     "leasing": re.compile(r"(лизинг\w*|рассрочк\w+|оплата\s+частями|отсрочк\w+\s+платеж\w+)", re.I),
-    "showroom": re.compile(r"(шоу-?рум\w*|демо-?зал\w*|выставочн\w+\s+зал|можно\s+посмотреть\s+в\s+офисе|приезжайте\s+в\s+офис)", re.I),
+    "showroom": re.compile(r"(шоу-?рум\w*|демо-?зал\w*|демонстрационн\w+\s+зал|можно\s+посмотреть\s+в\s+(?:нашем\s+)?офисе|приезжайте\s+в\s+(?:наш\s+)?офис|посмотреть\s+вживую)", re.I),
     "delivery_russia": re.compile(r"(доставк\w+\s+по\s+(?:всей\s+)?россии|доставляем\s+по\s+(?:всей\s+)?россии|во\s+все\s+регионы|в\s+любой\s+город)", re.I),
     "support_247": re.compile(r"(24\s*/\s*7|круглосуточн\w+\s+поддержк\w+|поддержка\s+24\s+часа)", re.I),
     "multilang": re.compile(r"(многоязычн\w+|мультиязычн\w+|на\s+\d+\s+языках)", re.I),
@@ -126,6 +126,10 @@ def _merge(acc: dict, found: dict) -> None:
             acc[k] = v
 
 
+def _domain(url: str) -> str:
+    return urlparse(url).netloc.lower().removeprefix("www.")
+
+
 def scan_site(base_url: str, source_key: str, cached_dir: str | None = None, fetch: bool = True, max_pages: int = 24) -> dict:
     acc: dict = {}
     checked: list[str] = []
@@ -139,6 +143,8 @@ def scan_site(base_url: str, source_key: str, cached_dir: str | None = None, fet
                 continue
             m = re.search(r'<link rel="canonical" href="([^"]+)"|property="og:url" content="([^"]+)"', html)
             url = (m.group(1) or m.group(2)) if m else base_url
+            if _domain(url) != _domain(base_url):
+                continue  # страница другого домена (площадка, реселлер) — не доказательство для этого конкурента
             _merge(acc, extract(_text(html)[:60000], url))
     # 2. главная и типовые страницы (сеть, с задержкой и robots)
     if fetch:
@@ -149,7 +155,7 @@ def scan_site(base_url: str, source_key: str, cached_dir: str | None = None, fet
                 res = http.fetch(url, source_key, save=False, timeout=20)
             except Exception:  # noqa: BLE001
                 continue
-            if urlparse(res.final_url).netloc != dom and path != "/":
+            if _domain(res.final_url) != _domain(base_url):
                 continue
             checked.append(url)
             _merge(acc, extract(_text(res.text)[:80000], url))

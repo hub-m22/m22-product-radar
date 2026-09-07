@@ -390,6 +390,27 @@ SLUG_EXCLUDE = ("/en/", "/page", "privacy", "offer", "return", "support", "revie
                 "policy", "oferta", "vacanc", "sitemap", "login", "cart", "search", "tag/", "faq", "warranty", "garant")
 
 
+GENERIC_KEYWORDS = {"set", "kit", "case", "mic", "bag", "gid", "tour", "shop", "rent", "product", "tovar", "catalog"}  # только как целое слово
+SPAM_STOPWORDS = {"de", "para", "con", "por", "del", "las", "los", "una", "hombre", "mujer"}  # признаки чужих (спам) страниц на взломанных сайтах
+
+
+def _slug_relevant(path: str) -> bool:
+    """Путь похож на страницу товара по нашей теме: ключевое слово как часть слова (длинные) или целое слово (короткие/общие),
+    и это не спам-страница вида /123456/Camiseta-Hombre-Para-... ."""
+    tokens = [t for t in re.split(r"[/_.\-]+", path.lower()) if t]
+    if len(tokens) >= 2 and tokens[0].isdigit() and len(tokens[0]) >= 4 and (set(tokens) & SPAM_STOPWORDS):
+        return False
+    if sum(1 for t in tokens if t in SPAM_STOPWORDS) >= 2:
+        return False
+    for k in SLUG_KEYWORDS:
+        if k in GENERIC_KEYWORDS:
+            if k in tokens or (k + "s") in tokens or (k + "y") in tokens:
+                return True
+        elif any(k in t for t in tokens):
+            return True
+    return False
+
+
 def expand_sitemap(conn: sqlite3.Connection, page: dict, limit: int = 200) -> int:
     """Читает sitemap.xml конкурента и добавляет релевантные страницы товаров как страницы мониторинга (без кода)."""
     from urllib.parse import urlparse
@@ -413,7 +434,7 @@ def expand_sitemap(conn: sqlite3.Connection, page: dict, limit: int = 200) -> in
         path = urlparse(u).path.lower()
         if not path.strip("/") or any(x in u.lower() for x in SLUG_EXCLUDE):
             continue
-        if not any(k in path for k in SLUG_KEYWORDS):
+        if not _slug_relevant(path):
             continue
         if db.row(conn, "SELECT id FROM monitored_pages WHERE url=?", (u,)):
             continue
