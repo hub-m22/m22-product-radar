@@ -385,6 +385,8 @@ def competitors_page(request: Request):
             comps = [c for c in comps if c["id"] in with_products or f["category"] in (db.uj(c["categories_json"], []) or [])]
         if f["severity"]:  # фильтр по уровню A/B/C
             comps = [c for c in comps if (c["tier"] or "C") == f["severity"]]
+        tender_count = sum(1 for c in comps if profmod.is_tender_participant(c))
+        comps = [c for c in comps if not profmod.is_tender_participant(c)]  # участники тендеров — на своей вкладке
         comps.sort(key=lambda c: ({"A": 0, "B": 1, "C": 2}.get(c["tier"] or "C", 2), -(c["priced"] or 0)))
         m22p = profmod.m22_profile(conn)
         roles = profmod.seller_roles(conn)
@@ -410,7 +412,7 @@ def competitors_page(request: Request):
             comps = [c for c in comps if f["q"].lower() in (c["name"] + " " + (c["website"] or "")).lower()]
         lists = _lists(conn)
         review = db.row(conn, "SELECT COUNT(*) n FROM product_matches WHERE needs_review=1 AND review_status='auto'")["n"]
-    return render(request, "competitors.html", comps=comps, f=f, review=review, m22p=m22p, **lists, extra_fields=profmod.EXTRA_FIELDS, extra_short=profmod.EXTRA_SHORT, m22x=m22x)
+    return render(request, "competitors.html", comps=comps, f=f, review=review, m22p=m22p, **lists, extra_fields=profmod.EXTRA_FIELDS, extra_short=profmod.EXTRA_SHORT, m22x=m22x, tender_count=tender_count)
 
 
 @app.post("/competitors/add")
@@ -424,6 +426,27 @@ def competitor_add(name: str = Form(...), website: str = Form(...), types: list[
         if page_url.strip() and not db.row(conn, "SELECT id FROM monitored_pages WHERE url=?", (page_url.strip(),)):
             conn.execute("INSERT INTO monitored_pages(competitor_id, url, kind, name) VALUES(?,?,?,?)", (cid, page_url.strip(), page_kind, name))
     return RedirectResponse(f"/competitors/{cid}", status_code=303)
+
+
+@app.get("/competitors/tenders", response_class=HTMLResponse)
+def competitors_tenders(request: Request):
+    with db.session() as conn:
+        d = profmod.tender_participants(conn)
+        cats = [(r["slug"], r["name_ru"]) for r in db.rows(conn, "SELECT slug, name_ru FROM categories ORDER BY sort_order")]
+    return render(request, "competitors_tenders.html", d=d, cats=cats)
+
+
+@app.post("/competitors/tenders/add")
+def competitors_tenders_add(name: str = Form(...), inn: str = Form(""), category: str = Form("disposable_headphones"), note: str = Form("")):
+    inn = "".join(ch for ch in inn if ch.isdigit()) or None
+    with db.session() as conn:
+        if not db.row(conn, "SELECT id FROM competitors WHERE (inn=? AND inn IS NOT NULL) OR name=?", (inn, name.strip())):
+            conn.execute("""INSERT INTO competitors(name, website, types_json, geography, categories_json, brands_json, rental_available, notes, source_urls_json, scrapable, is_active, added_by, created_at, updated_at, tier, inn, legal_name, legal_confidence, legal_note)
+                            VALUES(?, ?, ?, 'Россия', ?, '[]', 'unknown', ?, '[]', 0, 1, 'tenders', datetime('now'), datetime('now'), 'B', ?, ?, ?, ?)""",
+                         (name.strip(), f"tender:{inn or name.strip()}", db.j(["tender_supplier"]), db.j([category]), ("Участник тендеров. " + note.strip()).strip(), inn, name.strip(),
+                          "подтверждено (ИНН от заказчика)" if inn else "низкая", "ИНН передан заказчиком" if inn else "ИНН не указан — юрлицо нужно уточнить"))
+            conn.commit()
+    return RedirectResponse("/competitors/tenders", status_code=303)
 
 
 @app.get("/competitors/dashboard", response_class=HTMLResponse)

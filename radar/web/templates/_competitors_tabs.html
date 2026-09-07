@@ -2,6 +2,7 @@
   <a href="/competitors" class="{% if request.url.path == '/competitors' %}active{% endif %}">Реестр</a>
   <a href="/competitors/dashboard" class="{% if request.url.path.startswith('/competitors/dashboard') %}active{% endif %}">Показатели</a>
   <a href="/competitors/compare" class="{% if request.url.path.startswith('/competitors/compare') %}active{% endif %}">Сравнительная таблица</a>
+  <a href="/competitors/tenders" class="{% if request.url.path.startswith('/competitors/tenders') %}active{% endif %}">Участники тендеров</a>
   <a href="/competitor-matrix" class="{% if request.url.path.startswith('/competitor-matrix') %}active{% endif %}">Матрица товаров</a>
   <a href="/matches?review=0" class="">Сопоставления</a>
 </div>

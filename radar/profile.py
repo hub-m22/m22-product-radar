@@ -261,7 +261,7 @@ TYPE_LABELS_SHORT = {"tender_supplier": "участник госзакупок",
 
 def comparison_table(conn: sqlite3.Connection, tiers: tuple = ("A",)) -> dict:
     """Сравнительная таблица: признаки × продавцы (M22 первым). Значения: yes / число / None (нет данных)."""
-    comps = db.rows(conn, f"SELECT * FROM competitors WHERE is_active=1 AND tier IN ({','.join('?' * len(tiers))}) ORDER BY tier, name", list(tiers))
+    comps = [c for c in db.rows(conn, f"SELECT * FROM competitors WHERE is_active=1 AND tier IN ({','.join('?' * len(tiers))}) ORDER BY tier, name", list(tiers)) if not is_tender_participant(c)]
     m22p = m22_profile(conn)
     m22_auto = db.uj(db.get_setting(conn, "m22_profile"), {}) or {}
     manual = db.uj(db.get_setting(conn, "m22_profile_manual"), {}) or {}
@@ -345,9 +345,57 @@ LEGAL_COLS = ("inn", "ogrn", "legal_name", "legal_status", "legal_region", "okve
 CONF_RANK = {"подтверждено (ИНН на сайте)": 0, "высокая (адрес/товарный знак)": 1, "средняя (по названию)": 2, "низкая": 3}
 
 
-def dashboard_data(conn: sqlite3.Connection, tiers: tuple = ("A",)) -> dict:
-    """Показатели по юрлицам: сайты одной группы (один ИНН) объединяются в одну строку."""
+def is_tender_participant(c: dict) -> bool:
+    return "tender_supplier" in (db.uj(c.get("types_json"), []) or []) or (c.get("website") or "").startswith("tender:")
+
+
+def tender_segment(c: dict) -> tuple[str, str]:
+    """Сегмент участника тендеров по форме и масштабу: (название, пояснение)."""
+    inn = c.get("inn") or ""
+    rev = c.get("revenue_rub") or 0
+    if c.get("risk_flags") and "НЕДОБРОСОВЕСТН" in c["risk_flags"].upper():
+        return ("В реестре недобросовестных", "контракты могут расторгаться; заказчики вправе отклонять")
+    if len(inn) == 12 or (c.get("legal_name") or "").startswith("ИП"):
+        return ("ИП-тендерщик", "без штата и сайта, берёт разные категории, конкурирует ценой")
+    if rev >= 1e9:
+        return ("Крупный ИТ-интегратор", "миллиардные контракты с ДИТ/транспортом; наушники — побочная позиция")
+    if rev >= 100e6:
+        return ("Средний поставщик", "оборот 100 млн – 1 млрд, участие в закупках регулярное")
+    if rev > 0:
+        return ("Малый поставщик", "оборот до 100 млн, 1–5 сотрудников")
+    return ("Без данных о масштабе", "юрлицо не подтверждено или отчётность отсутствует")
+
+
+def tender_participants(conn: sqlite3.Connection) -> dict:
+    comps = [c for c in db.rows(conn, "SELECT * FROM competitors WHERE is_active=1 ORDER BY name") if is_tender_participant(c)]
+    from .normalize import CATEGORY_NAMES
+    rows = []
+    for c in comps:
+        seg, hint = tender_segment(c)
+        rows.append({**c, "segment": seg, "segment_hint": hint, "is_ip": len(c.get("inn") or "") == 12 or (c.get("legal_name") or "").startswith("ИП"),
+                     "categories": [CATEGORY_NAMES.get(s, s) for s in (db.uj(c.get("categories_json"), []) or [])]})
+    rows.sort(key=lambda r: -(r.get("tenders_sum_rub") or 0))
+    segs: dict[str, dict] = {}
+    for r in rows:
+        s = segs.setdefault(r["segment"], {"name": r["segment"], "hint": r["segment_hint"], "count": 0, "sum": 0.0, "names": []})
+        s["count"] += 1
+        s["sum"] += r.get("tenders_sum_rub") or 0
+        s["names"].append((r.get("legal_name") or r["name"])[:28])
+    return {"rows": rows, "total": len(rows), "ip_count": sum(1 for r in rows if r["is_ip"]),
+            "tenders_sum": sum(r.get("tenders_sum_rub") or 0 for r in rows), "tenders_count": sum(r.get("tenders_count") or 0 for r in rows),
+            "revenue_sum": sum(r.get("revenue_rub") or 0 for r in rows), "with_revenue": sum(1 for r in rows if r.get("revenue_rub")),
+            "rnp": sum(1 for r in rows if r.get("risk_flags") and "НЕДОБРОСОВЕСТН" in r["risk_flags"].upper()),
+            "arbitration": sum(r.get("arbitration_count") or 0 for r in rows),
+            "segments": sorted(segs.values(), key=lambda s: -s["sum"]),
+            "bars": [{"label": (r.get("legal_name") or r["name"]), "value": r.get("tenders_sum_rub") or 0, "count": r.get("tenders_count") or 0, "rnp": bool(r.get("risk_flags") and "НЕДОБРОСОВЕСТН" in r["risk_flags"].upper()),
+                      "title": r.get("tenders_top_customers") or ""} for r in rows if r.get("tenders_sum_rub")]}
+
+
+def dashboard_data(conn: sqlite3.Connection, tiers: tuple = ("A",), include_tenders: bool = False) -> dict:
+    """Показатели по юрлицам: сайты одной группы (один ИНН) объединяются в одну строку. Участники тендеров без сайтов — отдельно."""
     comps = db.rows(conn, f"SELECT * FROM competitors WHERE is_active=1 AND tier IN ({','.join('?' * len(tiers))}) ORDER BY tier, name", list(tiers))
+    if not include_tenders:
+        comps = [c for c in comps if not is_tender_participant(c)]
     entities: dict[str, dict] = {}
     for c in comps:
         key = c["inn"] or f"_none_{c['id']}"

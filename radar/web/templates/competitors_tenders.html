@@ -1,0 +1,59 @@
+{% extends "base.html" %}
+{% block title %}Участники тендеров — M22 Product Radar{% endblock %}
+{% block content %}
+<div class="topbar"><div><h1>Конкуренты · участники тендеров</h1>
+<div class="sub">Компании и ИП, с которыми M22 встречается в госзакупках. У большинства нет сайтов и каталогов, поэтому они ведутся отдельно от продавцов с сайтами. Данные — Rusprofile (ЕГРЮЛ/ЕГРИП, бухотчётность, ЕИС, арбитраж, ФССП, реестр недобросовестных поставщиков). ИП бухотчётность не сдают — для них только госзакупки.</div></div></div>
+{% include "_competitors_tabs.html" %}
+
+<div class="kpis">
+  <div class="kpi"><div class="kpi-v">{{ d.total }}</div><div class="kpi-l">участников, из них ИП: {{ d.ip_count }}</div></div>
+  <div class="kpi"><div class="kpi-v">{{ (d.tenders_sum / 1e6) | round(0) | int }} млн ₽</div><div class="kpi-l">сумма госзакупок как поставщик ({{ d.tenders_count }} закупок, накопленно)</div></div>
+  <div class="kpi"><div class="kpi-v">{{ (d.revenue_sum / 1e9) | round(1) }} млрд ₽</div><div class="kpi-l">суммарная выручка {{ d.with_revenue }} юрлиц за год</div></div>
+  <div class="kpi"><div class="kpi-v" style="color:{{ '#b45309' if d.rnp else 'inherit' }}">{{ d.rnp }}</div><div class="kpi-l">в реестре недобросовестных поставщиков</div></div>
+  <div class="kpi"><div class="kpi-v">{{ d.arbitration }}</div><div class="kpi-l">арбитражных дел суммарно</div></div>
+</div>
+
+<div class="grid2">
+<div class="card"><h3>Сегменты участников</h3><p class="small muted">Сегмент по форме и масштабу: он подсказывает, как компания ведёт себя в закупках — берёт всё подряд или специализируется.</p>
+<table class="nosort"><thead><tr><th>Сегмент</th><th class="num">Участников</th><th class="num">Госзакупок, млн ₽</th><th>Кто</th></tr></thead><tbody>
+{% for s in d.segments %}<tr><td><b>{{ s.name }}</b><div class="small muted">{{ s.hint }}</div></td><td class="num">{{ s.count }}</td><td class="num">{{ (s.sum / 1e6) | round(1) }}</td><td class="small">{{ s.names | join(', ') }}</td></tr>{% endfor %}
+</tbody></table></div>
+<div class="card"><h3>Сумма госзакупок как поставщик, млн ₽</h3>
+{% if d.bars %}<svg viewBox="0 0 520 {{ 24 * d.bars|length + 6 }}" width="100%" style="max-width:560px;font-family:inherit">
+{% set mx = d.bars[0].value %}{% for b in d.bars %}{% set y = loop.index0 * 24 %}
+<text x="0" y="{{ y + 15 }}" font-size="11" fill="#374151">{{ b.label[:26] }}</text>
+<rect x="170" y="{{ y + 4 }}" width="{{ (b.value / mx * 250) | round(1) if mx else 0 }}" height="15" rx="3" fill="{{ '#b45309' if b.rnp else '#2a9d6b' }}"><title>{{ b.title }}</title></rect>
+<text x="{{ 174 + (b.value / mx * 250 if mx else 0) | round(1) }}" y="{{ y + 15 }}" font-size="11" fill="#111827">{{ (b.value / 1e6) | round(1) }} <tspan fill="#6b7280">({{ b.count }})</tspan></text>
+{% endfor %}</svg>{% else %}<p class="muted">Нет данных.</p>{% endif %}
+<p class="small muted">Оранжевым — участник в реестре недобросовестных поставщиков. Логарифм не применяется: у ИТ-интеграторов суммы на порядки больше, наушники для них побочная позиция.</p></div>
+</div>
+
+<div class="card compact tbl-wrap"><h3 style="padding:10px 12px 0">Все участники</h3>
+<table style="min-width:1500px"><thead><tr><th style="min-width:210px">Участник</th><th>Сегмент</th><th>Регион</th><th class="num">С года</th><th class="num">Выручка</th><th class="num">Динамика</th><th class="num">Сотр.</th><th class="num">Госзакупок</th><th style="min-width:220px">Крупнейшие заказчики</th><th class="num">Арбитраж</th><th class="num">Исп. пр-ва</th><th style="min-width:160px">Риски</th><th>Категория товаров</th><th>Уверенность</th></tr></thead><tbody>
+{% for e in d.rows %}<tr>
+  <td><a href="/competitors/{{ e.id }}"><b>{{ e.legal_name or e.name }}</b></a><div class="small muted">{% if e.inn %}ИНН {{ e.inn }}{% else %}ИНН не указан{% endif %}{% if e.legal_source_url %} · <a href="{{ e.legal_source_url }}" target="_blank" rel="noopener">Rusprofile ↗</a>{% endif %}</div>{% if e.okved %}<div class="small muted">{{ e.okved[:70] }}</div>{% endif %}</td>
+  <td class="small"><span class="attr">{{ e.segment }}</span></td>
+  <td class="small">{{ e.legal_region or 'нет данных' }}</td>
+  <td class="num small">{{ e.reg_date[-4:] if e.reg_date else 'нет данных' }}</td>
+  <td class="num">{% if e.revenue_rub %}<b>{{ (e.revenue_rub / 1e6) | round(1) }} млн</b><div class="small muted">{{ e.revenue_year }}</div>{% elif e.is_ip %}<span class="muted">ИП, не публикуется</span>{% else %}<span class="muted">нет данных</span>{% endif %}</td>
+  <td class="num">{% if e.revenue_growth_pct is not none %}<span style="color:{{ '#15803d' if e.revenue_growth_pct >= 0 else '#b45309' }}">{{ '+' if e.revenue_growth_pct > 0 else '' }}{{ e.revenue_growth_pct | int }}%</span>{% else %}<span class="muted">—</span>{% endif %}</td>
+  <td class="num">{{ e.employees if e.employees is not none else 'нет данных' }}</td>
+  <td class="num">{% if e.tenders_count is not none %}<b>{{ e.tenders_count }}</b>{% if e.tenders_sum_rub %}<div class="small muted">{{ (e.tenders_sum_rub / 1e6) | round(1) }} млн ₽</div>{% endif %}{% else %}<span class="muted">нет данных</span>{% endif %}</td>
+  <td class="small">{{ e.tenders_top_customers or 'нет данных' }}</td>
+  <td class="num" title="{{ e.arbitration_note or '' }}">{% if e.arbitration_count is not none %}{{ e.arbitration_count }}{% if e.arbitration_sum_rub %}<div class="small muted">{{ (e.arbitration_sum_rub / 1e6) | round(1) }} млн ₽</div>{% endif %}{% else %}<span class="muted">нет данных</span>{% endif %}</td>
+  <td class="num" title="{{ e.enforcement_note or '' }}">{{ e.enforcement_count if e.enforcement_count is not none else 'нет данных' }}</td>
+  <td class="small">{% if e.risk_flags %}<span style="color:#b45309">⚠ {{ e.risk_flags }}</span>{% else %}<span class="muted">не выявлено</span>{% endif %}{% if e.fin_state %}<div class="muted">{{ e.fin_state[:90] }}</div>{% endif %}</td>
+  <td class="small">{{ e.categories | join(', ') }}</td>
+  <td class="small muted">{{ e.legal_confidence or '—' }}{% if e.legal_note %}<div title="{{ e.legal_note }}">{{ e.legal_note[:60] }}{% if e.legal_note|length > 60 %}…{% endif %}</div>{% endif %}</td>
+</tr>{% endfor %}</tbody></table></div>
+
+<div class="card"><h3>Добавить участника</h3>
+<form method="post" action="/competitors/tenders/add" class="form-grid">
+  <label>Название<input type="text" name="name" required placeholder="ООО «…» или ИП Фамилия И. О."></label>
+  <label>ИНН<input type="text" name="inn" placeholder="10 или 12 цифр"></label>
+  <label>Категория товаров<select name="category">{% for slug, n in cats %}<option value="{{ slug }}" {% if slug == 'disposable_headphones' %}selected{% endif %}>{{ n }}</option>{% endfor %}</select></label>
+  <label class="full">Примечание<input type="text" name="note" placeholder="в каком тендере встретились, что поставляли"></label>
+  <div class="full"><button type="submit" class="small">Добавить</button> <span class="small muted">Данные Rusprofile затем заносятся в карточке участника, блок «Юрлицо и финансы».</span></div>
+</form></div>
+<p class="small muted">Сами закупки (заказчики, суммы, предметы) по нашим категориям собираются в разделе «Новые возможности» → тендеры; поставщик в открытых данных ЕИС по этим позициям не указан, поэтому связать закупку с участником пока можно только вручную.</p>
+{% endblock %}
