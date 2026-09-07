@@ -405,6 +405,24 @@ async def competitor_update(request: Request, cid: int, comment: str = Form(None
                       warranty_years: str = Form(None), service_center: str = Form(None), replacement_fund: str = Form(None), free_delivery: str = Form(None), usp: str = Form(None), rental: str = Form(None)):
     form = await request.form()
     with db.session() as conn:
+        if "legal_form" in form:
+            def _num(v):
+                v = (v or "").replace(" ", "").replace(",", ".").replace("\xa0", "")
+                try:
+                    return float(v) if v else None
+                except ValueError:
+                    return None
+            def _int(v):
+                n = _num(v)
+                return int(n) if n is not None else None
+            vals = {"inn": (form.get("inn") or "").strip() or None, "ogrn": (form.get("ogrn") or "").strip() or None, "legal_name": (form.get("legal_name") or "").strip() or None,
+                    "legal_status": (form.get("legal_status") or "").strip() or None, "legal_region": (form.get("legal_region") or "").strip() or None, "okved": (form.get("okved") or "").strip() or None,
+                    "reg_date": (form.get("reg_date") or "").strip() or None, "employees": _int(form.get("employees")), "revenue_year": _int(form.get("revenue_year")),
+                    "revenue_rub": _num(form.get("revenue_rub")), "revenue_growth_pct": _num(form.get("revenue_growth_pct")), "profit_rub": _num(form.get("profit_rub")),
+                    "tenders_count": _int(form.get("tenders_count")), "tenders_sum_rub": _num(form.get("tenders_sum_rub")), "tenders_top_customers": (form.get("tenders_top_customers") or "").strip() or None,
+                    "legal_source_url": (form.get("legal_source_url") or "").strip() or None, "legal_confidence": (form.get("legal_confidence") or "").strip() or None, "legal_note": (form.get("legal_note") or "").strip() or None}
+            sets = ", ".join(f"{k}=?" for k in vals) + ", legal_checked_at=datetime('now'), updated_at=datetime('now')"
+            conn.execute(f"UPDATE competitors SET {sets} WHERE id=?", (*vals.values(), cid))
         if "extra_manual" in form:
             c0 = db.row(conn, "SELECT profile_json FROM competitors WHERE id=?", (cid,))
             prof = db.uj(c0["profile_json"], {}) or {}

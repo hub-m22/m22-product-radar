@@ -262,7 +262,8 @@ def comparison_table(conn: sqlite3.Connection, tiers: tuple = ("A",)) -> dict:
     stats = {r["competitor_id"]: r for r in db.rows(conn, "SELECT competitor_id, COUNT(*) n, SUM(price IS NOT NULL) priced, SUM(availability='InStock') a, SUM(availability IN ('OutOfStock','PreOrder','SoldOut')) b FROM competitor_products WHERE is_active=1 GROUP BY competitor_id")}
     cats = {r["competitor_id"]: r["n"] for r in db.rows(conn, "SELECT competitor_id, COUNT(DISTINCT category_slug) n FROM competitor_products WHERE is_active=1 GROUP BY competitor_id")}
     columns = [{"id": 0, "name": "M22", "is_m22": True, "vals": {}, "evidence": {}, "products": db.row(conn, "SELECT COUNT(*) n FROM m22_products WHERE is_active=1 AND in_scope=1 AND parent_url IS NULL")["n"],
-                "categories": db.row(conn, "SELECT COUNT(DISTINCT category_slug) n FROM m22_products WHERE is_active=1 AND in_scope=1")["n"], "stock": None, "role": "производитель / владелец бренда (Radiosync, Kromix)", "tier": "—"}]
+                "categories": db.row(conn, "SELECT COUNT(DISTINCT category_slug) n FROM m22_products WHERE is_active=1 AND in_scope=1")["n"], "stock": None, "role": "производитель / владелец бренда (Radiosync, Kromix)", "tier": "—",
+                "legal": db.uj(db.get_setting(conn, "m22_legal"), {}) or {}}]
     columns[0]["usp"] = manual.get("usp") or ((m22_auto.get("usp") or {}).get("value") if isinstance(m22_auto.get("usp"), dict) else None)
     for k, _, _t in rows_def:
         v = manual.get(k) if manual.get(k) not in (None, "") else (m22_auto.get(k) or {}).get("value") if isinstance(m22_auto.get(k), dict) else None
@@ -288,6 +289,7 @@ def comparison_table(conn: sqlite3.Connection, tiers: tuple = ("A",)) -> dict:
         st = stats.get(c["id"])
         known = ((st["a"] or 0) + (st["b"] or 0)) if st else 0
         columns.append({"id": c["id"], "name": c["name"], "is_m22": False, "vals": vals, "evidence": ev, "products": st["n"] if st else 0, "priced": st["priced"] if st else 0,
+                        "legal": {k: c[k] for k in ("inn", "legal_name", "legal_status", "reg_date", "employees", "revenue_year", "revenue_rub", "revenue_growth_pct", "tenders_count", "tenders_sum_rub", "legal_source_url", "legal_confidence")},
                         "categories": cats.get(c["id"], 0), "stock": round((st["a"] or 0) / known * 100) if known else None, "role": roles.get(c["id"], "—"), "tier": c["tier"] or "C",
                         "website": c["website"], "usp": c["usp"], "checked": c["profile_checked_at"]})
     # флаги «лучше M22» по строкам

@@ -23,6 +23,9 @@
     {% for k, n in extra_fields %}{% set ev = profile.get(k) if profile.get(k) is mapping else none %}{% set v = man.get(k) if man.get(k) not in (none, '') else (ev.value if ev else none) %}
     <dt>{{ n }}</dt><dd>{% if v is none %}<span class="muted">нет данных</span>{% elif v == 'yes' %}да{% elif v == 'no' %}нет{% else %}{{ v }}{% endif %}{% if man.get(k) not in (none, '') %} <span class="small muted">(вручную)</span>{% elif ev %}<div class="small muted">{{ (ev.snippet or '')[:200] }} <a href="{{ ev.url }}" target="_blank" rel="noopener">↗</a></div>{% endif %}</dd>
     {% endfor %}
+    <dt>Юрлицо</dt><dd>{% if c.inn %}<b>{{ c.legal_name or '—' }}</b> · ИНН {{ c.inn }}{% if c.ogrn %} · ОГРН {{ c.ogrn }}{% endif %}{% if c.legal_status %} · {{ c.legal_status }}{% endif %}{% if c.legal_region %} · {{ c.legal_region }}{% endif %}{% if c.reg_date %} · с {{ c.reg_date }}{% endif %}<div class="small muted">{{ c.okved or '' }}{% if c.legal_source_url %} · <a href="{{ c.legal_source_url }}" target="_blank" rel="noopener">источник ↗</a>{% endif %}{% if c.legal_confidence %} · сопоставление: {{ c.legal_confidence }}{% endif %}{% if c.legal_note %} · {{ c.legal_note }}{% endif %}</div>{% else %}<span class="muted">ИНН не установлен — укажите ниже</span>{% endif %}</dd>
+    <dt>Выручка</dt><dd>{% if c.revenue_rub %}<b>{{ (c.revenue_rub / 1e6) | round(1) }} млн ₽</b> за {{ c.revenue_year }}{% if c.revenue_growth_pct is not none %} ({{ '+' if c.revenue_growth_pct > 0 else '' }}{{ c.revenue_growth_pct | int }}% к прошлому году){% endif %}{% if c.profit_rub is not none %} · прибыль {{ (c.profit_rub / 1e6) | round(1) }} млн ₽{% endif %}{% if c.employees %} · сотрудников: {{ c.employees }}{% endif %}{% else %}<span class="muted">нет данных</span>{% endif %}</dd>
+    <dt>Госзакупки (поставщик)</dt><dd>{% if c.tenders_count is not none %}<b>{{ c.tenders_count }}</b> закупок{% if c.tenders_sum_rub %} на {{ (c.tenders_sum_rub / 1e6) | round(1) }} млн ₽{% endif %}{% if c.tenders_top_customers %}<div class="small muted">заказчики: {{ c.tenders_top_customers }}</div>{% endif %}{% else %}<span class="muted">нет данных</span>{% endif %}</dd>
     <dt>Профиль проверен</dt><dd>{{ c.profile_checked_at or 'ещё не сканировался' }}{% if profile.get('_checked') %} <span class="small muted">({{ profile._checked | length }} страниц: {{ profile._checked | join(', ') | truncate(200) }})</span>{% endif %}
       <form method="post" action="/competitors/{{ c.id }}/profile-scan" class="inline"><button class="sec small">Пересканировать сайт</button></form></dd>
     <dt>Преимущества / позиционирование</dt><dd>{{ c.advantages or '—' }}</dd>
@@ -80,6 +83,28 @@
       <label>{{ n }}{% if k in ('years_on_market','clients_count') %}<input type="text" name="{{ k }}" value="{{ mv if mv is not none else '' }}" placeholder="число"><span class="small muted">пусто — как найдено на сайте</span>{% else %}<select name="{{ k }}"><option value="">как найдено на сайте</option><option value="yes" {% if mv == 'yes' %}selected{% endif %}>да</option><option value="no" {% if mv == 'no' %}selected{% endif %}>нет</option></select>{% endif %}</label>
       {% endfor %}
       <div class="full"><button type="submit" class="small">Сохранить категорию, группу и сервисный профиль</button></div></form>
+    <h3 style="margin-top:14px">Юрлицо и финансы (Rusprofile / ЕГРЮЛ)</h3>
+    <p class="small muted">Заполняется по карточке компании на Rusprofile (ссылку сохраните в поле «источник»). Суммы — в рублях.</p>
+    <form method="post" action="/competitors/{{ c.id }}/update" class="form-grid"><input type="hidden" name="legal_form" value="1">
+      <label>ИНН<input type="text" name="inn" value="{{ c.inn or '' }}"></label>
+      <label>ОГРН<input type="text" name="ogrn" value="{{ c.ogrn or '' }}"></label>
+      <label class="full">Юрлицо<input type="text" name="legal_name" value="{{ c.legal_name or '' }}"></label>
+      <label>Статус<input type="text" name="legal_status" value="{{ c.legal_status or '' }}" placeholder="Действующая организация"></label>
+      <label>Регион<input type="text" name="legal_region" value="{{ c.legal_region or '' }}"></label>
+      <label class="full">Основной ОКВЭД<input type="text" name="okved" value="{{ c.okved or '' }}"></label>
+      <label>Дата регистрации<input type="text" name="reg_date" value="{{ c.reg_date or '' }}" placeholder="ДД.ММ.ГГГГ"></label>
+      <label>Сотрудников<input type="text" name="employees" value="{{ c.employees or '' }}"></label>
+      <label>Год отчётности<input type="text" name="revenue_year" value="{{ c.revenue_year or '' }}"></label>
+      <label>Выручка, ₽<input type="text" name="revenue_rub" value="{{ c.revenue_rub | int if c.revenue_rub else '' }}"></label>
+      <label>Динамика выручки, %<input type="text" name="revenue_growth_pct" value="{{ c.revenue_growth_pct if c.revenue_growth_pct is not none else '' }}"></label>
+      <label>Прибыль, ₽<input type="text" name="profit_rub" value="{{ c.profit_rub | int if c.profit_rub is not none else '' }}"></label>
+      <label>Госзакупок (поставщик)<input type="text" name="tenders_count" value="{{ c.tenders_count if c.tenders_count is not none else '' }}"></label>
+      <label>Сумма закупок, ₽<input type="text" name="tenders_sum_rub" value="{{ c.tenders_sum_rub | int if c.tenders_sum_rub else '' }}"></label>
+      <label class="full">Крупнейшие заказчики<input type="text" name="tenders_top_customers" value="{{ c.tenders_top_customers or '' }}"></label>
+      <label class="full">Источник (ссылка)<input type="text" name="legal_source_url" value="{{ c.legal_source_url or '' }}"></label>
+      <label>Уверенность сопоставления<select name="legal_confidence"><option value="">—</option>{% for v in ['подтверждено (ИНН на сайте)', 'высокая (адрес/товарный знак)', 'средняя (по названию)', 'низкая'] %}<option value="{{ v }}" {% if c.legal_confidence == v %}selected{% endif %}>{{ v }}</option>{% endfor %}</select></label>
+      <label class="full">Примечание<input type="text" name="legal_note" value="{{ c.legal_note or '' }}"></label>
+      <div class="full"><button type="submit" class="small">Сохранить юрлицо и финансы</button></div></form>
     <form method="post" action="/competitors/{{ c.id }}/update" class="inline" style="margin-top:8px"><input type="hidden" name="is_active" value="{{ 0 if c.is_active else 1 }}"><button class="sec small">{{ 'Деактивировать конкурента' if c.is_active else 'Активировать' }}</button></form></div>
 </div>
 {% endblock %}

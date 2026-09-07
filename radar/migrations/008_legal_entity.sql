@@ -1,0 +1,20 @@
+-- Юридическое лицо конкурента и финансовые данные (источник: Rusprofile, вручную/по ссылке)
+ALTER TABLE competitors ADD COLUMN inn TEXT;
+ALTER TABLE competitors ADD COLUMN ogrn TEXT;
+ALTER TABLE competitors ADD COLUMN legal_name TEXT;
+ALTER TABLE competitors ADD COLUMN legal_status TEXT;
+ALTER TABLE competitors ADD COLUMN legal_region TEXT;
+ALTER TABLE competitors ADD COLUMN okved TEXT;
+ALTER TABLE competitors ADD COLUMN reg_date TEXT;
+ALTER TABLE competitors ADD COLUMN employees INTEGER;
+ALTER TABLE competitors ADD COLUMN revenue_year INTEGER;
+ALTER TABLE competitors ADD COLUMN revenue_rub REAL;
+ALTER TABLE competitors ADD COLUMN revenue_growth_pct REAL;
+ALTER TABLE competitors ADD COLUMN profit_rub REAL;
+ALTER TABLE competitors ADD COLUMN tenders_count INTEGER;
+ALTER TABLE competitors ADD COLUMN tenders_sum_rub REAL;
+ALTER TABLE competitors ADD COLUMN tenders_top_customers TEXT;
+ALTER TABLE competitors ADD COLUMN legal_source_url TEXT;
+ALTER TABLE competitors ADD COLUMN legal_checked_at TEXT;
+ALTER TABLE competitors ADD COLUMN legal_confidence TEXT;
+ALTER TABLE competitors ADD COLUMN legal_note TEXT;
