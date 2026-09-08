@@ -39,7 +39,9 @@ def review(conn: sqlite3.Connection, categories: list[str] | None = None, only_w
         sellers = {c["competitor_id"] for c in comps}
         strong = [c for c in comps if c["match_type"] in STRONG]
         row = {"p": p, "category": CATEGORY_NAMES.get(p["category_slug"], p["category_slug"]), "n": len(comps), "sellers": len(sellers), "strong": len(strong), "comps": comps[:8], "approx": approx}
-        if len(comps) < config.MIN_COMPARABLES:
+        # для идентичных/точных моделей достаточно двух предложений: это тот же товар, а не «похожий»
+        need = 2 if (strong and len(strong) == len(comps)) else config.MIN_COMPARABLES
+        if len(comps) < need:
             row.update(verdict="no_data", verdict_ru="мало данных", gap=None, median=None, pmin=None, pmax=None,
                        why=f"сопоставимых предложений: {len(comps)}; нужно минимум {config.MIN_COMPARABLES}")
             if only_with_market:
