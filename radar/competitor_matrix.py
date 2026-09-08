@@ -130,13 +130,16 @@ def coverage(conn: sqlite3.Connection) -> dict:
     """Карта «продавец × категория»: число активных товаров; строка M22 — первой."""
     cats = [c for c in db.rows(conn, "SELECT slug, name_ru FROM categories ORDER BY sort_order")]
     m22 = {r["category_slug"]: r["n"] for r in db.rows(conn, "SELECT category_slug, COUNT(*) n FROM m22_products WHERE is_active=1 AND in_scope=1 AND parent_url IS NULL GROUP BY 1")}
-    comp = db.rows(conn, """SELECT COALESCE(c.group_name, c.name) AS seller, MIN(c.id) AS competitor_id, cp.category_slug, COUNT(*) n, SUM(cp.price IS NOT NULL) priced
+    # считаем модели, а не строки: у Retekess одна модель радиогида продаётся в 20 вариантах комплектации, у группы Cromi одна модель — на 8 сайтах
+    comp = db.rows(conn, """SELECT COALESCE(c.group_name, c.name) AS seller, MIN(c.id) AS competitor_id, cp.category_slug, COUNT(*) n, SUM(cp.price IS NOT NULL) priced,
+                                   COUNT(DISTINCT COALESCE(cp.brand, '') || ':' || COALESCE(cp.model_key, lower(cp.name))) models
                             FROM competitor_products cp JOIN competitors c ON c.id=cp.competitor_id WHERE cp.is_active=1 AND c.is_active=1 GROUP BY seller, cp.category_slug""")
     sellers: dict[str, dict] = {}
     for r in comp:
-        s = sellers.setdefault(r["seller"], {"seller": r["seller"], "competitor_id": r["competitor_id"], "cats": {}, "total": 0})
-        s["cats"][r["category_slug"]] = {"n": r["n"], "priced": r["priced"]}
+        s = sellers.setdefault(r["seller"], {"seller": r["seller"], "competitor_id": r["competitor_id"], "cats": {}, "total": 0, "models": 0})
+        s["cats"][r["category_slug"]] = {"n": r["n"], "priced": r["priced"], "models": r["models"]}
         s["total"] += r["n"]
+        s["models"] += r["models"]
     used = {slug for s in sellers.values() for slug in s["cats"]} | set(m22)
     cats = [c for c in cats if c["slug"] in used]
     seller_rows = sorted(sellers.values(), key=lambda s: -s["total"])

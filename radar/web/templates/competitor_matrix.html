@@ -4,7 +4,7 @@
 <div class="topbar"><div><h1>Матрица конкурентов</h1><div class="sub">Все товары всех конкурентов: категория, тип, модель, цена, дальность, каналы, диапазон, автономность, вес — и ближайший аналог M22. Параметры сняты с карточек товаров автоматически; «нет данных» — продавец не указал на странице.</div></div>
 <div class="actions-row"><a class="btn sec small" href="/export/competitor_matrix.xlsx">XLSX</a> <a class="btn sec small" href="/export/competitor_matrix.csv">CSV</a> <a class="btn sec small" href="/competitors">Реестр конкурентов</a></div></div>
 
-<div class="tabs"><a href="/competitor-matrix" class="{% if view == 'matrix' %}active{% endif %}">Товары</a><a href="/competitor-matrix?view=summary" class="{% if view == 'summary' %}active{% endif %}">Сводка по продавцам</a><a href="/competitor-matrix?view=coverage" class="{% if view == 'coverage' %}active{% endif %}">Покрытие категорий</a><a href="/competitor-matrix?view=changes" class="{% if view == 'changes' %}active{% endif %}">Что появилось / исчезло</a></div>
+<div class="tabs"><a href="/competitor-matrix" class="{% if view == 'matrix' %}active{% endif %}">Товары</a><a href="/competitor-matrix?view=summary" class="{% if view == 'summary' %}active{% endif %}">Сводка по продавцам</a><a href="/competitor-matrix?view=coverage" class="{% if view == 'coverage' %}active{% endif %}">Покрытие категорий</a><a href="/competitor-matrix?view=sitecats" class="{% if view == 'sitecats' %}active{% endif %}">Категории на сайтах</a><a href="/competitor-matrix?view=changes" class="{% if view == 'changes' %}active{% endif %}">Что появилось / исчезло</a></div>
 
 {% if view == 'summary' %}
 <div class="note">Полнота данных по каждому продавцу: сколько товаров снято, у скольких есть цена и технические характеристики. Уровень: <b>A</b> — прямые ключевые конкуренты, <b>B</b> — вторичные (реселлеры, аренда, маркетплейсы), <b>C</b> — косвенные и заменители.</div>
@@ -32,13 +32,34 @@
 </tbody></table></div>
 <div class="small muted" style="margin-top:6px">«С характеристиками» — есть хотя бы одно из полей: дальность, каналов, диапазон, автономность, вес. Красным — меньше 30 % товаров с характеристиками: продавец не публикует параметры на карточках или они в картинках/PDF.</div>
 
+{% elif view == 'sitecats' %}
+<div class="note">Категории <b>так, как они названы на самих сайтах</b>: пункты меню каталога и хлебные крошки на страницах товаров. Число в скобках — сколько собранных товаров отнесено к разделу (0 — раздел есть в меню, но товары в него не попали или не собраны). Первыми — сайты M22.
+  <form method="post" action="/competitor-matrix/sitecats/rescan" style="display:inline"><button class="small sec" title="заново прочитать меню сайтов и хлебные крошки (2–5 минут)">Обновить с сайтов</button></form></div>
+<div class="card compact tbl-wrap"><table>
+<thead><tr><th>Ур.</th><th style="min-width:200px">Сайт</th><th class="num" title="разделов верхнего уровня">Разделов</th><th class="num" title="всего разделов с подразделами">Всего</th><th>Категории, как названы на сайте</th></tr></thead>
+<tbody>{% for s in sitecats.sites %}<tr {% if s.tier == 'M22' %}style="background:var(--accent-bg)"{% endif %}>
+  <td><span class="badge {{ {'A':'sev-high','B':'sev-medium','C':'st','M22':'st-new'}.get(s.tier, 'st') }}">{{ s.tier }}</span></td>
+  <td>{% if s.competitor_id %}<a href="/competitors/{{ s.competitor_id }}">{{ s.site }}</a><div class="small muted">{{ s.seller[:40] }}</div>{% else %}<b>{{ s.site }}</b><div class="small muted">M22</div>{% endif %}</td>
+  <td class="num">{{ s.top }}</td><td class="num">{{ s.cats|length }}</td>
+  <td class="small">{% for c in s.cats %}<span class="attr" title="{{ 'подраздел «' ~ c.parent ~ '» · ' if c.parent else '' }}похоже на: {{ sitecats.names.get(c.our_slug, 'вне контура') }}{% if c.source == 'breadcrumbs' %} · из хлебных крошек{% endif %}" {% if c.level > 1 %}style="opacity:.75"{% endif %}>{% if c.url %}<a href="{{ c.url }}" target="_blank" rel="noopener">{{ c.name }}</a>{% else %}{{ c.name }}{% endif %} <span class="muted">({{ c.product_count or 0 }})</span></span> {% endfor %}</td>
+</tr>{% else %}<tr><td colspan="5" class="muted">Категории с сайтов ещё не собраны — нажмите «Обновить с сайтов».</td></tr>{% endfor %}</tbody></table></div>
+
+<h3 style="margin-top:18px">Сравнение: у кого какая категория и как она называется</h3>
+<div class="small muted" style="margin-bottom:6px">Строки — наши категории радара; в ячейке — как этот раздел называется на сайте продавца. Пусто — на сайте такого раздела нет. Последняя строка — разделы вне нашего контура (конференц‑системы, проекторы, вызов персонала и т. п.).</div>
+<div class="card compact tbl-wrap"><table>
+<thead><tr><th style="min-width:200px">Наша категория</th>{% for s in sitecats.sites %}<th style="min-width:120px" {% if s.tier == 'M22' %}class="hl"{% endif %}>{{ s.site }}</th>{% endfor %}</tr></thead>
+<tbody>{% for slug in sitecats.slugs %}<tr {% if slug == '_none' %}style="opacity:.7"{% endif %}><td><b>{{ sitecats.names.get(slug, slug) }}</b></td>
+  {% for s in sitecats.sites %}{% set names = sitecats.matrix[slug].get(s.site, []) %}<td class="small" {% if names and s.tier != 'M22' and not sitecats.matrix[slug].get('m22.ru') and not sitecats.matrix[slug].get('radiosync.ru') and slug != '_none' %}style="background:var(--high-bg)"{% endif %}>{{ names | join('; ') if names else '' }}</td>{% endfor %}
+</tr>{% endfor %}</tbody></table></div>
+<div class="small muted" style="margin-top:6px">Красная заливка — раздел есть у конкурента, а на сайтах M22 такого раздела нет. Соответствие «название → наша категория» определяется автоматически по словам в названии.</div>
+
 {% elif view == 'coverage' %}
-<div class="note">Карта «продавец × категория»: число активных товаров. {% if cov.gaps %}<b>Категории, где у M22 ничего нет, а у конкурентов есть:</b> {% for g in cov.gaps %}<a href="/categories/{{ g.slug }}">{{ g.name_ru }}</a>{% if not loop.last %}, {% endif %}{% endfor %}.{% else %}Категорий без товаров M22 при наличии их у конкурентов нет.{% endif %}</div>
+<div class="note">Карта «продавец × категория»: число <b>моделей</b> (разные варианты комплектации одной модели и одна модель на нескольких сайтах группы считаются одной), в скобках — число позиций на сайтах. {% if cov.gaps %}<b>Категории, где у M22 ничего нет, а у конкурентов есть:</b> {% for g in cov.gaps %}<a href="/categories/{{ g.slug }}">{{ g.name_ru }}</a>{% if not loop.last %}, {% endif %}{% endfor %}.{% else %}Категорий без товаров M22 при наличии их у конкурентов нет.{% endif %}</div>
 <div class="card compact tbl-wrap"><table><thead><tr><th>Продавец</th>{% for c in cov.cats %}<th class="num" style="min-width:64px"><a href="/categories/{{ c.slug }}" title="{{ c.name_ru }}">{{ c.name_ru[:18] }}</a></th>{% endfor %}<th class="num">Всего</th></tr></thead><tbody>
   <tr style="background:var(--accent-bg)"><td><b>M22</b></td>{% for c in cov.cats %}<td class="num" {% if not cov.m22.get(c.slug) %}style="color:var(--high);font-weight:600"{% endif %}>{{ cov.m22.get(c.slug, 'нет') }}</td>{% endfor %}<td class="num"><b>{{ cov.m22.values() | sum }}</b></td></tr>
-  {% for s in cov.sellers %}<tr><td><a href="/competitor-matrix?competitor={{ s.competitor_id }}">{{ s.seller[:40] }}</a></td>{% for c in cov.cats %}{% set v = s.cats.get(c.slug) %}<td class="num" {% if v and not cov.m22.get(c.slug) %}style="background:var(--high-bg)"{% endif %}>{% if v %}{{ v.n }}<span class="small muted"> ({{ v.priced }})</span>{% else %}·{% endif %}</td>{% endfor %}<td class="num">{{ s.total }}</td></tr>{% endfor %}
+  {% for s in cov.sellers %}<tr><td><a href="/competitor-matrix?competitor={{ s.competitor_id }}">{{ s.seller[:40] }}</a></td>{% for c in cov.cats %}{% set v = s.cats.get(c.slug) %}<td class="num" {% if v and not cov.m22.get(c.slug) %}style="background:var(--high-bg)"{% endif %}>{% if v %}<a href="/competitor-matrix?competitor={{ s.competitor_id }}&category={{ c.slug }}" title="моделей {{ v.models }}, позиций {{ v.n }}, с ценой {{ v.priced }}">{{ v.models }}</a><span class="small muted"> ({{ v.n }})</span>{% else %}·{% endif %}</td>{% endfor %}<td class="num">{{ s.models }}<span class="small muted"> ({{ s.total }})</span></td></tr>{% endfor %}
 </tbody></table></div>
-<div class="small muted" style="margin-top:6px">В скобках — товары с ценой. Красная заливка — категория есть у продавца, но отсутствует у M22.</div>
+<div class="small muted" style="margin-top:6px">Число — модели, в скобках — позиции (варианты комплектов, цвета, повторы на сайтах одной группы). Красная заливка — категория есть у продавца, но отсутствует у M22. Клик по числу открывает список.</div>
 
 {% elif view == 'changes' %}
 <div class="grid grid-2">

@@ -18,6 +18,7 @@ from fastapi.templating import Jinja2Templates
 
 from .. import categories as catmod
 from .. import competitor_matrix as cmx
+from .. import site_categories
 from .. import site_audit
 from .. import profile as profmod
 from .. import config, db, discovery, feedback, importers, matching, recommendations, reports, scheduler, seed, signals
@@ -687,6 +688,7 @@ def competitor_matrix(request: Request, view: str = "matrix", competitor: str = 
         cov = cmx.coverage(conn) if view == "coverage" else None
         ch = cmx.changes(conn) if view == "changes" else None
         summ = cmx.summary(conn) if view == "summary" else None
+        sitecats = site_categories.comparison(conn) if view == "sitecats" else None
         rows = []
         if view == "matrix":
             rows = cmx.rows(conn, int(competitor) if competitor else None, category or None, kind or None, include_inactive=(state != "active"), q=q or None,
@@ -701,7 +703,15 @@ def competitor_matrix(request: Request, view: str = "matrix", competitor: str = 
                 rows = [r for r in rows if r["state"] == "new"]
             elif state == "nomatch":
                 rows = [r for r in rows if not r["m22_id"]]
-    return render(request, "competitor_matrix.html", view=view, f=f, rows=rows, cov=cov, ch=ch, summ=summ, cols=cmx.MATRIX_COLS, kinds=cmx.KIND_LABELS, **lists)
+    return render(request, "competitor_matrix.html", view=view, f=f, rows=rows, cov=cov, ch=ch, summ=summ, sitecats=sitecats, cols=cmx.MATRIX_COLS, kinds=cmx.KIND_LABELS, **lists)
+
+
+@app.post("/competitor-matrix/sitecats/rescan")
+def sitecats_rescan(request: Request):
+    """Пересобрать категории с сайтов M22 и конкурентов A (меню + хлебные крошки)."""
+    with db.session() as conn:
+        site_categories.scan_tier(conn, "A")
+    return RedirectResponse("/competitor-matrix?view=sitecats", status_code=303)
 
 
 # ---------------- Наши сайты (аудит m22.ru и radiosync.ru) ----------------
