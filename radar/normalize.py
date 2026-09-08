@@ -205,6 +205,9 @@ MODEL_HINTS: list[tuple[re.Pattern, str | None, str]] = [(re.compile(p, re.I), c
     (r"cromi\s*(?:cab|sl\s*in|sm-|h-)", "sync_translation", "other"),
     (r"whisper\s*cube|multi-caisses|кабин[аы]\s+(?:для\s+)?(?:синхронн\w+\s+)?перевод|eurocab|\bec-\d|пульт\w*\s+(?:синхронн\w+\s+)?переводчик", "sync_translation", "other"),
     (r"retekess\s*(?:tt|t1\d\d)", "radiogid", "system"),
+    # Retekess: TD — системы вызова/пейджеры, TH — кнопки вызова, FT — FM-передатчики, TA — ушной мониторинг, SU — усилители: вне контура; TR — рации
+    (r"\btd\s?\d{3}[a-z]?\b|\bth\s?\d{3}\b|\bft\s?1\d\b|\bpr\s?13\b|\bsu\s?\d{3}\b|\bta\s?\d{3}\b|\bt-ac\d", None, "other"),
+    (r"retekess\s*(?:tr|rt)\s?\d{3}|\btr\s?\d{3}\b.*(?:раци|radio)", "radio_walkie", "other"),
     (r"громкоговоритель|мегафон|усилитель голоса|rolton|rоlton|shidu|zoweetek", "voice_amplifier", "other"),
 ]]
 OUT_OF_SCOPE_HEADS = ("видеопроектор", "проектор", "конференц-систем", "кнопка вызова", "хост-ресивер", "часы ", "пейджер", "система вызова", "система беспроводных вызовов",
