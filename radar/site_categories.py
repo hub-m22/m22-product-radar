@@ -59,8 +59,8 @@ def fetch_menu(site_url: str) -> list[dict]:
         for a in nav.find_all("a", href=True):
             name = _clean_name(clean_text(a.get_text(" ", strip=True)))
             url = urljoin(site_url, a["href"]).split("#")[0]
-            if urlparse(url).netloc.lower().replace("www.", "") != dom:
-                continue
+            if urlparse(url).netloc.lower().replace("www.", "") != dom or urlparse(url).path.strip("/") == "":
+                continue  # чужой домен или ссылка на главную (логотип, «вызов персонала» → корень сайта)
             key = name.lower()
             if key in seen or not _is_category_name(name):
                 continue
