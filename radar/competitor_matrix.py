@@ -23,8 +23,9 @@ def rows(conn: sqlite3.Connection, competitor_id: int | None = None, category: s
          tier: str | None = None, in_scope_only: bool = False) -> list[dict]:
     where, params = ["c.is_active=1"], []
     if competitor_id:
-        where.append("cp.competitor_id=?")
-        params.append(competitor_id)
+        # продавец = вся группа сайтов (Cromi: cromi.ru, spbaudio.ru, sin24.ru …), если у конкурента задана группа
+        where.append("(cp.competitor_id=? OR (c.group_name IS NOT NULL AND c.group_name=(SELECT group_name FROM competitors WHERE id=?)))")
+        params += [competitor_id, competitor_id]
     if tier:
         where.append("c.tier=?")
         params.append(tier)

@@ -117,7 +117,7 @@ def model_key(name: str, sku: str | None = None) -> str | None:
 CATEGORY_RULES: list[tuple[str, list[str]]] = [
     ("sync_translation", ["синхронн", "перевод", "interpret", "translation", "переводчик", "делегац", "integrus"]),
     ("audiogid", ["аудиогид", "audio guide", "audioguide", "audiogid", "триггер", "trigger tag", "мультимедиа гид", "автогид"]),
-    ("disposable_headphones", ["одноразов", "disposable", "гигиеническ", "чехл", "накладки на амбушюр"]),
+    ("disposable_headphones", ["одноразов", "disposable", "гигиеническ", "чехлы для наушник", "чехлы на наушник", "чехол для наушник", "губчат", "накладки на амбушюр"]),
     ("reusable_headphones", ["многоразов", "накладные наушники", "наушник", "headphone", "earphone", "earpiece"]),
     ("charging_cases", ["кейс", "док-станц", "докстанц", "dock", "case", "зарядн", "charger", "charging", "сумк", "шкаф", "бокс для зарядки", "usb порт"]),
     ("voice_amplifier", ["голосовой усилитель", "усилитель голоса", "мегафон", "voice amplifier", "громкоговорител"]),
@@ -214,8 +214,15 @@ OUT_OF_SCOPE_HEADS = ("видеопроектор", "проектор", "кон�
                       "кнопка экстренного", "система контроля доступа", "портативное радио", "экранный дисплей", "pos-", "антенна для пейджер")
 
 
+OUT_OF_SCOPE_ANY = re.compile(r"кнопк\w* вызова|пейджерн|часы[- ]пейджер|аудиоконференц|конференц[- ]?систем|видеоконференц|лазерн\w+ указк|проектор|видеостен|led[- ]экран|светодиодн\w+ экран|микшерн|рэков|рэковый", re.I)
+
+
 def model_hint(name: str) -> tuple[str | None, str] | None:
     low = clean_text(name).lower()
+    if OUT_OF_SCOPE_ANY.search(low):
+        return None, "other"
+    if re.search(r"комплект радиокласса|\bset-?\d+\s*\+\s*\d|радиоклас", low):
+        return "radiogid", "system"
     for rx, cat, kind in MODEL_HINTS:
         if rx.search(low):
             return cat, kind

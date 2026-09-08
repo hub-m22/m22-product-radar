@@ -36,7 +36,9 @@ def raw_file(cid: int, url: str) -> Path | None:
 
 
 for cid in ids:
-    rows = db.rows(conn, "SELECT id, url, specs_json FROM competitor_products WHERE competitor_id=? AND is_active=1", (cid,))
+    # только позиции со своей страницей товара: у позиций с адресом каталога/раздела страница содержит чужие характеристики
+    rows = db.rows(conn, """SELECT id, url, specs_json FROM competitor_products WHERE competitor_id=? AND is_active=1
+                            AND url NOT IN (SELECT url FROM monitored_pages WHERE kind!='product')""", (cid,))
     found = updated = 0
     cache: dict[str, dict] = {}
     for r in rows:

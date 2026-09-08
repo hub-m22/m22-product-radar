@@ -224,7 +224,7 @@ def parse_product_page(html: str, url: str, cfg: dict | None = None) -> list[dic
         if isinstance(brand, dict):
             brand = brand.get("name")
         items.append({
-            "url": prod.get("url") or url, "name": normalize.clean_text(str(prod.get("name") or "")), "brand": brand,
+            "url": urljoin(url, str(prod.get("url") or url)), "name": normalize.clean_text(str(prod.get("name") or "")), "brand": brand,
             "sku": prod.get("sku") or prod.get("mpn"), "price": price, "currency": cur or "RUB", "availability": av,
             "description": normalize.clean_text(str(prod.get("description") or ""))[:2000], "image_url": _first_image(prod) or fallback_img,
         })
@@ -292,7 +292,7 @@ def parse_catalog_page(html: str, url: str, cfg: dict | None = None, category_sl
     for prod in _jsonld_products(soup):
         price, cur, av = _offer_price(prod.get("offers"))
         if prod.get("name"):
-            items.append({"url": prod.get("url") or url, "name": normalize.clean_text(str(prod["name"])), "price": price, "currency": cur or "RUB",
+            items.append({"url": urljoin(url, str(prod.get("url") or url)), "name": normalize.clean_text(str(prod["name"])), "price": price, "currency": cur or "RUB",
                           "availability": av, "image_url": _first_image(prod)})
     if len(items) >= 2:
         return items
