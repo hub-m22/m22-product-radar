@@ -234,11 +234,17 @@ def detect_multi_competitor_products(conn: sqlite3.Connection) -> int:
     m22_keys = {x["model_key"] for x in db.rows(conn, "SELECT DISTINCT model_key FROM m22_products WHERE is_active=1 AND model_key IS NOT NULL")}
     aliases = db.uj(db.get_setting(conn, "model_aliases"), {}) or {}
     m22_keys |= {a for a, b in aliases.items() if b in m22_keys}  # идентичные модели под другой маркой считаются «есть у M22»
+    emitted_multi: set[str] = set()
     for (brand, key), offers in groups.items():
         sellers = sorted({o["seller"] for o in offers})
         if len(sellers) < 2:
             continue
         has = key in m22_keys
+        if has and key in aliases:
+            # идентичная модель под другой маркой уже есть у M22 — это не «пробел», а прямая ценовая конкуренция; см. «Пересмотр цен»
+            conn.execute("UPDATE signals SET status='done', comment=? WHERE dedupe_key=? AND status='new'",
+                         (f"закрыт автоматически: модель {key} идентична {aliases[key]} у M22, сравнение цен — в разделе «Пересмотр цен»", f"multi:{brand}:{key}"))
+            continue
         prices = [o["price"] for o in offers if o["price"]]
         pmin, pmax = (min(prices), max(prices)) if prices else (None, None)
         sev = "high" if len(sellers) >= 3 and not has else "medium"
@@ -280,6 +286,7 @@ def detect_multi_competitor_products(conn: sqlite3.Connection) -> int:
                    else f"Проверить цену M22 на {label} относительно диапазона {_fmt(pmin)} - {_fmt(pmax)}.") if just["reasons"]
                   else f"Действий не требуется. Открыть сравнение характеристик и цен, если появятся новые данные по {label}.")
         dedupe = f"multi:{brand}:{key}"
+        emitted_multi.add(dedupe)
         existing = db.row(conn, "SELECT id FROM signals WHERE dedupe_key=?", (dedupe,))
         if existing:
             conn.execute("UPDATE signals SET title=?, what_happened=?, new_value=?, severity=?, evidence_json=?, source_url=?, why_matters=?, recommended_action=?, updated_at=datetime('now') WHERE id=?",
@@ -289,6 +296,10 @@ def detect_multi_competitor_products(conn: sqlite3.Connection) -> int:
                  new_value=f"{len(sellers)} продавцов", observed_at=db.now_iso(), source="мониторинг конкурентов", source_url=own, evidence_json=evidence, confidence=0.8,
                  why_matters=why, recommended_action=action, dedupe_key=dedupe):
             n += 1
+    # модели, которые больше не продают 2+ продавца (или сигнал устарел после пересбора), закрываем
+    for old_sig in db.rows(conn, "SELECT id, dedupe_key FROM signals WHERE type='multi_competitor_product' AND status='new'"):
+        if old_sig["dedupe_key"] not in emitted_multi:
+            conn.execute("UPDATE signals SET status='done', comment='закрыт автоматически: условие больше не выполняется' WHERE id=?", (old_sig["id"],))
     return n
 
 

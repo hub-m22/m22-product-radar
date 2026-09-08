@@ -292,6 +292,9 @@ def detect_kind(name: str) -> str:
         return "transmitter"
     if has_rx:
         return "receiver"
+    if re.search(r"\bс (?:одн\w+ )?(?:сумк|кейс|чехл|зарядн)|в кейсе|в сумке|with (?:a )?(?:carry\w* )?(?:bag|case)|charging (?:base|case)\b.*(?:system|система)", low) \
+            and any(k in low for k in ("система", "system", "комплект", "kit", "радиогид", "tour guide")):
+        return "system"  # «система … с сумкой/кейсом для переноски» — это система, а не сумка
     if any(k in low for k in ("кейс", "докстанц", "док-станц", "сумк", "case", "dock", "зарядн", "charger")):
         return "case_charger"
     if "наушник" in low or "headphone" in low or "earphone" in low:

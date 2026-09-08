@@ -23,17 +23,25 @@ def review(conn: sqlite3.Connection, categories: list[str] | None = None, only_w
     prods = db.rows(conn, f"SELECT * FROM m22_products p WHERE {' AND '.join(where)} ORDER BY p.category_slug, p.model_key, p.site", params)
     out = []
     for p in prods:
-        comps = matching.comparables_for(conn, p["id"], min_conf=0.7)
-        uniq: dict = {}
-        for c in comps:
-            uniq.setdefault((c["competitor_id"], c["name"]), c)
-        comps = sorted(uniq.values(), key=lambda c: c["price"])
+        def _uniq(lst):
+            u: dict = {}
+            for c in lst:
+                u.setdefault((c["competitor_id"], c["name"]), c)
+            return sorted(u.values(), key=lambda c: c["price"])
+
+        firm = _uniq(matching.comparables_for(conn, p["id"], min_conf=0.7))     # надёжно: идентичные, точные, одинаковое фото, прямые аналоги с совместимыми характеристиками
+        approx = False
+        comps = firm
+        if len(firm) < config.MIN_COMPARABLES or len({c["competitor_id"] for c in firm}) < 2:
+            loose = _uniq(matching.comparables_for(conn, p["id"], min_conf=0.6))  # ориентир: прямые аналоги той же категории и типа
+            if len(loose) >= config.MIN_COMPARABLES:
+                comps, approx = loose, True
         sellers = {c["competitor_id"] for c in comps}
         strong = [c for c in comps if c["match_type"] in STRONG]
-        row = {"p": p, "category": CATEGORY_NAMES.get(p["category_slug"], p["category_slug"]), "n": len(comps), "sellers": len(sellers), "strong": len(strong), "comps": comps[:8]}
-        if len(comps) < config.MIN_COMPARABLES or len(sellers) < 2:
+        row = {"p": p, "category": CATEGORY_NAMES.get(p["category_slug"], p["category_slug"]), "n": len(comps), "sellers": len(sellers), "strong": len(strong), "comps": comps[:8], "approx": approx}
+        if len(comps) < config.MIN_COMPARABLES:
             row.update(verdict="no_data", verdict_ru="мало данных", gap=None, median=None, pmin=None, pmax=None,
-                       why=f"сопоставимых предложений: {len(comps)} от {len(sellers)} продавцов; нужно минимум {config.MIN_COMPARABLES} от 2 продавцов")
+                       why=f"сопоставимых предложений: {len(comps)}; нужно минимум {config.MIN_COMPARABLES}")
             if only_with_market:
                 continue
             out.append(row)
@@ -54,6 +62,11 @@ def review(conn: sqlite3.Connection, categories: list[str] | None = None, only_w
         if strong_med is not None and strong:
             sg = (p["price"] - strong_med) / strong_med * 100
             why += f"; по идентичным/точным моделям ({len(strong)}) медиана {strong_med:,.0f} ₽ ({sg:+.0f} %)"
+        if approx:
+            ru += " (ориентировочно)"
+            why += "; ориентир по аналогам той же категории и типа, а не по идентичным моделям — проверьте предложения справа"
+        elif len(sellers) < 2:
+            why += "; все предложения от одного продавца"
         row.update(verdict=verdict, verdict_ru=ru, gap=round(gap), median=med, pmin=min(prices), pmax=max(prices), strong_median=strong_med,
                    why=why.replace(",", " "), target_low=med * 0.95, target_high=med * 1.05)
         out.append(row)

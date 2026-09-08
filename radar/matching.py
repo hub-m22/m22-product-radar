@@ -113,7 +113,16 @@ def match_one(cp: dict, m22_list: list[dict], m22_categories: set[str]) -> list[
                     mtype = "kit"
                 elif kind == "system" and m.get("capacity") and not cap:
                     conf = min(conf, 0.55)
-                    reasons.append("вместимость комплекта конкурента неизвестна")
+                    mtype = "kit"
+                    reasons.append("вместимость комплекта конкурента неизвестна — цены несопоставимы")
+                elif kind == "system" and cap and not m.get("capacity"):
+                    conf = min(conf, 0.55)
+                    mtype = "kit"
+                    reasons.append(f"у конкурента комплект на {cap}, у M22 вместимость не указана (базовая система) — цены несопоставимы")
+                elif kind == "system" and not cap and not m.get("capacity"):
+                    conf = min(conf, 0.55)
+                    mtype = "kit"
+                    reasons.append("состав комплекта не указан ни у M22, ни у конкурента — та же модель, но цены несопоставимы")
                 out.append({"m22_product_id": m["id"], "match_type": mtype, "confidence": round(max(0.2, min(conf, 0.98)), 2), "reasons": reasons})
         if out:
             out.sort(key=lambda x: -x["confidence"])
