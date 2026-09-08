@@ -53,6 +53,26 @@
 </tr>{% endfor %}</tbody></table></div>
 <div class="small muted" style="margin-top:6px">Красная заливка — раздел есть у конкурента, а на сайтах M22 такого раздела нет. Соответствие «название → наша категория» определяется автоматически по словам в названии.</div>
 
+<h3 style="margin-top:22px">Разделы конкурентов, которых нет в матрице M22 — кандидаты в новые ниши</h3>
+<div class="small muted" style="margin-bottom:8px">Всего {{ outscope.total }} разделов у конкурентов A, сгруппированы по темам. Ссылка на название открывает страницу раздела на сайте продавца. «Что на странице» — описание и первые позиции, снятые со страницы автоматически (обновляются кнопкой «Обновить с сайтов»). Пометка «есть у M22 вне контура радара» — у M22 такой раздел на сайте есть, но радар это направление не отслеживает.</div>
+{% for t in outscope.themes %}
+<div class="card" style="margin-bottom:12px">
+  <h3 style="margin:0 0 4px">{{ t.theme }} <span class="small muted">· {{ t.cats|length }} раздел(ов) на {{ t.sites|length }} сайт(ах)</span>{% if t.m22_has %} <span class="badge st-new" title="раздел есть на m22.ru, но радар это направление не отслеживает">есть у M22 вне контура радара</span>{% endif %}</h3>
+  <div class="small" style="margin-bottom:8px">{{ t.why }}</div>
+  <div class="tbl-wrap"><table>
+  <thead><tr><th>Ур.</th><th style="min-width:160px">Сайт</th><th style="min-width:200px">Раздел на сайте</th><th style="min-width:280px">Что на странице</th><th style="min-width:260px">Примеры позиций</th><th class="num">Товаров в радаре</th></tr></thead>
+  <tbody>{% for c in t.cats %}<tr>
+    <td><span class="badge {{ {'A':'sev-high','B':'sev-medium','C':'st'}.get(c.tier, 'st') }}">{{ c.tier }}</span></td>
+    <td class="small"><a href="/competitors/{{ c.competitor_id }}">{{ c.site }}</a><div class="muted">{{ c.seller[:40] }}</div></td>
+    <td>{% if c.url %}<a href="{{ c.url }}" target="_blank" rel="noopener"><b>{{ c.name }}</b> ↗</a>{% else %}<b>{{ c.name }}</b> <span class="small muted">(из хлебных крошек, отдельной страницы нет)</span>{% endif %}{% if c.in_radar %}<div class="small muted">в радаре: {{ c.in_radar }}</div>{% endif %}</td>
+    <td class="small">{% if c.note %}{{ c.note }}{% elif c.enriched_at %}<span class="muted">описания на странице нет</span>{% else %}<span class="muted">ещё не просмотрено — нажмите «Обновить с сайтов»</span>{% endif %}</td>
+    <td class="small">{% if c.samples %}{% for x in c.samples %}<div>· {{ x }}</div>{% endfor %}{% else %}<span class="muted">нет данных</span>{% endif %}</td>
+    <td class="num">{% if c.product_count %}{{ c.product_count }}{% else %}<span class="muted">0</span>{% endif %}</td>
+  </tr>{% endfor %}</tbody></table></div>
+</div>
+{% endfor %}
+{% if outscope.m22_out %}<div class="card compact"><h3>Разделы m22.ru вне контура радара</h3><div class="small">{% for c in outscope.m22_out %}<a href="{{ c.url }}" target="_blank" rel="noopener">{{ c.name }}</a>{% if not loop.last %} · {% endif %}{% endfor %}</div><div class="small muted" style="margin-top:4px">Эти направления M22 ведёт (вызов персонала, пейджеры, табло), но радар их не собирает и не сравнивает. Если нужно — добавим как отдельный контур.</div></div>{% endif %}
+
 {% elif view == 'coverage' %}
 <div class="note">Карта «продавец × категория»: число <b>моделей</b> (разные варианты комплектации одной модели и одна модель на нескольких сайтах группы считаются одной), в скобках — число позиций на сайтах. {% if cov.gaps %}<b>Категории, где у M22 ничего нет, а у конкурентов есть:</b> {% for g in cov.gaps %}<a href="/categories/{{ g.slug }}">{{ g.name_ru }}</a>{% if not loop.last %}, {% endif %}{% endfor %}.{% else %}Категорий без товаров M22 при наличии их у конкурентов нет.{% endif %}</div>
 <div class="card compact tbl-wrap"><table><thead><tr><th>Продавец</th>{% for c in cov.cats %}<th class="num" style="min-width:64px"><a href="/categories/{{ c.slug }}" title="{{ c.name_ru }}">{{ c.name_ru[:18] }}</a></th>{% endfor %}<th class="num">Всего</th></tr></thead><tbody>

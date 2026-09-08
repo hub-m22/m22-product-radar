@@ -273,3 +273,119 @@ def comparison(conn: sqlite3.Connection) -> dict:
     slugs = [s for s in CATEGORY_NAMES if any(s in slugs_of(r) for r in rows)] + ["_none"]
     matrix = {slug: {site: [r["name"] for r in s["cats"] if slug in slugs_of(r)] for site, s in sites.items()} for slug in slugs}
     return {"sites": list(sites.values()), "slugs": slugs, "matrix": matrix, "names": {**CATEGORY_NAMES, "_none": "Вне нашего контура / не сопоставлено"}}
+
+
+# ---------------- Разделы конкурентов вне контура радара: темы, пояснения, содержимое страниц ----------------
+OUT_THEMES: list[tuple[str, str, str]] = [
+    # (ключ-регулярка по названию раздела, тема, что это такое / зачем смотреть)
+    (r"кнопк|вызов|пейджер|оповещ|табло|медсестр|официант|order|paging|calling", "Системы вызова персонала и пейджеры",
+     "Кнопки вызова, часы‑пейджеры, табло: HoReCa, клиники, склады. У M22 это направление есть на m22.ru, но радар его не отслеживает — здесь видно, кто из конкурентов по радиогидам тоже в нём торгует."),
+    (r"конференц|crestron|biamp|dcn|встраиваем|микшер|управлени", "Конференц‑системы и управление залом",
+     "Дискуссионные пульты, микрофонные конференц‑системы, управление залом. Соседняя ниша B2B: те же заказчики (администрации, вузы, музеи), другой продукт."),
+    (r"проекц|dlp|экран|видеостен|светодиод|видеоконференц|жк", "Проекция, экраны, видео",
+     "Проекторы, LED‑экраны, видеостены, ВКС. Интеграторский ассортимент для мероприятий; для M22 скорее аренда/партнёрство, чем собственный склад."),
+    (r"звуков|аудиооборуд|вокальн|аудиорешен|радиосистем\w* (?:akg|sennheiser)|акустик|колонк", "Звуковое оборудование",
+     "Вокальные радиосистемы, акустика, звук для конференций. Смежно с микрофонами для гидов — те же бренды (Sennheiser, AKG)."),
+    (r"кофр|рэков|кейсы и кофры", "Кейсы и кофры для транспортировки",
+     "Флайт‑кейсы, рэковые кейсы. Смежно с зарядными кейсами M22, но для перевозки техники, а не для зарядки приёмников."),
+    (r"студи|запись|аудиозапис|озвуч|карт маршрут|разработк|контент|услуг|под ключ|аутсорс", "Услуги и контент",
+     "Запись аудиогидов, озвучивание, разработка маршрутов. Не товар, а сервис вокруг аудиогидов: возможный апсейл к железу."),
+    (r"радиоприемник|радиоприёмник|fm|радио\b", "Бытовые радиоприёмники",
+     "FM/AM приёмники (Retekess). Дешёвый смежный товар, к экскурсиям отношения почти не имеет."),
+    (r"лазерн|указк", "Лазерные указки и мелочи для гида",
+     "Дешёвые сопутствующие товары для экскурсовода: указки, шнурки, ремешки. Хорошо продаются в корзину к радиогиду."),
+    (r"приложени|qr|мобильн", "Приложения и QR‑аудиогиды",
+     "Аудиогид на смартфоне посетителя вместо устройства. Технологический заменитель железа — риск для аудиогидов и одновременно новая ниша (контент + подписка)."),
+    (r"трансляц|стрим|вещан", "Трансляция звука",
+     "Передача звука на смартфоны/приёмники в зале, тихая дискотека, трансляция лекций. Новый сценарий применения той же радиотехники."),
+    (r"доступн|тифло|слабослыш|индукцион|незряч", "Доступная среда",
+     "Тифлокомментирование, индукционные петли, оборудование для слабослышащих. Госзаказ по программе «Доступная среда»: отдельный бюджетный канал."),
+    (r"усилител|мегафон|громкогов", "Усилители голоса и мегафоны",
+     "Поясные усилители голоса, мегафоны. Дешёвая альтернатива радиогиду для небольших групп; у M22 отдельного раздела нет."),
+    (r"решени", "Готовые решения / кейсы применения",
+     "Страницы‑сценарии («решения для музеев, заводов»), которые ведут к тем же товарам; интересны формулировками, а не ассортиментом."),
+]
+
+
+def out_theme(name: str) -> tuple[str, str]:
+    low = name.lower()
+    for rx, theme, why in OUT_THEMES:
+        if re.search(rx, low):
+            return theme, why
+    return "Прочее", "Раздел не удалось отнести к известной теме — откройте страницу и посмотрите содержимое."
+
+
+def _page_summary(url: str) -> tuple[str, list[str]]:
+    """Описание страницы раздела и примеры позиций (заголовки карточек/названия с ценой)."""
+    res = http.fetch(url, "menu", save=False, timeout=25)
+    soup = BeautifulSoup(res.text, "lxml")
+    desc = ""
+    for sel in ('meta[name="description"]', 'meta[property="og:description"]'):
+        el = soup.select_one(sel)
+        if el is not None and (el.get("content") or "").strip() and not re.match(r"^(спасибо|главная)", clean_text(el.get("content")), re.I):
+            desc = clean_text(el.get("content"))[:300]
+            break
+    if not desc:
+        h1 = soup.find("h1")
+        p = h1.find_next("p") if h1 is not None else None
+        if p is not None:
+            desc = clean_text(p.get_text(" "))[:300]
+    if re.match(r"^(спасибо|главная|записей нет)", desc, re.I):
+        desc = ""
+    items: list[str] = []
+    main = soup.find("main") or soup.body or soup
+    for el in main.select("h2, h3, h4, [class*=product-title], [class*=product__title], [class*=item-title], [class*=name], [itemprop=name]"):
+        t = clean_text(el.get_text(" "))
+        if 5 <= len(t) <= 80 and not re.search(r"корзин|доставк|оплат|контакт|отзыв|похожие|рекоменд|новости|статьи|каталог|меню|подписк|главная|спасибо|записей нет|категори|решение \d|^для |свяжемся|позвон|заявк|вопрос", t, re.I)                 and not SKIP.search(t):
+            if t not in items:
+                items.append(t)
+        if len(items) >= 8:
+            break
+    return desc, items
+
+
+def enrich_out_of_scope(conn: sqlite3.Connection, force: bool = False) -> int:
+    """Для разделов вне контура (и смежных) подгружает описание страницы и примеры товаров."""
+    rows = db.rows(conn, """SELECT id, url FROM site_categories WHERE url IS NOT NULL AND url!='' AND competitor_id IS NOT NULL
+                            AND (our_slug IS NULL OR our_slug IN ('adjacent_new','substitutes_apps','voice_amplifier')) """ + ("" if force else "AND enriched_at IS NULL"))
+    n = 0
+    for r in rows:
+        try:
+            desc, items = _page_summary(r["url"])
+        except Exception as exc:  # noqa: BLE001
+            log.info("summary %s: %s", r["url"], exc)
+            desc, items = "", []
+        conn.execute("UPDATE site_categories SET note=?, sample_items=?, enriched_at=datetime('now') WHERE id=?", (desc, " | ".join(items), r["id"]))
+        conn.commit()
+        n += 1
+    return n
+
+
+def out_of_scope(conn: sqlite3.Connection) -> dict:
+    """Разделы конкурентов, которых нет в матрице M22: сгруппированы по темам, с пояснением, ссылкой, описанием и примерами."""
+    m22_slugs: set[str] = set()
+    m22_out: list[dict] = []
+    for r in db.rows(conn, "SELECT name, url, our_slug FROM site_categories WHERE competitor_id IS NULL"):
+        if r["our_slug"]:
+            m22_slugs |= {x.strip() for x in r["our_slug"].split(",")}
+        else:
+            m22_out.append(dict(r))
+    m22_themes = {out_theme(r["name"])[0] for r in m22_out}
+    rows = db.rows(conn, """SELECT sc.*, COALESCE(c.group_name, c.name) AS seller, c.tier, c.website FROM site_categories sc JOIN competitors c ON c.id=sc.competitor_id
+                            ORDER BY c.tier, sc.site, sc.name""")
+    themes: dict[str, dict] = {}
+    for r in rows:
+        slugs = {x.strip() for x in (r["our_slug"] or "").split(",") if x.strip()}
+        if slugs and slugs & m22_slugs:
+            continue  # у M22 такой раздел есть
+        theme, why = out_theme(r["name"])
+        t = themes.setdefault(theme, {"theme": theme, "why": why, "cats": [], "sites": set(), "m22_has": theme in m22_themes})
+        d = dict(r)
+        d["samples"] = [x for x in (r["sample_items"] or "").split(" | ") if x][:6]
+        d["in_radar"] = ", ".join(CATEGORY_NAMES.get(s, s) for s in slugs) if slugs else ""
+        t["cats"].append(d)
+        t["sites"].add(r["site"])
+    out = sorted(themes.values(), key=lambda t: (-len(t["sites"]), t["theme"]))
+    for t in out:
+        t["sites"] = sorted(t["sites"])
+    return {"themes": out, "m22_out": m22_out, "total": sum(len(t["cats"]) for t in out)}
