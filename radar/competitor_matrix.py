@@ -32,8 +32,9 @@ def rows(conn: sqlite3.Connection, competitor_id: int | None = None, category: s
     if in_scope_only:
         where.append("cp.category_slug IS NOT NULL")
     if category:
-        where.append("cp.category_slug=?")
-        params.append(category)
+        cats = [category] if isinstance(category, str) else list(category)
+        where.append(f"cp.category_slug IN ({','.join('?' * len(cats))})")
+        params += cats
     if kind:
         where.append("cp.kind=?")
         params.append(kind)

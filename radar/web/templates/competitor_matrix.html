@@ -95,13 +95,13 @@
   <input type="hidden" name="view" value="matrix">
   <label>Уровень<select name="tier"><option value="">все</option><option value="A" {% if f.tier == 'A' %}selected{% endif %}>A — прямые</option><option value="B" {% if f.tier == 'B' %}selected{% endif %}>B — вторичные</option><option value="C" {% if f.tier == 'C' %}selected{% endif %}>C — косвенные</option></select></label>
   <label>Продавец<select name="competitor"><option value="">все</option>{% for c in competitors %}<option value="{{ c.id }}" {% if f.competitor == c.id|string %}selected{% endif %}>{{ c.name[:50] }}</option>{% endfor %}</select></label>
-  <label>Категория<select name="category"><option value="">все</option>{% for c in categories %}<option value="{{ c.slug }}" {% if f.category == c.slug %}selected{% endif %}>{{ c.name_ru }}</option>{% endfor %}</select></label>
   <label>Тип изделия<select name="kind"><option value="">все</option>{% for k, n in kinds.items() %}<option value="{{ k }}" {% if f.kind == k %}selected{% endif %}>{{ n }}</option>{% endfor %}</select></label>
   <label>Статус<select name="state"><option value="active" {% if f.state == 'active' %}selected{% endif %}>в продаже</option><option value="all" {% if f.state == 'all' %}selected{% endif %}>все, включая исчезнувшие</option><option value="gone" {% if f.state == 'gone' %}selected{% endif %}>исчезли</option><option value="new" {% if f.state == 'new' %}selected{% endif %}>новые</option><option value="nomatch" {% if f.state == 'nomatch' %}selected{% endif %}>без аналога у M22</option></select></label>
   <label>Характеристики<select name="specs"><option value="">все</option><option value="yes" {% if f.specs == 'yes' %}selected{% endif %}>сняты</option><option value="no" {% if f.specs == 'no' %}selected{% endif %}>не сняты</option></select></label>
   <label>Контур<select name="scope"><option value="in" {% if f.scope != 'all' %}selected{% endif %}>только по теме</option><option value="all" {% if f.scope == 'all' %}selected{% endif %}>все собранные</option></select></label>
   <label>Поиск<input type="text" name="q" value="{{ f.q }}" placeholder="модель, товар, продавец"></label>
   <button class="small">Применить</button> <a class="btn sec small" href="/competitor-matrix">Сбросить</a>
+  <div class="cat-pills"><span class="small muted">Категории (можно несколько):</span> {% for c in categories %}<label class="pill-check"><input type="checkbox" name="category" value="{{ c.slug }}" {% if c.slug in f.categories %}checked{% endif %}> {{ c.name_ru }}</label>{% endfor %}</div>
 </form>
 <div class="sub">Позиций: {{ rows|length }}. Сортировка — кликом по заголовку; ширина колонок тянется мышью. Показаны только товары в продаже; позиции, которые пропали с сайта продавца, — в фильтре «Статус» и на вкладке «Что появилось / исчезло».</div>
 <div class="card compact tbl-wrap"><table style="min-width:2000px">

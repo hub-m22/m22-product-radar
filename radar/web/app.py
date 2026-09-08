@@ -679,10 +679,11 @@ def match_review(mid: int, decision: str = Form(...), note: str = Form(""), matc
 
 # ---------------- Матрица конкурентов ----------------
 @app.get("/competitor-matrix", response_class=HTMLResponse)
-def competitor_matrix(request: Request, view: str = "matrix", competitor: str = "", category: str = "", kind: str = "", state: str = "", q: str = "", tier: str = "",
+def competitor_matrix(request: Request, view: str = "matrix", competitor: str = "", kind: str = "", state: str = "", q: str = "", tier: str = "",
                       scope: str = "in", specs: str = ""):
     state = state or "active"  # по умолчанию показываем только товары в продаже; исчезнувшие — по фильтру или на вкладке «Что появилось / исчезло»
-    f = {"competitor": competitor, "category": category, "kind": kind, "state": state, "q": q, "tier": tier, "scope": scope, "specs": specs}
+    cats = [x for x in request.query_params.getlist("category") if x]  # несколько категорий сразу
+    f = {"competitor": competitor, "categories": cats, "kind": kind, "state": state, "q": q, "tier": tier, "scope": scope, "specs": specs}
     with db.session() as conn:
         lists = _lists(conn)
         cov = cmx.coverage(conn) if view == "coverage" else None
@@ -692,7 +693,7 @@ def competitor_matrix(request: Request, view: str = "matrix", competitor: str = 
         outscope = site_categories.out_of_scope(conn) if view == "sitecats" else None
         rows = []
         if view == "matrix":
-            rows = cmx.rows(conn, int(competitor) if competitor else None, category or None, kind or None, include_inactive=(state != "active"), q=q or None,
+            rows = cmx.rows(conn, int(competitor) if competitor else None, cats or None, kind or None, include_inactive=(state != "active"), q=q or None,
                             tier=tier or None, in_scope_only=(scope != "all"))
             if specs == "yes":
                 rows = [r for r in rows if r["spec_count"]]
@@ -872,9 +873,11 @@ def compare(request: Request, signal: Optional[int] = None, product: Optional[in
 def matrix(request: Request):
     f = _filters(request)
     where, params = ["p.is_active=1", "p.parent_url IS NULL"], []
-    if f["category"]:
-        where.append("p.category_slug=?")
-        params.append(f["category"])
+    cats = [x for x in request.query_params.getlist("category") if x]
+    f["categories"] = cats
+    if cats:
+        where.append(f"p.category_slug IN ({','.join('?' * len(cats))})")
+        params += cats
     if f["q"]:
         where.append("(p.name LIKE ? OR p.sku LIKE ? OR p.model_key LIKE ?)")
         params += [f"%{f['q']}%"] * 3

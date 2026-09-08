@@ -4,11 +4,11 @@
 <div class="topbar"><div><h1>Товарная матрица M22</h1><div class="sub">{{ prods|length }} товаров (m22.ru + radiosync.ru), контур: экскурсионная деятельность и B2B-решения.</div></div>
 <div class="actions-row"><a class="btn sec small" href="/export/matrix.xlsx">XLSX</a> <a class="btn sec small" href="/export/matrix.csv">CSV</a></div></div>
 <form class="filters" method="get">
-  <label>Категория<select name="category"><option value="">все</option>{% for c in categories %}<option value="{{ c.slug }}" {% if f.category == c.slug %}selected{% endif %}>{{ c.name_ru }}</option>{% endfor %}</select></label>
   <label>Сайт<select name="site"><option value="">оба</option><option value="m22.ru" {% if site == 'm22.ru' %}selected{% endif %}>m22.ru</option><option value="radiosync.ru" {% if site == 'radiosync.ru' %}selected{% endif %}>radiosync.ru</option></select></label>
   <label>Контур<select name="scope"><option value="1" {% if scope == '1' %}selected{% endif %}>только в контуре</option><option value="0" {% if scope == '0' %}selected{% endif %}>все собранные</option></select></label>
   <label>Поиск<input type="text" name="q" value="{{ f.q }}" placeholder="название, артикул, модель"></label>
-  <button class="small">Применить</button>
+  <button class="small">Применить</button> <a class="btn sec small" href="/matrix">Сбросить</a>
+  <div class="cat-pills"><span class="small muted">Категории (можно несколько):</span> {% for c in categories %}<label class="pill-check"><input type="checkbox" name="category" value="{{ c.slug }}" {% if c.slug in f.categories %}checked{% endif %}> {{ c.name_ru }}</label>{% endfor %}</div>
 </form>
 <div class="pill-list" style="margin-bottom:10px">{% for c in cat_stats %}<span class="pill">{{ CATEGORY_NAMES.get(c.category_slug, c.category_slug) }}: {{ c.n }} · {{ c.pmin | money }} – {{ c.pmax | money }}</span>{% endfor %}</div>
 <div class="small muted" style="margin-bottom:6px">Колонки характеристик — те же, что в матрице конкурентов (дальность, каналов, диапазон, экран, автономность, вес, двусторонняя связь, вместимость): по ним радар ищет аналоги. Они извлекаются из карточки товара на сайте (таблица характеристик и описание); «нет данных» — на сайте M22 параметр не указан, и его стоит добавить в карточку.</div>

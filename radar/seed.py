@@ -9,7 +9,7 @@ from .normalize import CATEGORY_NAMES
 CATEGORY_ORDER = [
     "radiogid", "audiogid", "sync_translation", "disposable_headphones", "reusable_headphones", "microphones_guide",
     "charging_cases", "kits_solutions", "rental", "industrial_tours", "museum_equipment", "conference_delegations",
-    "intercom_events", "voice_amplifier", "radio_walkie", "substitutes_apps", "adjacent_new",
+    "staff_call", "intercom_events", "voice_amplifier", "radio_walkie", "substitutes_apps", "adjacent_new",
 ]
 
 SOURCE_DESCRIPTIONS: list[dict] = [
