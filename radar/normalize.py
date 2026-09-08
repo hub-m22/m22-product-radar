@@ -209,7 +209,9 @@ MODEL_HINTS: list[tuple[re.Pattern, str | None, str]] = [(re.compile(p, re.I), c
     (r"cromi\s*\d{3}t", "sync_translation", "transmitter"),
     (r"cromi\s*(?:cab|sl\s*in|sm-|h-)", "sync_translation", "other"),
     (r"whisper\s*cube|multi-caisses|кабин[аы]\s+(?:для\s+)?(?:синхронн\w+\s+)?перевод|eurocab|\bec-\d|пульт\w*\s+(?:синхронн\w+\s+)?переводчик", "sync_translation", "other"),
-    (r"retekess\s*(?:tt|t1\d\d)", "radiogid", "system"),
+    (r"\bt1(?:14|17|28)\b", "staff_call", "system"),  # Retekess T114/T117/T128 — часы и кнопки вызова, не радиогиды
+    (r"bosch\s*(?:lbb|int-?tx|dcn|integrus)|\blbb\s?\d{4}|\bint-tx", "sync_translation", "other"),
+    (r"retekess\s*(?:tt|t13\d|t11[2569]|t133)", "radiogid", "system"),
     # Retekess: TD — системы вызова/пейджеры, TH — кнопки вызова, FT — FM-передатчики, TA — ушной мониторинг, SU — усилители: вне контура; TR — рации
     (r"\btd\s?\d{3}[a-z]?\b|\bth\s?\d{3}\b", "staff_call", "system"),
     (r"\bft\s?1\d\b|\bpr\s?13\b|\bsu\s?\d{3}\b|\bta\s?\d{3}\b|\bt-ac\d", None, "other"),
@@ -228,6 +230,8 @@ def model_hint(name: str) -> tuple[str | None, str] | None:
     low = clean_text(name).lower()
     if OUT_OF_SCOPE_ANY.search(low):
         return None, "other"
+    if re.search(r"вызова|вызов персонала|пейджер|часы официанта|часов официанта|nurse call|call button", low):
+        return "staff_call", "system"
     if re.search(r"комплект радиокласса|\bset-?\d+\s*\+\s*\d|радиоклас", low):
         return "radiogid", "system"
     for rx, cat, kind in MODEL_HINTS:

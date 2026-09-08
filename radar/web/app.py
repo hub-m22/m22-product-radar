@@ -19,6 +19,7 @@ from fastapi.templating import Jinja2Templates
 from .. import categories as catmod
 from .. import competitor_matrix as cmx
 from .. import site_categories
+from .. import image_match
 from .. import site_audit
 from .. import profile as profmod
 from .. import config, db, discovery, feedback, importers, matching, recommendations, reports, scheduler, seed, signals
@@ -35,7 +36,7 @@ STATUS_NAMES = {"new": "Новый", "in_research": "На исследовани
                 "research": "Исследуется", "approved": "Одобрено", "parked": "Отложено"}
 SEV_NAMES = {"high": "Высокая", "medium": "Средняя", "low": "Низкая"}
 FACT_NAMES = {"fact": "Подтверждённый факт", "inference": "Аналитический вывод", "hypothesis": "Гипотеза"}
-MATCH_NAMES = {"exact_model": "Точное совпадение модели", "direct_analog": "Прямой аналог", "functional": "Функционально похожий", "kit": "Комплект", "accessory": "Аксессуар",
+MATCH_NAMES = {"exact_model": "Точное совпадение модели", "same_photo": "Одинаковое фото", "direct_analog": "Прямой аналог", "functional": "Функционально похожий", "kit": "Комплект", "accessory": "Аксессуар",
                "substitute": "Заменитель", "adjacent": "Смежный товар", "new_category": "Новая категория"}
 SOURCE_STATUS = {"ok": "Работает", "error": "Ошибка", "needs_auth": "Требует подключения", "blocked": "Недоступен", "paid": "Платный", "manual_import": "Ручной импорт",
                  "disabled": "Отключён", "unknown": "Не проверялся"}
@@ -705,6 +706,8 @@ def competitor_matrix(request: Request, view: str = "matrix", competitor: str = 
                 rows = [r for r in rows if r["state"] == "new"]
             elif state == "nomatch":
                 rows = [r for r in rows if not r["m22_id"]]
+            elif state == "photo":
+                rows = [r for r in rows if r.get("photo_verdict")]
     return render(request, "competitor_matrix.html", view=view, f=f, rows=rows, cov=cov, ch=ch, summ=summ, sitecats=sitecats, outscope=outscope, cols=cmx.MATRIX_COLS, kinds=cmx.KIND_LABELS, **lists)
 
 
@@ -921,8 +924,9 @@ def product_detail(request: Request, pid: int):
         sigs = db.rows(conn, SIGNAL_SQL + " WHERE s.m22_product_id=? ORDER BY s.created_at DESC", (pid,))
         prices = [m["cp_price"] for m in all_matches if m["cp_price"] and m["confidence"] >= 0.6 and m["match_type"] in ("exact_model", "direct_analog", "kit")]
         median = sorted(prices)[len(prices) // 2] if prices else None
+        photos = image_match.photo_matches_for(conn, m22_product_id=pid)
     return render(request, "product_detail.html", p=p, hist=hist, matches=all_matches, twin=twin, variants=variants, sigs=sigs, median=median, n_comp=len(prices),
-                  specs=db.uj(p["specs_json"], {}) or {}, kit=db.uj(p["kit_json"], {}) or {}, images=db.uj(p["images_json"], []) or [])
+                  specs=db.uj(p["specs_json"], {}) or {}, kit=db.uj(p["kit_json"], {}) or {}, images=db.uj(p["images_json"], []) or [], photos=photos)
 
 
 # ---------------- Поисковый спрос ----------------

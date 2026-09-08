@@ -52,7 +52,9 @@ def rows(conn: sqlite3.Connection, competitor_id: int | None = None, category: s
                            (SELECT m.images_json FROM product_matches pm JOIN m22_products m ON m.id=pm.m22_product_id WHERE pm.competitor_product_id=cp.id AND pm.review_status!='rejected' ORDER BY pm.confidence DESC LIMIT 1) AS m22_images_json,
                            (SELECT m.url FROM product_matches pm JOIN m22_products m ON m.id=pm.m22_product_id WHERE pm.competitor_product_id=cp.id AND pm.review_status!='rejected' ORDER BY pm.confidence DESC LIMIT 1) AS m22_url,
                            (SELECT pm.match_type FROM product_matches pm WHERE pm.competitor_product_id=cp.id AND pm.review_status!='rejected' ORDER BY pm.confidence DESC LIMIT 1) AS match_type,
-                           (SELECT pm.confidence FROM product_matches pm WHERE pm.competitor_product_id=cp.id AND pm.review_status!='rejected' ORDER BY pm.confidence DESC LIMIT 1) AS match_conf
+                           (SELECT pm.confidence FROM product_matches pm WHERE pm.competitor_product_id=cp.id AND pm.review_status!='rejected' ORDER BY pm.confidence DESC LIMIT 1) AS match_conf,
+                           (SELECT im.verdict FROM image_matches im WHERE im.competitor_product_id=cp.id ORDER BY CASE im.verdict WHEN 'same' THEN 0 ELSE 1 END, im.phash_dist LIMIT 1) AS photo_verdict,
+                           (SELECT m.name FROM image_matches im JOIN m22_products m ON m.id=im.m22_product_id WHERE im.competitor_product_id=cp.id ORDER BY CASE im.verdict WHEN 'same' THEN 0 ELSE 1 END, im.phash_dist LIMIT 1) AS photo_m22_name
                            FROM competitor_products cp JOIN competitors c ON c.id=cp.competitor_id WHERE {' AND '.join(where)}
                            ORDER BY c.tier, seller, cp.category_slug, cp.kind, cp.price""", params)
     for r in out:

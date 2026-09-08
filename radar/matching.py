@@ -195,6 +195,10 @@ def run_matching(conn: sqlite3.Connection) -> dict:
     for cp in cps:
         cp["norm"] = specmod.normalize(cp["name"], cp["description"], cp["specs_json"], cp["price"], cp["capacity"])
     created = updated = 0
+    # устаревшие автоматические сопоставления: категория товара M22 и конкурента разошлась после переклассификации
+    conn.execute("""DELETE FROM product_matches WHERE review_status='auto' AND method='rule' AND m22_product_id IS NOT NULL AND id IN (
+                        SELECT pm.id FROM product_matches pm JOIN m22_products m ON m.id=pm.m22_product_id JOIN competitor_products cp ON cp.id=pm.competitor_product_id
+                        WHERE COALESCE(m.category_slug,'') != COALESCE(cp.category_slug,'') OR cp.is_active=0 OR m.is_active=0 OR m.in_scope=0)""")
     for cp in cps:
         matches = match_one(cp, m22_list, m22_categories)
         for mt in matches:
@@ -210,7 +214,13 @@ def run_matching(conn: sqlite3.Connection) -> dict:
                              (mt["m22_product_id"], cp["id"], mt["match_type"], mt["confidence"], "rule", db.j(mt["reasons"]), needs_review))
                 created += 1
     conn.commit()
-    return {"competitor_products": len(cps), "created": created, "updated": updated}
+    # совпадения по фото (если хеши уже посчитаны): одинаковое фото усиливает/создаёт сопоставление, похожее — только пометка
+    try:
+        from . import image_match
+        photo = image_match.apply_to_matches(conn)
+    except Exception as exc:  # noqa: BLE001
+        photo = {"error": str(exc)}
+    return {"competitor_products": len(cps), "created": created, "updated": updated, "photo": photo}
 
 
 def comparables_for(conn: sqlite3.Connection, m22_product_id: int, min_conf: float = 0.6) -> list[dict]:
@@ -220,7 +230,7 @@ def comparables_for(conn: sqlite3.Connection, m22_product_id: int, min_conf: flo
                c.name AS competitor_name, c.id AS competitor_id
         FROM product_matches pm JOIN competitor_products cp ON cp.id=pm.competitor_product_id JOIN competitors c ON c.id=cp.competitor_id
         WHERE pm.m22_product_id=? AND pm.review_status!='rejected' AND pm.confidence>=? AND cp.price IS NOT NULL AND cp.is_active=1
-          AND cp.currency='RUB' AND pm.match_type IN ('exact_model','direct_analog') AND COALESCE(cp.category_slug,'')!='rental' AND cp.price>=10
+          AND cp.currency='RUB' AND pm.match_type IN ('exact_model','same_photo','direct_analog') AND COALESCE(cp.category_slug,'')!='rental' AND cp.price>=10
         ORDER BY pm.confidence DESC""", (m22_product_id, min_conf))
     for r in rows:
         norm = specmod.normalize(r["name"], r.pop("description"), r.pop("specs_json"), r["price"], r["capacity"])

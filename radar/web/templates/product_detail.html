@@ -18,6 +18,14 @@
   <div>
     {% if twin %}<div class="card"><h3>Тот же товар на другом сайте</h3><table><thead><tr><th>Сайт</th><th>Название</th><th class="num">Цена</th></tr></thead><tbody>{% for t in twin %}<tr><td>{{ t.site }}</td><td><a href="/matrix/{{ t.id }}">{{ t.name[:60] }}</a></td><td class="num" {% if t.price != p.price %}style="color:var(--high);font-weight:600"{% endif %}>{{ t.price | money }}</td></tr>{% endfor %}</tbody></table></div>{% endif %}
     {% if variants %}<div class="card" style="margin-top:14px"><h3>Варианты (SKU)</h3><table><tbody>{% for v in variants %}<tr><td>{{ v.name[:70] }}</td><td>{{ v.sku }}</td><td class="num">{{ v.price | money }}</td></tr>{% endfor %}</tbody></table></div>{% endif %}
+    {% if photos %}<div class="card" style="margin-top:14px"><h3>Совпадения по фотографии ({{ photos|length }})</h3>
+    <div class="small muted" style="margin-bottom:6px">Сравнение перцептивных хешей фото. «Фото совпадает» — почти наверняка то же изделие (отличие до 6 бит из 64); «похоже» — только подсказка, сопоставление по ней не создаётся.</div>
+    <table><thead><tr><th></th><th>Продавец</th><th>Товар конкурента</th><th class="num">Цена</th><th>Вердикт</th><th class="num" title="отличие хешей, бит из 64">Отличие</th></tr></thead><tbody>
+    {% for ph in photos %}<tr><td>{% if ph.comp_image %}<img src="{{ ph.comp_image }}" alt="" loading="lazy" referrerpolicy="no-referrer" class="thumb" onerror="this.style.display='none'">{% endif %}</td>
+      <td class="small"><a href="/competitors/{{ ph.competitor_id }}">{{ ph.seller[:30] }}</a></td><td><a href="{{ ph.comp_url }}" target="_blank" rel="noopener">{{ ph.comp_name[:70] }}</a></td>
+      <td class="num">{% if ph.comp_price %}{{ ph.comp_price | money }}{% else %}<span class="muted">цена по запросу</span>{% endif %}</td>
+      <td>{% if ph.verdict == 'same' %}<span class="badge st-new">фото совпадает</span>{% else %}<span class="badge st">похоже, возможно то же</span>{% endif %}</td><td class="num small">{{ ph.phash_dist }} / {{ ph.dhash_dist }}</td></tr>{% endfor %}
+    </tbody></table></div>{% endif %}
     <div class="card" style="margin-top:14px"><h3>Предложения конкурентов ({{ matches|length }})</h3>
       <table><thead><tr><th>Конкурент</th><th>Товар</th><th class="num">Цена</th><th>Тип</th><th>Уверенность</th></tr></thead><tbody>
       {% for c in matches %}<tr {% if c.review_status == 'rejected' %}style="opacity:.5"{% endif %}><td><a href="/competitors/{{ c.competitor_id if c.competitor_id else '' }}">{{ c.competitor_name[:28] }}</a></td><td><a href="{{ c.cp_url }}" target="_blank" rel="noopener">{{ c.cp_name[:55] }}</a>{% if c.cp_capacity %} <span class="small muted">({{ c.cp_capacity }})</span>{% endif %}</td><td class="num">{{ c.cp_price | money }}</td><td class="small">{{ MATCH_NAMES.get(c.match_type, c.match_type) }}</td><td>{{ m.conf(c.confidence) }}</td></tr>{% else %}<tr><td colspan="5" class="muted">Сопоставлений нет.</td></tr>{% endfor %}
