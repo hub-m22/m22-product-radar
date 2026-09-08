@@ -19,7 +19,7 @@ from .normalize import CATEGORY_NAMES, classify_category, clean_text
 
 log = logging.getLogger(__name__)
 
-SKIP = re.compile(r"контакт|о компании|о нас|доставк|оплат|гарант|отзыв|новост|блог|стать|вакан|портфолио|проект|акци|услуг|партн|faq|вопрос|главная|корзин|вход|войти|личный|кабинет|сравнен|избранн|поиск|политик|карта сайта|дилер|сотрудни|about|contact|delivery|payment|news|blog|cart|login|search|телефон|заказ|скидк|бренд|производител|реквизит|города|москва|санкт|казань|подробнее|инфо$|видео|опыт|медиацентр|поддержк|пользовател|кто уже|публикац|english|version|сферы применения|посещение завода|туризм|школа|ресторан|отель|медицина|склад|розничн|спа-центр|подготовка|просвещение|expand_more|chevron_right|^\d|₽|лет$|раз$|решения для|баров|переговорн|учебных|учережден|гостиниц|музеев|театров|обмен|возврат|тендер|бизнесу|соглашение|оферт|автотовар", re.I)
+SKIP = re.compile(r"контакт|о компании|о нас|доставк|оплат|гарант|отзыв|новост|блог|стать|вакан|портфолио|проект|акци|услуг|партн|faq|вопрос|главная|корзин|вход|войти|личный|кабинет|сравнен|избранн|поиск|политик|карта сайта|дилер|сотрудни|about|contact|delivery|payment|news|blog|cart|login|search|телефон|заказ|скидк|бренд|производител|реквизит|города|москва|санкт|казань|подробнее|инфо$|видео|опыт|медиацентр|поддержк|пользовател|кто уже|публикац|english|version|сферы применения|посещение завода|туризм|школа|ресторан|отель|медицина|склад|розничн|спа-центр|подготовка|просвещение|expand_more|chevron_right|^\d|₽|лет$|раз$|баров|переговорн|учебных|учережден|гостиниц|музеев|театров|обмен|возврат|тендер|бизнесу|соглашение|оферт|автотовар|согласие|перейти|^купить$|^продажа|производство|аудиозапис|переводы на|под ключ|аутсорсинг|^с |^по ", re.I)
 MODEL_LIKE = re.compile(r"\b[A-Za-z]{1,6}[- ]?\d{2,4}[A-Za-z]?\b|\bmk\s?ii\b|арт\.", re.I)
 ICON_WORDS = re.compile(r"\b(expand_more|chevron_right|keyboard_arrow_down|menu)\b", re.I)
 BRANDS = ("reinvox", "spbaudio", "beyerdynamic", "sennheiser", "bosch", "soolai", "vesco", "cromi", "retekess", "okayo", "touraudio", "zoweetek", "rolton", "rоlton", "shidu", "radioguide", "crestron")
@@ -39,13 +39,71 @@ def _is_category_name(t: str) -> bool:
     low = t.lower()
     if any(low.startswith(b) or low == b for b in BRANDS):
         return False  # пункт меню = бренд/модель, а не категория
-    if not re.search(r"[а-яё]", low) and len(low.split()) <= 2:
-        return False  # латиница в одно-два слова на русском сайте — почти всегда бренд (Barco, BenQ, Life Size)
+    if not re.search(r"[а-яё]", low) and not re.search(r"gps|guide|tour", low):
+        return False  # латиница на русском сайте — бренд (Barco, BenQ) или англоязычная страница
     if re.match(r"^(каталог|весь каталог|все товары|товары|продукция|оборудование|компания|магазин|обзоры|инфо|tproduct|другие|прочее)$", low):
         return False
-    if re.search(r"\s[–—-]\s|выгодно|удобно|лучшее|незаменим|максимум|техника будущего|для экскурсионных целей|для музеев и|на производстве|в крыму|в мурманске|международного", low):
-        return False  # заголовки статей из боковых меню
+    if re.search(r"выгодно|удобно|лучшее|незаменим|максимум|техника будущего|для экскурсионных целей|для музеев и|на производстве|в крыму|в мурманске|международного|преимуществ|стоимость|организация|конференция с|"
+                 r"приемник синхронного|синхронный перевод речи|мобильное оборудование|рекомендуем|^для |что такое|как выбрать|max-?\d|iso\s?\d", low):
+        return False  # заголовки статей и подпункты из боковых меню, отдельные модели
     return True
+
+# Разделы сайтов M22 → наши категории (вручную, точнее автоматики; несколько категорий через запятую)
+M22_OVERRIDES = {
+    "радиогиды и аудиогиды для экскурсий": "radiogid,audiogid",
+    "готовые решения для экскурсий": "kits_solutions",
+    "одноразовые наушники": "disposable_headphones",
+    "многоразовые наушники": "reusable_headphones",
+    "комплектующие для гидов": "reusable_headphones,microphones_guide,charging_cases",
+    "синхронный перевод": "sync_translation",
+    "интерком - системы": "intercom_events",
+    "интерком-системы": "intercom_events",
+    "гарнитуры": "reusable_headphones,microphones_guide",
+    "беспроводные наушники": "reusable_headphones",
+    "беспроводные петличные микрофоны": "microphones_guide",
+    "микрофоны конденсаторные": "microphones_guide",
+    "рации и аксессуары": "radio_walkie",
+    "рации": "radio_walkie",
+    "гарнитуры для раций": "radio_walkie",
+    "зарядные устройства": "charging_cases",
+    "зарядные станции": "charging_cases",
+    "элементы питания": "charging_cases",
+    "наушники и аксессуары": "reusable_headphones",
+    "аксессуары": "reusable_headphones,charging_cases",
+    "радиогиды": "radiogid",
+    "аренда": "rental",
+}
+
+
+# Разделы конкурентов, которые автоматика по словам не распознаёт
+COMPETITOR_OVERRIDES = {
+    "приложения": "substitutes_apps",
+    "gps-гид": "audiogid",
+    "gps гид": "audiogid",
+    "трансляция": "adjacent_new",
+    "доступная среда": "adjacent_new",
+    "расходные материалы": "reusable_headphones,microphones_guide,disposable_headphones",
+    "аксессуары и наушники": "reusable_headphones,charging_cases",
+    "аксессуары для радиооборудования": "reusable_headphones,charging_cases",
+    "аксессуары": "reusable_headphones,charging_cases",
+    "комплексные решения": "kits_solutions",
+}
+
+
+def our_slugs_for(site: str, competitor_id: int | None, name: str) -> str | None:
+    low_any = name.lower().strip()
+    if competitor_id is not None:
+        for k, v in COMPETITOR_OVERRIDES.items():
+            if low_any == k or low_any.startswith(k + " "):
+                return v
+    if competitor_id is None:
+        low = name.lower().strip()
+        if low in M22_OVERRIDES:
+            return M22_OVERRIDES[low]
+        for k, v in M22_OVERRIDES.items():
+            if low.startswith(k) and len(k) >= 6:
+                return v
+    return classify_category(name)
 
 
 def fetch_menu(site_url: str) -> list[dict]:
@@ -179,7 +237,7 @@ def scan_site(conn: sqlite3.Connection, site: str, competitor_id: int | None, si
     for m in menu:
         conn.execute("""INSERT OR REPLACE INTO site_categories(site, competitor_id, name, url, parent, level, our_slug, product_count, source, checked_at)
                         VALUES(?,?,?,?,?,?,?,?,?,datetime('now'))""",
-                     (site, competitor_id, m["name"], m.get("url"), m.get("parent"), m.get("level", 1), classify_category(m["name"]),
+                     (site, competitor_id, m["name"], m.get("url"), m.get("parent"), m.get("level", 1), our_slugs_for(site, competitor_id, m["name"]),
                       _count_products(conn, competitor_id, site, m), "breadcrumbs" if m.get("from_crumbs") else "menu"))
     conn.commit()
     return {"site": site, "categories": len(menu)}
@@ -210,6 +268,8 @@ def comparison(conn: sqlite3.Connection) -> dict:
             r["approx_count"] = approx_cache[key]
         s["cats"].append(r)
         s["top"] += 1 if r["level"] == 1 else 0
-    slugs = [s for s in CATEGORY_NAMES if any(r["our_slug"] == s for r in rows)] + ["_none"]
-    matrix = {slug: {site: [r["name"] for r in s["cats"] if (r["our_slug"] or "_none") == slug] for site, s in sites.items()} for slug in slugs}
+    def slugs_of(r) -> list[str]:
+        return [x.strip() for x in (r["our_slug"] or "_none").split(",") if x.strip()]
+    slugs = [s for s in CATEGORY_NAMES if any(s in slugs_of(r) for r in rows)] + ["_none"]
+    matrix = {slug: {site: [r["name"] for r in s["cats"] if slug in slugs_of(r)] for site, s in sites.items()} for slug in slugs}
     return {"sites": list(sites.values()), "slugs": slugs, "matrix": matrix, "names": {**CATEGORY_NAMES, "_none": "Вне нашего контура / не сопоставлено"}}
