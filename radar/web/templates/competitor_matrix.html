@@ -33,7 +33,7 @@
 <div class="small muted" style="margin-top:6px">«С характеристиками» — есть хотя бы одно из полей: дальность, каналов, диапазон, автономность, вес. Красным — меньше 30 % товаров с характеристиками: продавец не публикует параметры на карточках или они в картинках/PDF.</div>
 
 {% elif view == 'sitecats' %}
-<div class="note">Категории <b>так, как они названы на самих сайтах</b>: пункты меню каталога и хлебные крошки на страницах товаров. Число в скобках — сколько собранных товаров отнесено к разделу (0 — раздел есть в меню, но товары в него не попали или не собраны). Первыми — сайты M22.
+<div class="note">Категории <b>так, как они названы на самих сайтах</b>: пункты меню каталога и хлебные крошки на страницах товаров. Число в скобках — сколько собранных товаров лежит в этом разделе сайта; «≈» — оценка по нашей классификации, когда сайт не показывает принадлежность товара к разделу; 0 — раздел есть в меню, но товаров в нём мы не нашли. У сайтов‑лендингов (radioguide.shop, disaudio.ru) меню как такового нет. Первыми — сайты M22.
   <form method="post" action="/competitor-matrix/sitecats/rescan" style="display:inline"><button class="small sec" title="заново прочитать меню сайтов и хлебные крошки (2–5 минут)">Обновить с сайтов</button></form></div>
 <div class="card compact tbl-wrap"><table>
 <thead><tr><th>Ур.</th><th style="min-width:200px">Сайт</th><th class="num" title="разделов верхнего уровня">Разделов</th><th class="num" title="всего разделов с подразделами">Всего</th><th>Категории, как названы на сайте</th></tr></thead>
@@ -41,7 +41,7 @@
   <td><span class="badge {{ {'A':'sev-high','B':'sev-medium','C':'st','M22':'st-new'}.get(s.tier, 'st') }}">{{ s.tier }}</span></td>
   <td>{% if s.competitor_id %}<a href="/competitors/{{ s.competitor_id }}">{{ s.site }}</a><div class="small muted">{{ s.seller[:40] }}</div>{% else %}<b>{{ s.site }}</b><div class="small muted">M22</div>{% endif %}</td>
   <td class="num">{{ s.top }}</td><td class="num">{{ s.cats|length }}</td>
-  <td class="small">{% for c in s.cats %}<span class="attr" title="{{ 'подраздел «' ~ c.parent ~ '» · ' if c.parent else '' }}похоже на: {{ sitecats.names.get(c.our_slug, 'вне контура') }}{% if c.source == 'breadcrumbs' %} · из хлебных крошек{% endif %}" {% if c.level > 1 %}style="opacity:.75"{% endif %}>{% if c.url %}<a href="{{ c.url }}" target="_blank" rel="noopener">{{ c.name }}</a>{% else %}{{ c.name }}{% endif %} <span class="muted">({{ c.product_count or 0 }})</span></span> {% endfor %}</td>
+  <td class="small">{% for c in s.cats %}<span class="attr" title="{{ 'подраздел «' ~ c.parent ~ '» · ' if c.parent else '' }}похоже на: {{ sitecats.names.get(c.our_slug, 'вне контура') }}{% if c.source == 'breadcrumbs' %} · из хлебных крошек{% endif %}" {% if c.level > 1 %}style="opacity:.75"{% endif %}>{% if c.url %}<a href="{{ c.url }}" target="_blank" rel="noopener">{{ c.name }}</a>{% else %}{{ c.name }}{% endif %} <span class="muted">{% if c.product_count %}({{ c.product_count }}){% elif c.approx_count %}(≈{{ c.approx_count }}){% else %}(0){% endif %}</span></span> {% endfor %}</td>
 </tr>{% else %}<tr><td colspan="5" class="muted">Категории с сайтов ещё не собраны — нажмите «Обновить с сайтов».</td></tr>{% endfor %}</tbody></table></div>
 
 <h3 style="margin-top:18px">Сравнение: у кого какая категория и как она называется</h3>

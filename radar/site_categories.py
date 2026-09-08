@@ -198,8 +198,16 @@ def comparison(conn: sqlite3.Connection) -> dict:
     rows = db.rows(conn, """SELECT sc.*, COALESCE(c.group_name, c.name) AS seller, c.tier FROM site_categories sc LEFT JOIN competitors c ON c.id=sc.competitor_id
                             ORDER BY CASE WHEN sc.competitor_id IS NULL THEN 0 ELSE 1 END, c.tier, sc.site, sc.level, sc.id""")
     sites: dict[str, dict] = {}
+    approx_cache: dict[tuple, int] = {}
     for r in rows:
         s = sites.setdefault(r["site"], {"site": r["site"], "competitor_id": r["competitor_id"], "seller": r["seller"] or "M22", "tier": r["tier"] or "M22", "cats": [], "top": 0})
+        r = dict(r)
+        if not r["product_count"] and r["our_slug"] and r["competitor_id"]:
+            # адреса товаров не вложены в адрес раздела (Tilda, Magento) — оцениваем по нашей классификации собранных товаров
+            key = (r["competitor_id"], r["our_slug"])
+            if key not in approx_cache:
+                approx_cache[key] = db.row(conn, "SELECT COUNT(*) n FROM competitor_products WHERE competitor_id=? AND is_active=1 AND category_slug=?", key)["n"]
+            r["approx_count"] = approx_cache[key]
         s["cats"].append(r)
         s["top"] += 1 if r["level"] == 1 else 0
     slugs = [s for s in CATEGORY_NAMES if any(r["our_slug"] == s for r in rows)] + ["_none"]
