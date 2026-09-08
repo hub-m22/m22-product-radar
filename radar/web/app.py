@@ -230,50 +230,90 @@ def _lists(conn) -> dict:
 
 # ---------------- Главная ----------------
 @app.get("/", response_class=HTMLResponse)
-def index(request: Request, category: str = ""):
-    cat_where = " AND s.category_slug=?" if category else ""
-    cat_params: list = [category] if category else []
+def index(request: Request):
+    """Главная — только сводка; подробности в разделах."""
     with db.session() as conn:
-        sev = "CASE severity WHEN 'high' THEN 0 WHEN 'medium' THEN 1 ELSE 2 END"
-        top = db.rows(conn, SIGNAL_SQL + f" WHERE s.status IN ('new','in_research') AND s.type!='source_error'{cat_where} ORDER BY {sev.replace('severity', 's.severity')}, s.confidence DESC, s.created_at DESC LIMIT 8", cat_params)
-        recs = db.rows(conn, "SELECT * FROM recommendations WHERE status IN ('new','accepted','in_progress')" + (" AND category_slug=?" if category else "") + " ORDER BY priority, confidence DESC LIMIT 6", cat_params)
-        cat_overview = catmod.overview(conn)
-        cat_list = db.rows(conn, "SELECT slug, name_ru FROM categories ORDER BY sort_order")
-        d7, d30 = (date.today() - timedelta(days=7)).isoformat(), (date.today() - timedelta(days=30)).isoformat()
+        baseline = (db.get_setting(conn, "baseline_date") or "")[:10]
+        d30 = (date.today() - timedelta(days=30)).isoformat()
+        # действия: по одному на товар/тему, по приоритету
+        recs_all = db.rows(conn, "SELECT * FROM recommendations WHERE status IN ('new','accepted','in_progress') ORDER BY priority, confidence DESC")
+        seen, recs = set(), []
+        for r in recs_all:
+            key = r["m22_product_id"] or r["dedupe_key"]
+            if key in seen:
+                continue
+            seen.add(key)
+            recs.append(r)
+            if len(recs) >= 6:
+                break
+        price_signals = db.rows(conn, SIGNAL_SQL + " WHERE s.type IN ('m22_price_above_market','m22_price_below_market') AND s.status='new' ORDER BY s.severity='high' DESC, s.confidence DESC LIMIT 6")
+        multi = db.rows(conn, SIGNAL_SQL + " WHERE s.type='multi_competitor_product' AND s.status IN ('new','in_research') ORDER BY s.severity='high' DESC, s.confidence DESC LIMIT 5")
+        new_comp = db.rows(conn, """SELECT cp.id, cp.name, cp.price, cp.url, COALESCE(c.group_name, c.name) AS seller, c.id AS competitor_id FROM competitor_products cp JOIN competitors c ON c.id=cp.competitor_id
+                                    WHERE cp.is_active=1 AND cp.category_slug IS NOT NULL AND substr(cp.first_seen_at,1,10) > ? ORDER BY cp.first_seen_at DESC LIMIT 6""", (baseline,))
+        cov = cmx.coverage(conn)
+        gap_cats = cov["gaps"][:6]
+        hyps = db.rows(conn, "SELECT * FROM hypotheses WHERE decision_status IN ('new','research') ORDER BY created_at DESC LIMIT 4")
+        bad_sources = db.rows(conn, "SELECT * FROM sources WHERE status='error' OR consecutive_failures>0 ORDER BY consecutive_failures DESC LIMIT 6")
+        bad_pages = db.rows(conn, "SELECT mp.*, c.name AS cname FROM monitored_pages mp JOIN competitors c ON c.id=mp.competitor_id WHERE mp.fail_count>=3 AND mp.is_active=1 ORDER BY mp.fail_count DESC LIMIT 6")
+        runs = db.rows(conn, "SELECT * FROM source_runs ORDER BY id DESC LIMIT 5")
         counts = {
-            "signals_7": db.row(conn, "SELECT COUNT(*) n FROM signals WHERE substr(created_at,1,10)>=? AND type!='source_error'", (d7,))["n"],
-            "signals_30": db.row(conn, "SELECT COUNT(*) n FROM signals WHERE substr(created_at,1,10)>=? AND type!='source_error'", (d30,))["n"],
-            "price_7": db.row(conn, "SELECT COUNT(*) n FROM signals WHERE type='competitor_price_change' AND substr(created_at,1,10)>=?", (d7,))["n"],
-            "new_products_7": db.row(conn, "SELECT COUNT(*) n FROM signals WHERE type IN ('product_appeared','new_kit_solution') AND substr(created_at,1,10)>=?", (d7,))["n"],
-            "new_products_30": db.row(conn, "SELECT COUNT(*) n FROM signals WHERE type IN ('product_appeared','new_kit_solution') AND substr(created_at,1,10)>=?", (d30,))["n"],
-            "gaps": db.row(conn, "SELECT COUNT(*) n FROM signals WHERE type IN ('new_category','multi_competitor_product','category_growth_gap') AND status!='rejected' AND (title LIKE '%нет у M22%' OR title LIKE '%у M22 её нет%' OR title LIKE '%отсутствует%')")["n"],
-            "hyps": db.row(conn, "SELECT COUNT(*) n FROM hypotheses WHERE decision_status IN ('new','research')")["n"],
-            "recs": db.row(conn, "SELECT COUNT(*) n FROM recommendations WHERE status='new'")["n"],
-            "m22": db.row(conn, "SELECT COUNT(*) n FROM m22_products WHERE is_active=1 AND in_scope=1")["n"],
+            "m22": db.row(conn, "SELECT COUNT(*) n FROM m22_products WHERE is_active=1 AND in_scope=1 AND parent_url IS NULL")["n"],
             "comp": db.row(conn, "SELECT COUNT(*) n FROM competitors WHERE is_active=1")["n"],
-            "cp": db.row(conn, "SELECT COUNT(*) n FROM competitor_products WHERE is_active=1 AND price IS NOT NULL")["n"],
+            "cp": db.row(conn, "SELECT COUNT(*) n FROM competitor_products WHERE is_active=1 AND price IS NOT NULL AND category_slug IS NOT NULL")["n"],
+            "matched": db.row(conn, "SELECT COUNT(DISTINCT pm.m22_product_id) n FROM product_matches pm JOIN competitor_products cp ON cp.id=pm.competitor_product_id WHERE cp.is_active=1 AND pm.review_status!='rejected' AND pm.confidence>=0.6")["n"],
+            "same_photo": db.row(conn, "SELECT COUNT(*) n FROM image_matches WHERE verdict='same'")["n"],
+            "review": db.row(conn, "SELECT COUNT(*) n FROM product_matches pm JOIN competitor_products cp ON cp.id=pm.competitor_product_id WHERE cp.is_active=1 AND pm.needs_review=1 AND pm.review_status='auto'")["n"],
+            "errors": db.row(conn, "SELECT (SELECT COUNT(*) FROM sources WHERE status='error' OR consecutive_failures>0) + (SELECT COUNT(*) FROM monitored_pages WHERE fail_count>=3 AND is_active=1) n")["n"],
+            "recs": len(recs_all),
+            "price_signals": db.row(conn, "SELECT COUNT(*) n FROM signals WHERE type IN ('m22_price_above_market','m22_price_below_market') AND status='new'")["n"],
+            "new_products": db.row(conn, "SELECT COUNT(*) n FROM competitor_products WHERE is_active=1 AND category_slug IS NOT NULL AND substr(first_seen_at,1,10) > ?", (baseline,))["n"],
+            "gone_products": db.row(conn, "SELECT COUNT(*) n FROM signals WHERE type='product_disappeared' AND status='new'")["n"],
+            "price_moves": db.row(conn, "SELECT COUNT(*) n FROM signals WHERE type='competitor_price_change' AND substr(created_at,1,10)>=?", (d30,))["n"],
+            "gap_cats": len(cov["gaps"]),
+            "outscope": db.row(conn, "SELECT COUNT(*) n FROM site_categories WHERE competitor_id IS NOT NULL AND our_slug IS NULL")["n"],
+            "hyps": db.row(conn, "SELECT COUNT(*) n FROM hypotheses WHERE decision_status IN ('new','research')")["n"],
         }
-        cats = db.rows(conn, """SELECT s.category_slug, SUM(CASE WHEN s.type IN ('demand_change','category_growth_existing','category_growth_gap') AND s.new_value LIKE '+%' THEN 1 ELSE 0 END) AS up,
-                                SUM(CASE WHEN s.type IN ('demand_change','category_growth_existing') AND s.new_value LIKE '-%' THEN 1 ELSE 0 END) AS down, COUNT(*) AS n
-                                FROM signals s WHERE s.category_slug IS NOT NULL AND s.status!='rejected' GROUP BY s.category_slug ORDER BY n DESC LIMIT 12""")
-        cat_demand = db.rows(conn, """SELECT q.category_slug, COUNT(DISTINCT q.id) AS queries, COUNT(d.id) AS obs FROM search_queries q LEFT JOIN demand_observations d ON d.query_id=q.id AND d.source='google_trends'
-                                      WHERE q.category_slug IS NOT NULL GROUP BY q.category_slug""")
-        price_signals = db.rows(conn, SIGNAL_SQL + " WHERE s.type IN ('m22_price_above_market','m22_price_below_market','competitor_price_change','cross_site_discrepancy') AND s.status!='rejected' ORDER BY s.severity='high' DESC, s.confidence DESC LIMIT 6")
-        new_products = db.rows(conn, SIGNAL_SQL + " WHERE s.type IN ('product_appeared','new_kit_solution','multi_competitor_product') AND s.status!='rejected' ORDER BY s.created_at DESC LIMIT 6")
-        gaps = db.rows(conn, SIGNAL_SQL + " WHERE s.type IN ('new_category','category_growth_gap') AND s.status!='rejected' ORDER BY s.severity='high' DESC LIMIT 6")
-        hyps = db.rows(conn, "SELECT * FROM hypotheses WHERE decision_status IN ('new','research') ORDER BY created_at DESC LIMIT 5")
-        bad_sources = db.rows(conn, "SELECT * FROM sources WHERE status='error' OR consecutive_failures>0 ORDER BY consecutive_failures DESC")
-        bad_pages = db.rows(conn, "SELECT mp.*, c.name AS cname FROM monitored_pages mp JOIN competitors c ON c.id=mp.competitor_id WHERE mp.fail_count>=1 AND mp.is_active=1 ORDER BY mp.fail_count DESC LIMIT 8")
-        runs = db.rows(conn, "SELECT * FROM source_runs ORDER BY id DESC LIMIT 6")
+        cat_overview = catmod.overview(conn)
         limits = reports._data_limits(conn)
-        top_rec = None
-        if top:
-            for r in db.rows(conn, "SELECT * FROM recommendations WHERE status!='rejected' ORDER BY priority"):
-                if top[0]["id"] in (db.uj(r["signal_ids_json"], []) or []):
-                    top_rec = r
-                    break
-    return render(request, "index.html", top=top, recs=recs, top_rec=top_rec, category=category, cat_overview=cat_overview, cat_list=cat_list, counts=counts, cats=cats, cat_demand={c["category_slug"]: c for c in cat_demand}, price_signals=price_signals,
-                  new_products=new_products, gaps=gaps, hyps=hyps, bad_sources=bad_sources, bad_pages=bad_pages, runs=runs, limits=limits)
+        last_update = db.row(conn, "SELECT MAX(finished_at) t FROM source_runs")["t"]
+    return render(request, "index.html", recs=recs, price_signals=price_signals, multi=multi, new_comp=new_comp, gap_cats=gap_cats, hyps=hyps, bad_sources=bad_sources,
+                  bad_pages=bad_pages, runs=runs, counts=counts, cat_overview=cat_overview, limits=limits, last_update=last_update, baseline=baseline)
+
+
+@app.get("/logic", response_class=HTMLResponse)
+def logic_page(request: Request):
+    """Описание логики радара из docs/ЛОГИКА_РАДАРА.md (заголовки, абзацы, списки)."""
+    import html as _html
+    import re as _re
+
+    path = Path(__file__).resolve().parent.parent.parent / "docs" / "ЛОГИКА_РАДАРА.md"
+    out, in_list = [], False
+    try:
+        for line in path.read_text(encoding="utf-8").splitlines():
+            t = _html.escape(line.rstrip())
+            t = _re.sub(r"\*\*(.+?)\*\*", r"<b>\1</b>", t)
+            if t.startswith("# "):
+                out.append(f"<h1>{t[2:]}</h1>")
+            elif t.startswith("## "):
+                if in_list:
+                    out.append("</ul>")
+                    in_list = False
+                out.append(f"<h2>{t[3:]}</h2>")
+            elif _re.match(r"^(- |\d+\. )", t):
+                if not in_list:
+                    out.append("<ul>")
+                    in_list = True
+                out.append(f"<li>{_re.sub(r'^(- |\d+\. )', '', t)}</li>")
+            elif t.strip():
+                if in_list:
+                    out.append("</ul>")
+                    in_list = False
+                out.append(f"<p>{t}</p>")
+        if in_list:
+            out.append("</ul>")
+    except OSError:
+        out = ["<p>Файл описания не найден.</p>"]
+    return render(request, "logic.html", body="\n".join(out))
 
 
 # ---------------- Рекомендации ----------------

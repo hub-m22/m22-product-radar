@@ -39,8 +39,17 @@ SIGNAL_TYPES = {
 
 
 def _emit(conn: sqlite3.Connection, **s) -> bool:
-    """Создаёт сигнал, если с таким dedupe_key его ещё нет. Возвращает True при создании."""
-    if db.row(conn, "SELECT id FROM signals WHERE dedupe_key=?", (s["dedupe_key"],)):
+    """Создаёт сигнал, если с таким dedupe_key его ещё нет. Если есть и он ещё не разобран (статус new) —
+    обновляет факты (цены, медиану, уверенность), не плодя дублей. Возвращает True только при создании."""
+    ex = db.row(conn, "SELECT id, status FROM signals WHERE dedupe_key=?", (s["dedupe_key"],))
+    if ex:
+        if ex["status"] == "new":
+            ev = s.get("evidence_json")
+            conn.execute("""UPDATE signals SET title=?, what_happened=?, old_value=?, new_value=?, observed_at=?, evidence_json=?, confidence=?, severity=?,
+                            why_matters=?, recommended_action=?, source_url=COALESCE(?, source_url) WHERE id=?""",
+                         (s.get("title"), s.get("what_happened"), s.get("old_value"), s.get("new_value"), s.get("observed_at") or db.now_iso(),
+                          db.j(ev) if isinstance(ev, (dict, list)) else ev, s.get("confidence"), s.get("severity"), s.get("why_matters"), s.get("recommended_action"),
+                          s.get("source_url"), ex["id"]))
         return False
     cols = ["type", "severity", "fact_kind", "category_slug", "m22_product_id", "competitor_id", "competitor_product_id", "query_id", "title",
             "what_happened", "old_value", "new_value", "observed_at", "period", "source", "source_url", "evidence_json", "confidence", "why_matters",
@@ -286,17 +295,18 @@ def detect_price_vs_market(conn: sqlite3.Connection) -> int:
     n = 0
     products = db.rows(conn, "SELECT * FROM m22_products WHERE is_active=1 AND in_scope=1 AND price IS NOT NULL AND (parent_url IS NULL OR site='radiosync.ru')")
     m22_skus = {p["sku"].strip().upper() for p in products if p["site"] == "m22.ru" and p["sku"]}
+    emitted: set[str] = set()
     for p in products:
         if p["site"] == "radiosync.ru" and p["sku"] and p["sku"].strip().upper() in m22_skus:
             continue  # двойник на m22.ru уже проверен
-        comps = comparables_for(conn, p["id"], min_conf=0.6)
+        comps = comparables_for(conn, p["id"], min_conf=0.7)  # только точные модели, одинаковые фото и прямые аналоги с совместимыми характеристиками
         # исключаем дубли одного и того же предложения (один конкурент — одна цена на товар)
         uniq = {}
         for c in comps:
             uniq.setdefault((c["competitor_id"], c["name"]), c)
         comps = list(uniq.values())
-        if len(comps) < config.MIN_COMPARABLES:
-            continue
+        if len(comps) < config.MIN_COMPARABLES or len({c["competitor_id"] for c in comps}) < 2:
+            continue  # нужны минимум 3 предложения минимум от 2 продавцов, иначе «рынок» — это один сайт
         prices = [c["price"] for c in comps]
         med = statistics.median(prices)
         gap = (p["price"] - med) / med * 100
@@ -306,7 +316,10 @@ def detect_price_vs_market(conn: sqlite3.Connection) -> int:
         # уверенность ограничена качеством сопоставлений: разнородные аналоги не дают >75% даже при большом числе предложений
         conf = round(min(avg_conf + 0.15, 0.45 + 0.05 * len(comps), 0.95), 2)
         above = gap > 0
-        exact = sum(1 for c in comps if c["match_type"] == "exact_model")
+        exact = sum(1 for c in comps if c["match_type"] in ("exact_model", "same_photo"))
+        emitted.add(f"pvm:{p['id']}:{'above' if above else 'below'}")
+        conn.execute("UPDATE signals SET status='done', comment='условие изменилось: теперь цена по другую сторону от рынка' WHERE dedupe_key=? AND status='new'",
+                     (f"pvm:{p['id']}:{'below' if above else 'above'}",))
         m_norm = specmod.normalize(p["name"], p["description"], p["specs_json"], p["price"], p["capacity"])
         note = (f"{exact} точных совпадений модели, {len(comps) - exact} прямых аналогов. Правило: тот же тип изделия ({p['kind']}) и совместимые ключевые характеристики "
                 f"(двусторонняя связь, класс диапазона, порядок дальности). Характеристики M22: {specmod_summary(m_norm)}. "
@@ -321,8 +334,12 @@ def detect_price_vs_market(conn: sqlite3.Connection) -> int:
                               else "Цена ниже рынка — недополученная маржа, если спрос не падает."),
                  recommended_action=(f"Проверить обоснованность цены: либо снизить до диапазона {_fmt(med * 0.95)} – {_fmt(med * 1.05)}, либо явно показать в карточке преимущества (гарантия 2 года, поддержка, наличие)."
                                      if above else f"Проверить повышение цены на «{p['name'][:40]}»: медиана {len(comps)} конкурентов выше на {abs(gap):.0f}% ({_fmt(med)})."),
-                 dedupe_key=f"pvm:{p['model_key'] or p['id']}:{p['kind']}:{p['capacity']}:{'above' if above else 'below'}:{round(gap / 5) * 5}"):
+                 dedupe_key=f"pvm:{p['id']}:{'above' if above else 'below'}"):
             n += 1
+    # сигналы, условие которых больше не выполняется (цена или рынок изменились), закрываем автоматически
+    for old_sig in db.rows(conn, "SELECT id, dedupe_key FROM signals WHERE type IN ('m22_price_above_market','m22_price_below_market') AND status='new'"):
+        if old_sig["dedupe_key"] not in emitted:
+            conn.execute("UPDATE signals SET status='done', comment='закрыт автоматически: разрыв с рынком исчез или сопоставимых предложений стало меньше 3' WHERE id=?", (old_sig["id"],))
     return n
 
 
@@ -498,15 +515,20 @@ def detect_source_errors(conn: sqlite3.Connection) -> int:
         if _emit(conn, type="source_error", severity="low", fact_kind="fact", title=f"Источник «{s['name']}» не работает ({s['consecutive_failures']} сбоев подряд)",
                  what_happened=(s["last_error"] or "")[:300], observed_at=db.now_iso(), source=s["key"], source_url=s["url"], confidence=1.0,
                  why_matters="Без источника часть сигналов не обновляется.", recommended_action="Проверить доступность сайта и настройки страницы мониторинга в разделе «Источники».",
-                 dedupe_key=f"srcerr:{s['key']}:{(s['last_run_at'] or '')[:10]}"):
+                 dedupe_key=f"srcerr:{s['key']}"):
             n += 1
     pages = db.rows(conn, "SELECT mp.*, c.name AS cname FROM monitored_pages mp JOIN competitors c ON c.id=mp.competitor_id WHERE mp.fail_count>=3 AND mp.is_active=1 AND mp.last_status IN ('error','robots_disallowed')")
     for p in pages:
         if _emit(conn, type="source_error", severity="low", fact_kind="fact", competitor_id=p["competitor_id"], title=f"Страница {p['cname']} недоступна {p['fail_count']} раз подряд",
                  what_happened=(p["last_error"] or "")[:300], observed_at=db.now_iso(), source=p["cname"], source_url=p["url"], confidence=1.0,
                  why_matters="Цены этого конкурента не обновляются.", recommended_action="Открыть страницу вручную; при смене адреса — обновить URL страницы мониторинга.",
-                 dedupe_key=f"pageerr:{p['id']}:{p['fail_count']}"):
+                 dedupe_key=f"pageerr:{p['id']}"):
             n += 1
+    # источники и страницы, которые снова работают или выключены, — закрываем сигналы
+    conn.execute("""UPDATE signals SET status='done', comment='закрыт автоматически: источник снова работает' WHERE type='source_error' AND status='new' AND dedupe_key LIKE 'srcerr:%'
+                    AND substr(dedupe_key, 8) IN (SELECT key FROM sources WHERE consecutive_failures=0)""")
+    conn.execute("""UPDATE signals SET status='done', comment='закрыт автоматически: страница снова доступна или выключена' WHERE type='source_error' AND status='new' AND dedupe_key LIKE 'pageerr:%'
+                    AND CAST(substr(dedupe_key, 9) AS INTEGER) NOT IN (SELECT id FROM monitored_pages WHERE fail_count>=3 AND is_active=1 AND last_status IN ('error','robots_disallowed'))""")
     return n
 
 

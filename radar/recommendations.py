@@ -19,7 +19,13 @@ def _due(days: int) -> str:
 
 
 def _emit(conn: sqlite3.Connection, **r) -> bool:
-    if db.row(conn, "SELECT id FROM recommendations WHERE dedupe_key=?", (r["dedupe_key"],)):
+    ex = db.row(conn, "SELECT id, status FROM recommendations WHERE dedupe_key=?", (r["dedupe_key"],))
+    if ex:
+        if ex["status"] == "new":  # ещё не разобрана — обновляем факты, не плодим дублей
+            conn.execute("UPDATE recommendations SET title=?, action=?, priority=?, basis=?, expected_effect=?, confidence=?, sources_json=?, signal_ids_json=?, updated_at=datetime('now') WHERE id=?",
+                         (r.get("title"), r.get("action"), r.get("priority"), r.get("basis"), r.get("expected_effect"), r.get("confidence"),
+                          db.j(r.get("sources_json")) if isinstance(r.get("sources_json"), (list, dict)) else r.get("sources_json"),
+                          db.j(r.get("signal_ids_json")) if isinstance(r.get("signal_ids_json"), (list, dict)) else r.get("signal_ids_json"), ex["id"]))
         return False
     cols = ["title", "action", "priority", "basis", "expected_effect", "confidence", "owner", "due_date", "sources_json", "signal_ids_json", "category_slug", "m22_product_id", "dedupe_key"]
     vals = [r.get(c) for c in cols]
@@ -36,7 +42,7 @@ def _cat(slug):
 
 def generate(conn: sqlite3.Connection) -> int:
     n = 0
-    sig = lambda t: db.rows(conn, "SELECT * FROM signals WHERE type=? AND status!='rejected' ORDER BY created_at DESC", (t,))  # noqa: E731
+    sig = lambda t: db.rows(conn, "SELECT * FROM signals WHERE type=? AND status NOT IN ('rejected','done') ORDER BY created_at DESC", (t,))  # noqa: E731
 
     # 1. Цена относительно рынка (сильный факт: ≥3 сопоставимых)
     for s in sig("m22_price_above_market") + sig("m22_price_below_market"):
@@ -63,6 +69,9 @@ def generate(conn: sqlite3.Connection) -> int:
                  basis=s["what_happened"], expected_effect=effect, confidence=s["confidence"], owner=OWNERS["pricing"], due_date=_due(7), sources_json=srcs,
                  signal_ids_json=[s["id"]], category_slug=s["category_slug"], m22_product_id=p["id"], dedupe_key=f"rec:{s['dedupe_key']}"):
             n += 1
+    # 1а. рекомендации по закрытым/отклонённым сигналам закрываем
+    conn.execute("""UPDATE recommendations SET status='done', comment=COALESCE(comment,'') || ' [закрыта автоматически: сигнал закрыт]' WHERE status='new' AND dedupe_key LIKE 'rec:pvm:%'
+                    AND substr(dedupe_key, 5) IN (SELECT dedupe_key FROM signals WHERE status IN ('done','rejected'))""")
 
     # 2. Расхождение цен между сайтами — сильный факт
     xs = [s for s in sig("cross_site_discrepancy") if s["old_value"] and s["new_value"] and "отличается" in s["title"]]

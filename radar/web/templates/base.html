@@ -14,7 +14,7 @@
     <div class="brand"><a href="/" class="brand-link"><img src="/static/m22-logo.svg" alt="M22" class="brand-logo"><span class="brand-text">Product Radar<small>рыночная разведка · v{{ app_version }}</small></span></a></div>
     <nav>
       {% set items = [("/", "Главная"), ("/actions", "Рекомендуемые действия"), ("/categories", "Категории"), ("/signals", "Сигналы"), ("/competitors", "Конкуренты"), ("/competitor-matrix", "Матрица конкурентов"), ("/matrix", "Матрица M22"), ("/site-audit", "Наши сайты"),
-                      ("/demand", "Поисковый спрос"), ("/opportunities", "Новые возможности"), ("/sources", "Источники"), ("/reports", "Отчёты"), ("/settings", "Настройки"), ("/changelog", "Журнал версий")] %}
+                      ("/demand", "Поисковый спрос"), ("/opportunities", "Новые возможности"), ("/sources", "Источники"), ("/reports", "Отчёты"), ("/settings", "Настройки"), ("/logic", "Логика радара"), ("/changelog", "Журнал версий")] %}
       {% for href, label in items %}
         <a href="{{ href }}" class="{% if (href == '/' and path == '/') or (href != '/' and path.startswith(href)) %}active{% endif %}">{{ label }}</a>
       {% endfor %}

@@ -2,75 +2,68 @@
 {% block title %}Главная — M22 Product Radar{% endblock %}
 {% block content %}
 <div class="topbar">
-  <div><button type="button" class="theme-toggle js-theme-toggle" style="float:right;margin-left:12px" title="Переключить светлую/тёмную тему"><span class="js-theme-icon">🌙</span> <span class="js-theme-label">Тёмная тема</span></button><h1><img src="/static/m22-logo.svg" alt="M22" class="page-logo">Что происходит на рынке экскурсионного оборудования</h1>
-  <div class="sub">Данные обновлены: <b>{{ last_update | dt }}</b> · Товаров M22 в контуре: {{ counts.m22 }} · Конкурентов: {{ counts.comp }} · Предложений конкурентов с ценой: {{ counts.cp }}</div></div>
-  <div class="actions-row no-print">
-    <form method="get" class="inline filters" style="padding:4px 8px;margin:0"><label>Категория<select name="category" onchange="this.form.submit()"><option value="">все категории</option>{% for c in cat_list %}<option value="{{ c.slug }}" {% if category == c.slug %}selected{% endif %}>{{ c.name_ru }}</option>{% endfor %}</select></label></form>
-    <form method="post" action="/analyze" class="inline"><button class="sec small">Пересчитать сигналы</button></form> <a class="btn small" href="/reports">Отчёты</a></div>
+  <div><button type="button" class="theme-toggle js-theme-toggle" style="float:right;margin-left:12px" title="Переключить светлую/тёмную тему"><span class="js-theme-icon">🌙</span> <span class="js-theme-label">Тёмная тема</span></button>
+  <h1>Обзор</h1>
+  <div class="sub">Данные обновлены: <b>{{ last_update | dt }}</b>. Здесь только сводка; подробности — в разделах по ссылкам. <a href="/logic">Как радар решает, что важно →</a></div></div>
+  <div class="actions-row no-print"><form method="post" action="/analyze" class="inline"><button class="sec small">Пересчитать сигналы</button></form> <a class="btn small" href="/reports">Отчёты</a></div>
 </div>
-{% if category %}<div class="note ok-note">Показаны сигналы и действия только по категории «{{ CATEGORY_NAMES.get(category, category) }}». <a href="/categories/{{ category }}">Открыть разбор категории →</a> · <a href="/">Сбросить</a></div>{% endif %}
-
-{% set top1 = top[0] if top else None %}
-<div class="q-answer">
-  <div class="card"><div class="q">Что важного произошло?</div><div class="a">{% if top1 %}<a href="/signals/{{ top1.id }}">{{ top1.title }}</a>{% else %}Новых сигналов нет{% endif %}</div></div>
-  <div class="card"><div class="q">Почему это важно?</div><div class="a">{{ top1.why_matters if top1 else '—' }}</div></div>
-  <div class="card"><div class="q">Что делать?</div><div class="a">{% if top_rec %}<a href="/actions/{{ top_rec.id }}">{{ top_rec.title }}</a>{% elif top1 %}{{ top1.recommended_action }}{% else %}—{% endif %}</div></div>
-  <div class="card"><div class="q">Какой приоритет?</div><div class="a">{% if top_rec %}{{ m.prio(top_rec.priority) }} · срок {{ top_rec.due_date }}{% elif top1 %}{{ m.sev(top1.severity) }} · важность сигнала{% else %}—{% endif %}</div></div>
-  <div class="card"><div class="q">Насколько можно доверять?</div><div class="a">{% if top1 %}{{ m.conf(top1.confidence) }} · {{ m.fact(top1.fact_kind) }}{% else %}—{% endif %}</div></div>
-</div>
-
-{% if limits.notes %}<div class="note"><b>Ограничения текущих данных:</b> {{ limits.notes | join(' ') }}</div>{% endif %}
 
 <div class="grid grid-4">
-  <div class="card kpi"><span class="v">{{ counts.signals_7 }}</span><span class="l">сигналов за 7 дней</span><span class="d">{{ counts.signals_30 }} за 30 дней</span></div>
-  <div class="card kpi"><span class="v">{{ counts.recs }}</span><span class="l">новых рекомендаций</span><span class="d"><a href="/actions">открыть список</a></span></div>
-  <div class="card kpi"><span class="v">{{ counts.gaps }}</span><span class="l">товарных пробелов M22</span><span class="d">{{ counts.hyps }} гипотез на рассмотрении</span></div>
-  <div class="card kpi"><span class="v">{{ counts.new_products_7 }}</span><span class="l">новых товаров конкурентов за 7 дней</span><span class="d">{{ counts.price_7 }} изменений цен за 7 дней</span></div>
+  <div class="card kpi"><span class="v">{{ counts.m22 }}</span><span class="l">товаров M22 в матрице</span><span class="d"><a href="/matrix">m22.ru + radiosync.ru</a></span></div>
+  <div class="card kpi"><span class="v">{{ counts.cp }}</span><span class="l">товаров конкурентов с ценой</span><span class="d">{{ counts.comp }} конкурентов · <a href="/competitor-matrix">матрица</a></span></div>
+  <div class="card kpi"><span class="v">{{ counts.matched }}</span><span class="l">товаров M22 с найденным аналогом</span><span class="d">{{ counts.same_photo }} совпадений по фото · <a href="/matches?review=0">проверить сомнительные ({{ counts.review }})</a></span></div>
+  <div class="card kpi" {% if counts.errors %}style="border-color:var(--high)"{% endif %}><span class="v">{{ counts.errors }}</span><span class="l">источников и страниц с ошибками</span><span class="d"><a href="/sources">раздел «Источники»</a></span></div>
 </div>
 
-<div class="grid grid-2" style="margin-top:14px">
-  <div>
-    <h2>Главные сигналы</h2>
-    {% for s in top %}{{ m.signal_card(s, compact=True) }}{% else %}<div class="card muted">Сигналов нет — запустите сбор и анализ.</div>{% endfor %}
-    <a href="/signals">Все сигналы →</a>
-  </div>
-  <div>
-    <h2>Рекомендуемые действия</h2>
-    <div class="card compact tbl-wrap"><table><thead><tr><th>Приоритет</th><th>Действие</th><th>Основание</th><th>Уверенность</th><th>Кто / срок</th><th>Статус</th></tr></thead>
-    <tbody>{% for r in recs %}{{ m.rec_row(r) }}{% else %}<tr><td colspan="6" class="muted">Рекомендаций пока нет.</td></tr>{% endfor %}</tbody></table></div>
-    <a href="/actions">Все действия →</a>
+{% if limits.notes %}<div class="note" style="margin-top:10px"><b>Ограничения текущих данных:</b> {{ limits.notes | join(' ') }}</div>{% endif %}
 
-    <h2>Категории: где мы по цене</h2>
-    <div class="card compact tbl-wrap"><table><thead><tr><th>Категория</th><th>Статус</th><th class="num">M22</th><th class="num">Конкур.</th><th class="num">Дешевле M22</th><th class="num">Сигналы</th></tr></thead><tbody>
-      {% for c in cat_overview %}<tr><td><a href="/categories/{{ c.slug }}">{{ c.name }}</a></td>
-        <td><span class="badge {{ {'ok':'sev-low','watch':'sev-medium','attention':'sev-high','gap':'sev-high','no_data':'st'}.get(c.status, 'st') }}">{{ {'ok':'ок','watch':'следить','attention':'внимание','gap':'нет у M22','no_data':'мало данных'}.get(c.status, c.status) }}</span></td>
-        <td class="num">{{ c.m22_n }}</td><td class="num">{{ c.priced }}</td><td class="num">{% if c.cheaper_share is not none %}{{ c.cheaper_share }}%{% else %}—{% endif %}</td><td class="num">{{ c.signals }}</td></tr>{% endfor %}
-    </tbody></table></div>
-    <a class="small" href="/categories">Все категории →</a>
-  </div>
+<div class="grid grid-2" style="margin-top:14px">
+  <div class="card"><h2>Что делать в первую очередь <span class="small muted">({{ counts.recs }} открытых)</span></h2>
+    <div class="small muted" style="margin-bottom:6px">По одному действию на товар, по убыванию приоритета. Полный список со статусами и комментариями — в разделе «Рекомендуемые действия».</div>
+    {% for r in recs %}<div style="margin-bottom:8px">{{ m.prio(r.priority) }} <a href="/actions/{{ r.id }}">{{ r.title }}</a><div class="small muted">{{ r.owner }} · до {{ r.due_date }} · уверенность {{ (r.confidence * 100) | int }}%</div></div>{% else %}<div class="muted small">Открытых действий нет.</div>{% endfor %}
+    <a class="small" href="/actions">Все действия →</a></div>
+
+  <div class="card"><h2>Цены: где M22 отличается от рынка <span class="small muted">({{ counts.price_signals }})</span></h2>
+    <div class="small muted" style="margin-bottom:6px">Только там, где есть минимум 3 сопоставимых предложения от 2+ продавцов и разрыв от 10 %.</div>
+    {% for s in price_signals %}<div class="small" style="margin-bottom:8px">{{ m.sev(s.severity) }} <a href="/signals/{{ s.id }}">{{ s.title }}</a></div>{% else %}<div class="muted small">Ценовых расхождений с рынком нет или сопоставимых предложений недостаточно.</div>{% endfor %}
+    <a class="small" href="/signals?type=m22_price_above_market">дороже рынка</a> · <a class="small" href="/signals?type=m22_price_below_market">дешевле рынка</a> · <a class="small" href="/signals?type=cross_site_discrepancy">расхождения m22.ru / radiosync.ru</a></div>
 </div>
 
 <div class="grid grid-3" style="margin-top:14px">
-  <div class="card"><h2>Цены: M22 и конкуренты</h2>
-    {% for s in price_signals %}<div class="small" style="margin-bottom:8px">{{ m.sev(s.severity) }} <a href="/signals/{{ s.id }}">{{ s.title }}</a></div>{% else %}<div class="muted small">Ценовых сигналов нет.</div>{% endfor %}
-    <a class="small" href="/signals?type=m22_price_above_market">дороже рынка</a> · <a class="small" href="/signals?type=m22_price_below_market">дешевле рынка</a> · <a class="small" href="/signals?type=cross_site_discrepancy">расхождения сайтов</a></div>
-  <div class="card"><h2>Новые товары и решения конкурентов</h2>
-    {% for s in new_products %}<div class="small" style="margin-bottom:8px">{{ m.sev(s.severity) }} <a href="/signals/{{ s.id }}">{{ s.title }}</a></div>{% else %}<div class="muted small">Новых товаров с момента базового замера не обнаружено (нужен второй сбор).</div>{% endfor %}</div>
-  <div class="card"><h2>Товарные пробелы и гипотезы</h2>
-    {% for s in gaps %}<div class="small" style="margin-bottom:8px">{{ m.sev(s.severity) }} <a href="/signals/{{ s.id }}">{{ s.title }}</a></div>{% endfor %}
-    {% for h in hyps %}<div class="small" style="margin-bottom:6px">💡 <a href="/opportunities/{{ h.id }}">{{ h.title }}</a> {{ m.status(h.decision_status) }}</div>{% endfor %}
-    <a class="small" href="/opportunities">Все гипотезы →</a></div>
+  <div class="card"><h2>Что изменилось у конкурентов</h2>
+    <div class="small" style="margin-bottom:6px">С базового замера {{ baseline }}: новых позиций <b>{{ counts.new_products }}</b>, исчезло <b>{{ counts.gone_products }}</b>, изменений цен за 30 дней <b>{{ counts.price_moves }}</b>.</div>
+    {% for a in new_comp %}<div class="small" style="margin-bottom:6px">🆕 <a href="/competitors/{{ a.competitor_id }}">{{ a.seller[:24] }}</a>: <a href="{{ a.url }}" target="_blank" rel="noopener">{{ a.name[:55] }}</a> {{ a.price | money }}</div>{% else %}<div class="muted small">Новых позиций после базового замера нет. Изменения цен появятся после второго замера в другой день.</div>{% endfor %}
+    <a class="small" href="/competitor-matrix?view=changes">Что появилось / исчезло →</a></div>
+
+  <div class="card"><h2>Одну модель продают несколько продавцов</h2>
+    <div class="small muted" style="margin-bottom:6px">Ходовые модели рынка, которых нет у M22 — кандидаты на ввод.</div>
+    {% for s in multi %}<div class="small" style="margin-bottom:8px">{{ m.sev(s.severity) }} <a href="/signals/{{ s.id }}">{{ s.title }}</a></div>{% else %}<div class="muted small">Таких моделей не найдено.</div>{% endfor %}
+    <a class="small" href="/signals?type=multi_competitor_product">Все →</a></div>
+
+  <div class="card"><h2>Пробелы и новые ниши</h2>
+    <div class="small" style="margin-bottom:6px">Категорий, где у конкурентов есть товары, а у M22 нет: <b>{{ counts.gap_cats }}</b>. Разделов конкурентов вне матрицы M22: <b>{{ counts.outscope }}</b>. Гипотез на рассмотрении: <b>{{ counts.hyps }}</b>.</div>
+    {% for g in gap_cats %}<div class="small">▫ <a href="/categories/{{ g.slug }}">{{ g.name_ru }}</a></div>{% endfor %}
+    {% for h in hyps %}<div class="small" style="margin-top:4px">💡 <a href="/opportunities/{{ h.id }}">{{ h.title }}</a> {{ m.status(h.decision_status) }}</div>{% endfor %}
+    <a class="small" href="/competitor-matrix?view=sitecats">Категории на сайтах и ниши →</a> · <a class="small" href="/opportunities">Гипотезы →</a></div>
 </div>
 
 <div class="grid grid-2" style="margin-top:14px">
-  <div class="card"><h2>Источники с ошибками</h2>
+  <div class="card"><h2>Категории: где мы по цене</h2>
+    <div class="tbl-wrap"><table><thead><tr><th>Категория</th><th>Статус</th><th class="num">M22</th><th class="num">Конкур.</th><th class="num">Дешевле M22</th></tr></thead><tbody>
+      {% for c in cat_overview %}{% if c.m22_n %}<tr><td><a href="/categories/{{ c.slug }}">{{ c.name }}</a></td>
+        <td><span class="badge {{ {'ok':'sev-low','watch':'sev-medium','attention':'sev-high','gap':'sev-high','no_data':'st'}.get(c.status, 'st') }}">{{ {'ok':'ок','watch':'следить','attention':'внимание','gap':'пробел','no_data':'мало данных'}.get(c.status, c.status) }}</span></td>
+        <td class="num">{{ c.m22_n }}</td><td class="num">{{ c.priced }}</td><td class="num">{% if c.cheaper_share is not none %}{{ c.cheaper_share }}%{% else %}<span class="muted">нет данных</span>{% endif %}</td></tr>{% endif %}{% endfor %}
+    </tbody></table></div>
+    <a class="small" href="/categories">Все категории →</a></div>
+
+  <div class="card"><h2>Состояние данных</h2>
     {% if bad_sources or bad_pages %}
-      {% for s in bad_sources %}<div class="small">❌ <b>{{ s.name }}</b> — {{ s.last_error or 'ошибка' }} ({{ s.consecutive_failures }} подряд)</div>{% endfor %}
-      {% for p in bad_pages %}<div class="small">⚠ {{ p.cname }}: <a href="{{ p.url }}" target="_blank" rel="noopener">{{ p.url[:60] }}</a> — {{ p.last_status }} {{ (p.last_error or '')[:80] }}</div>{% endfor %}
-    {% else %}<div class="muted small">Все источники в норме.</div>{% endif %}
-    <a class="small" href="/sources">Раздел «Источники» →</a></div>
-  <div class="card"><h2>Последние сборы</h2><table><thead><tr><th>Источник</th><th>Завершён</th><th>Статус</th><th>Итог</th></tr></thead><tbody>
-    {% for r in runs %}<tr><td>{{ r.source_key }}</td><td class="nowrap">{{ r.finished_at | dt }}</td><td><span class="badge src-{{ 'ok' if r.status in ('ok','partial') else 'error' }}">{{ r.status }}</span></td><td class="small">{{ r.message or '' }}</td></tr>{% endfor %}
-  </tbody></table></div>
+      {% for s in bad_sources %}<div class="small">❌ <b>{{ s.name }}</b> — {{ (s.last_error or 'ошибка')[:90] }} ({{ s.consecutive_failures }} подряд)</div>{% endfor %}
+      {% for p in bad_pages %}<div class="small">⚠ {{ p.cname[:30] }}: <a href="{{ p.url }}" target="_blank" rel="noopener">{{ p.url[:55] }}</a> — {{ p.last_status }}</div>{% endfor %}
+    {% else %}<div class="small">✅ Все источники и страницы мониторинга в норме.</div>{% endif %}
+    <table style="margin-top:8px"><thead><tr><th>Последние сборы</th><th>Завершён</th><th>Статус</th><th>Итог</th></tr></thead><tbody>
+    {% for r in runs %}<tr><td>{{ r.source_key }}</td><td class="nowrap small">{{ r.finished_at | dt }}</td><td><span class="badge src-{{ 'ok' if r.status in ('ok','partial') else 'error' }}">{{ r.status }}</span></td><td class="small">{{ (r.message or '')[:60] }}</td></tr>{% endfor %}
+    </tbody></table>
+    <a class="small" href="/sources">Источники и журнал ошибок →</a></div>
 </div>
 {% endblock %}
