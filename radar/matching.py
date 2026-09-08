@@ -50,6 +50,8 @@ def feature_compat(m_norm: dict, c_norm: dict) -> tuple[float, list[str]]:
         reasons.append(f"дальность отличается более чем вдвое ({rm:g} м против {rc:g} м)")
     return penalty, reasons
 
+ALIASES: dict[str, str] = {}  # код модели у конкурента -> код модели M22 (заполняется из настроек при запуске сопоставления)
+
 KIND_GROUPS = {
     "system": "system", "kit": "system", "transmitter": "transmitter", "receiver": "receiver", "case_charger": "accessory",
     "headphones": "headphones", "microphone": "microphone", "audioguide": "audioguide", "accessory": "accessory",
@@ -76,15 +78,20 @@ def match_one(cp: dict, m22_list: list[dict], m22_categories: set[str]) -> list[
     cap = cp.get("capacity")
     mkey = cp.get("model_key")
     brand = (cp.get("brand") or "").lower()
+    # идентичные модели под другой маркой (OEM): T130 у Retekess = SGTR02 у Radiosync — задаются в Настройках
+    alias_of = ALIASES.get(mkey or "")
 
-    # 1. Точное совпадение модели
-    if mkey and len(mkey) >= 4:
+    # 1. Точное совпадение модели (или идентичная модель по таблице соответствий)
+    if mkey and (len(mkey) >= 4 or alias_of):
         for m in m22_list:
-            if m.get("model_key") == mkey:
-                conf = 0.85
-                reasons = [f"совпадает ключ модели {mkey}"]
+            if m.get("model_key") == mkey or (alias_of and m.get("model_key") == alias_of):
+                identical = bool(alias_of and m.get("model_key") == alias_of)
+                conf = 0.95 if identical else 0.85
+                reasons = [f"идентичная модель: {mkey} у конкурента = {alias_of} у M22 (то же изделие под другой маркой)"] if identical else [f"совпадает ключ модели {mkey}"]
                 mb = (m.get("brand") or "").lower()
-                if brand and mb and (brand in mb or mb in brand):
+                if identical:
+                    pass
+                elif brand and mb and (brand in mb or mb in brand):
                     conf += 0.1
                     reasons.append("совпадает бренд")
                 elif brand and mb:
@@ -96,7 +103,7 @@ def match_one(cp: dict, m22_list: list[dict], m22_categories: set[str]) -> list[
                 elif cap and m.get("capacity") and cap == m["capacity"]:
                     conf += 0.05
                     reasons.append(f"совпадает вместимость {cap}")
-                mtype = "exact_model"
+                mtype = "identical" if identical else "exact_model"
                 if KIND_GROUPS.get(m.get("kind") or "other") != kind:
                     conf = min(conf, 0.4)
                     mtype = "functional"
@@ -171,7 +178,7 @@ def match_one(cp: dict, m22_list: list[dict], m22_categories: set[str]) -> list[
         candidates.sort(key=lambda x: -x[0])
         best_score = candidates[0][0]
         # системы сопоставляются адресно (вместимость), приёмники/передатчики/аксессуары — со всеми аналогами M22 того же типа
-        pool = candidates[:2] if kind == "system" else [c for c in candidates[:8] if c[0] >= 0.55]
+        pool = candidates[:2] if kind == "system" else [c for c in candidates[:3] if c[0] >= 0.55]  # не более 3 кандидатов, чтобы не плодить слабые пары
         for score, m, reasons in pool:
             if kind == "system" and score < best_score - 0.15:
                 break
@@ -191,6 +198,8 @@ def run_matching(conn: sqlite3.Connection) -> dict:
     for m in m22_list:
         m["norm"] = specmod.normalize(m["name"], m["description"], m["specs_json"], m["price"], m["capacity"])
     m22_categories = {m["category_slug"] for m in m22_list if m["category_slug"]}
+    global ALIASES
+    ALIASES = db.uj(db.get_setting(conn, "model_aliases"), {}) or {}
     cps = db.rows(conn, "SELECT id, name, brand, model_key, category_slug, kind, capacity, price, description, specs_json FROM competitor_products WHERE is_active=1")
     for cp in cps:
         cp["norm"] = specmod.normalize(cp["name"], cp["description"], cp["specs_json"], cp["price"], cp["capacity"])
@@ -202,7 +211,7 @@ def run_matching(conn: sqlite3.Connection) -> dict:
     for cp in cps:
         matches = match_one(cp, m22_list, m22_categories)
         for mt in matches:
-            needs_review = 1 if mt["confidence"] < 0.7 else 0
+            needs_review = 1 if mt["confidence"] < 0.7 and mt["match_type"] in ("exact_model", "direct_analog", "kit", "identical") else 0  # аксессуары и функционально похожие — справочно, не на проверку
             existing = db.row(conn, "SELECT id, review_status FROM product_matches WHERE competitor_product_id=? AND m22_product_id IS ?", (cp["id"], mt["m22_product_id"]))
             if existing:
                 if existing["review_status"] == "auto":
@@ -230,7 +239,7 @@ def comparables_for(conn: sqlite3.Connection, m22_product_id: int, min_conf: flo
                c.name AS competitor_name, c.id AS competitor_id
         FROM product_matches pm JOIN competitor_products cp ON cp.id=pm.competitor_product_id JOIN competitors c ON c.id=cp.competitor_id
         WHERE pm.m22_product_id=? AND pm.review_status!='rejected' AND pm.confidence>=? AND cp.price IS NOT NULL AND cp.is_active=1
-          AND cp.currency='RUB' AND pm.match_type IN ('exact_model','same_photo','direct_analog') AND COALESCE(cp.category_slug,'')!='rental' AND cp.price>=10
+          AND cp.currency='RUB' AND pm.match_type IN ('exact_model','identical','direct_analog') AND COALESCE(cp.category_slug,'')!='rental' AND cp.price>=10
         ORDER BY pm.confidence DESC""", (m22_product_id, min_conf))
     for r in rows:
         norm = specmod.normalize(r["name"], r.pop("description"), r.pop("specs_json"), r["price"], r["capacity"])

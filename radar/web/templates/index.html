@@ -26,7 +26,7 @@
   <div class="card"><h2>Цены: где M22 отличается от рынка <span class="small muted">({{ counts.price_signals }})</span></h2>
     <div class="small muted" style="margin-bottom:6px">Только там, где есть минимум 3 сопоставимых предложения от 2+ продавцов и разрыв от 10 %.</div>
     {% for s in price_signals %}<div class="small" style="margin-bottom:8px">{{ m.sev(s.severity) }} <a href="/signals/{{ s.id }}">{{ s.title }}</a></div>{% else %}<div class="muted small">Ценовых расхождений с рынком нет или сопоставимых предложений недостаточно.</div>{% endfor %}
-    <a class="small" href="/signals?type=m22_price_above_market">дороже рынка</a> · <a class="small" href="/signals?type=m22_price_below_market">дешевле рынка</a> · <a class="small" href="/signals?type=cross_site_discrepancy">расхождения m22.ru / radiosync.ru</a></div>
+    <a class="btn small" href="/pricing">Пересмотр цен: что поднять, что снизить →</a> <a class="small" href="/signals?type=cross_site_discrepancy">расхождения m22.ru / radiosync.ru</a></div>
 </div>
 
 <div class="grid grid-3" style="margin-top:14px">

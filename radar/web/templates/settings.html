@@ -7,6 +7,10 @@
     <form method="post" action="/settings/update" class="form-grid">
       <label class="full">Список ответственных (через ;)<input type="text" name="owners" value="{{ settings.get('owners', '') }}"></label>
       <label class="full">Ответственный по умолчанию<input type="text" name="owner_default" value="{{ settings.get('owner_default', '') }}"></label>
+      <label class="full">Идентичные модели у конкурентов (одна пара на строку: КОД У КОНКУРЕНТА = КОД M22; это одно и то же изделие под разными марками)
+        <textarea name="model_aliases" rows="6" style="width:100%;font-family:monospace">{% for a, b in (settings.get('model_aliases') | uj({})).items() %}{{ a }} = {{ b }}
+{% endfor %}</textarea></label>
+      <div class="full small muted">Пример: «T130 = SGTR02» — радиогид Retekess T130 и Radiosync SGTR02 идентичны. После сохранения нажмите «Пересчитать сигналы» на главной.</div>
       <div class="full"><button type="submit" class="small">Сохранить</button></div></form>
     <h3>Пороги значимости (из .env)</h3><dl class="kv">{% for k, v in thresholds.items() %}<dt>{{ k }}</dt><dd>{{ v }}</dd>{% endfor %}</dl>
     <p class="small muted">Пороги задаются переменными окружения RADAR_* в файле .env (см. README); изменение требует перезапуска.</p>

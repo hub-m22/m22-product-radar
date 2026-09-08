@@ -179,7 +179,7 @@ def compare(conn: sqlite3.Connection) -> dict:
 
 
 def apply_to_matches(conn: sqlite3.Connection) -> dict:
-    """Переносит совпадения по фото в product_matches: одинаковое фото — сопоставление «same_photo» с уверенностью 0.9
+    """Переносит совпадения по фото в product_matches: одинаковое фото — сопоставление «identical» с уверенностью 0.9
     (или усиление существующего); похожее фото — только пометка в причинах существующего сопоставления."""
     created = boosted = noted = 0
     for im in db.rows(conn, "SELECT * FROM image_matches"):
@@ -194,12 +194,12 @@ def apply_to_matches(conn: sqlite3.Connection) -> dict:
                 if not any("фото совпадает" in r for r in reasons):
                     reasons.append(reason)
                 conf = max(ex["confidence"] or 0, 0.9)
-                conn.execute("UPDATE product_matches SET confidence=?, reasons_json=?, needs_review=0, match_type=CASE WHEN match_type IN ('functional','accessory','adjacent') THEN 'same_photo' ELSE match_type END, updated_at=datetime('now') WHERE id=?",
+                conn.execute("UPDATE product_matches SET confidence=?, reasons_json=?, needs_review=0, match_type=CASE WHEN match_type IN ('functional','accessory','adjacent') THEN 'identical' ELSE match_type END, updated_at=datetime('now') WHERE id=?",
                              (conf, db.j(reasons), ex["id"]))
                 boosted += 1
             else:
                 conn.execute("INSERT INTO product_matches(m22_product_id, competitor_product_id, match_type, confidence, method, reasons_json, needs_review) VALUES(?,?,?,?,?,?,?)",
-                             (im["m22_product_id"], im["competitor_product_id"], "same_photo", 0.9, "photo", db.j([reason]), 0))
+                             (im["m22_product_id"], im["competitor_product_id"], "identical", 0.9, "photo", db.j([reason]), 0))
                 created += 1
         else:
             if ex and ex["review_status"] != "rejected":

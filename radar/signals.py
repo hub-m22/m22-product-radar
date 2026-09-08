@@ -232,6 +232,8 @@ def detect_multi_competitor_products(conn: sqlite3.Connection) -> int:
             continue  # короткий код без бренда (T100, R100) - нельзя утверждать, что это одна модель
         groups.setdefault((brand, r["model_key"]), []).append(r)
     m22_keys = {x["model_key"] for x in db.rows(conn, "SELECT DISTINCT model_key FROM m22_products WHERE is_active=1 AND model_key IS NOT NULL")}
+    aliases = db.uj(db.get_setting(conn, "model_aliases"), {}) or {}
+    m22_keys |= {a for a, b in aliases.items() if b in m22_keys}  # идентичные модели под другой маркой считаются «есть у M22»
     for (brand, key), offers in groups.items():
         sellers = sorted({o["seller"] for o in offers})
         if len(sellers) < 2:
@@ -316,7 +318,7 @@ def detect_price_vs_market(conn: sqlite3.Connection) -> int:
         # уверенность ограничена качеством сопоставлений: разнородные аналоги не дают >75% даже при большом числе предложений
         conf = round(min(avg_conf + 0.15, 0.45 + 0.05 * len(comps), 0.95), 2)
         above = gap > 0
-        exact = sum(1 for c in comps if c["match_type"] in ("exact_model", "same_photo"))
+        exact = sum(1 for c in comps if c["match_type"] in ("exact_model", "identical"))
         emitted.add(f"pvm:{p['id']}:{'above' if above else 'below'}")
         conn.execute("UPDATE signals SET status='done', comment='условие изменилось: теперь цена по другую сторону от рынка' WHERE dedupe_key=? AND status='new'",
                      (f"pvm:{p['id']}:{'below' if above else 'above'}",))

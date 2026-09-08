@@ -20,6 +20,7 @@ from .. import categories as catmod
 from .. import competitor_matrix as cmx
 from .. import site_categories
 from .. import image_match
+from .. import pricing
 from .. import site_audit
 from .. import profile as profmod
 from .. import config, db, discovery, feedback, importers, matching, recommendations, reports, scheduler, seed, signals
@@ -36,7 +37,7 @@ STATUS_NAMES = {"new": "Новый", "in_research": "На исследовани
                 "research": "Исследуется", "approved": "Одобрено", "parked": "Отложено"}
 SEV_NAMES = {"high": "Высокая", "medium": "Средняя", "low": "Низкая"}
 FACT_NAMES = {"fact": "Подтверждённый факт", "inference": "Аналитический вывод", "hypothesis": "Гипотеза"}
-MATCH_NAMES = {"exact_model": "Точное совпадение модели", "same_photo": "Одинаковое фото", "direct_analog": "Прямой аналог", "functional": "Функционально похожий", "kit": "Комплект", "accessory": "Аксессуар",
+MATCH_NAMES = {"exact_model": "Точное совпадение модели", "identical": "Идентичное оборудование (та же модель или то же фото)", "direct_analog": "Прямой аналог", "functional": "Функционально похожий", "kit": "Комплект", "accessory": "Аксессуар",
                "substitute": "Заменитель", "adjacent": "Смежный товар", "new_category": "Новая категория"}
 SOURCE_STATUS = {"ok": "Работает", "error": "Ошибка", "needs_auth": "Требует подключения", "blocked": "Недоступен", "paid": "Платный", "manual_import": "Ручной импорт",
                  "disabled": "Отключён", "unknown": "Не проверялся"}
@@ -261,7 +262,7 @@ def index(request: Request):
             "comp": db.row(conn, "SELECT COUNT(*) n FROM competitors WHERE is_active=1")["n"],
             "cp": db.row(conn, "SELECT COUNT(*) n FROM competitor_products WHERE is_active=1 AND price IS NOT NULL AND category_slug IS NOT NULL")["n"],
             "matched": db.row(conn, "SELECT COUNT(DISTINCT pm.m22_product_id) n FROM product_matches pm JOIN competitor_products cp ON cp.id=pm.competitor_product_id WHERE cp.is_active=1 AND pm.review_status!='rejected' AND pm.confidence>=0.6")["n"],
-            "same_photo": db.row(conn, "SELECT COUNT(*) n FROM image_matches WHERE verdict='same'")["n"],
+            "identical": db.row(conn, "SELECT COUNT(*) n FROM image_matches WHERE verdict='same'")["n"],
             "review": db.row(conn, "SELECT COUNT(*) n FROM product_matches pm JOIN competitor_products cp ON cp.id=pm.competitor_product_id WHERE cp.is_active=1 AND pm.needs_review=1 AND pm.review_status='auto'")["n"],
             "errors": db.row(conn, "SELECT (SELECT COUNT(*) FROM sources WHERE status='error' OR consecutive_failures>0) + (SELECT COUNT(*) FROM monitored_pages WHERE fail_count>=3 AND is_active=1) n")["n"],
             "recs": len(recs_all),
@@ -759,6 +760,49 @@ def sitecats_rescan(request: Request):
         site_categories.enrich_out_of_scope(conn)
     return RedirectResponse("/competitor-matrix?view=sitecats", status_code=303)
 
+# ---------------- Пересмотр цен ----------------
+@app.get("/pricing", response_class=HTMLResponse)
+def pricing_page(request: Request, verdict: str = "", site: str = ""):
+    cats = [x for x in request.query_params.getlist("category") if x]
+    with db.session() as conn:
+        rows = pricing.review(conn, cats or None)
+        lists = _lists(conn)
+    if site:
+        rows = [r for r in rows if r["p"]["site"] == site]
+    summ = pricing.summary(rows)
+    if verdict:
+        rows = [r for r in rows if r["verdict"] == verdict]
+    return render(request, "pricing.html", rows=rows, summ=summ, f={"verdict": verdict, "site": site, "categories": cats}, threshold=config.MARKET_GAP_THRESHOLD_PCT, **lists)
+
+
+@app.post("/pricing/recalc")
+def pricing_recalc():
+    """Заново сопоставить товары (с учётом фото и идентичных моделей) и пересчитать ценовые сигналы и действия."""
+    with db.session() as conn:
+        matching.run_matching(conn)
+        signals.detect_price_vs_market(conn)
+        recommendations.generate(conn)
+    return RedirectResponse("/pricing", status_code=303)
+
+
+@app.get("/export/pricing.xlsx")
+def export_pricing():
+    from openpyxl import Workbook
+
+    with db.session() as conn:
+        rows = pricing.review(conn)
+    wb = Workbook()
+    ws = wb.active
+    ws.title = "Пересмотр цен"
+    ws.append(["Вердикт", "Товар M22", "Сайт", "Категория", "Цена M22", "Медиана рынка", "Мин", "Макс", "Отклонение, %", "Предложений", "Продавцов", "Точных", "Почему"])
+    for r in rows:
+        ws.append([r["verdict_ru"], r["p"]["name"], r["p"]["site"], r["category"], r["p"]["price"], r["median"], r["pmin"], r["pmax"], r["gap"], r["n"], r["sellers"], r["strong"], r["why"]])
+    path = config.EXPORT_DIR / "pricing.xlsx"
+    path.parent.mkdir(parents=True, exist_ok=True)
+    wb.save(path)
+    return FileResponse(str(path), filename="pricing.xlsx")
+
+
 
 # ---------------- Наши сайты (аудит m22.ru и radiosync.ru) ----------------
 @app.get("/site-audit", response_class=HTMLResponse)
@@ -1253,12 +1297,21 @@ def settings_page(request: Request):
 
 
 @app.post("/settings/update")
-def settings_update(owners: str = Form(None), owner_default: str = Form(None)):
+def settings_update(owners: str = Form(None), owner_default: str = Form(None), model_aliases: str = Form(None)):
     with db.session() as conn:
         if owners is not None:
             db.set_setting(conn, "owners", ";".join(o.strip() for o in owners.split(";") if o.strip()))
         if owner_default:
             db.set_setting(conn, "owner_default", owner_default.strip())
+        if model_aliases is not None:
+            # формат: одна пара на строку «КОД_КОНКУРЕНТА = КОД_M22», например «T130 = SGTR02»
+            al = {}
+            for line in model_aliases.splitlines():
+                if "=" in line:
+                    a, b = line.split("=", 1)
+                    if a.strip() and b.strip():
+                        al[a.strip().upper().replace(" ", "").replace("-", "")] = b.strip().upper().replace(" ", "").replace("-", "")
+            db.set_setting(conn, "model_aliases", db.j(al))
     return RedirectResponse("/settings", status_code=303)
 
 
