@@ -892,7 +892,15 @@ def matrix(request: Request):
                                   FROM m22_products p WHERE {' AND '.join(where)} ORDER BY p.category_slug, p.model_key, p.capacity, p.site""", params)
         lists = _lists(conn)
         cat_stats = db.rows(conn, "SELECT category_slug, COUNT(*) n, MIN(price) pmin, MAX(price) pmax FROM m22_products WHERE is_active=1 AND in_scope=1 GROUP BY 1")
-    return render(request, "matrix.html", prods=prods, f=f, site=site, scope=scope, cat_stats=cat_stats, **lists)
+        variants = {r["parent_url"]: r["n"] for r in db.rows(conn, "SELECT parent_url, COUNT(*) n FROM m22_products WHERE is_active=1 AND parent_url IS NOT NULL GROUP BY 1")}
+        for p in prods:
+            p["norm"] = specmod.normalize(p["name"], p["description"], p["specs_json"], p["price"], p["capacity"])
+            p["raw_spec_count"] = len(specmod.flatten_specs(p["specs_json"]))
+            imgs = db.uj(p["images_json"], []) or []
+            img = imgs[0] if imgs and isinstance(imgs[0], str) else None
+            p["image"] = (img if img and img.startswith("http") else (("https://m22.ru" + img) if img else None))
+            p["variants"] = variants.get(p["url"], 0)
+    return render(request, "matrix.html", prods=prods, f=f, site=site, scope=scope, cat_stats=cat_stats, cols=cmx.MATRIX_COLS, KIND_LABELS=cmx.KIND_LABELS, **lists)
 
 
 @app.get("/matrix/{pid}", response_class=HTMLResponse)

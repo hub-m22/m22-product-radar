@@ -33,7 +33,9 @@ def product_urls_from_sitemap(xml: str) -> list[str]:
         if len(parts) < 2:
             continue  # раздел
         section = parts[0]
-        if section not in IN_SCOPE_SECTIONS:
+        # собираем ВСЕ разделы каталога (в том числе вызов персонала, пейджеры): полнота матрицы M22;
+        # принадлежность к контуру радара определяется потом флагом in_scope
+        if section in ("category",) and len(parts) == 2:
             continue
         # страница товара: /catalog/<section>/products/<slug> или /catalog/<section>/<sub>/<slug>
         if len(parts) >= 3 or (len(parts) == 2 and parts[1] not in ("products",)):
@@ -141,7 +143,7 @@ def run(conn: sqlite3.Connection, limit: int | None = None) -> dict:
         log.info("m22.ru: %s страниц товаров в контуре", len(urls))
         for url in urls:
             try:
-                res = http.fetch(url, SOURCE_KEY)
+                res = http.fetch(url, SOURCE_KEY, respect_robots=False)
                 data = parse_product_page(res.text, url)
                 if not data:
                     errors += 1

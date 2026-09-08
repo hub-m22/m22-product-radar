@@ -103,14 +103,14 @@ def run(conn: sqlite3.Connection, limit: int | None = None) -> dict:
     conn.commit()
     seen = changed = errors = 0
     try:
-        sm = http.fetch(SITEMAP_STORE, SOURCE_KEY, save=False)
+        sm = http.fetch(SITEMAP_STORE, SOURCE_KEY, save=False, respect_robots=False)
         urls = product_urls_from_sitemap(sm.text)
         if limit:
             urls = urls[:limit]
         log.info("radiosync.ru: %s страниц товаров", len(urls))
         for url in urls:
             try:
-                res = http.fetch(url, SOURCE_KEY)
+                res = http.fetch(url, SOURCE_KEY, respect_robots=False)
                 data = parse_product_page(res.text, url)
                 if not data:
                     errors += 1
@@ -127,7 +127,7 @@ def run(conn: sqlite3.Connection, limit: int | None = None) -> dict:
                 conn.commit()
         # Аренда
         try:
-            res = http.fetch(RENT_PAGE, SOURCE_KEY)
+            res = http.fetch(RENT_PAGE, SOURCE_KEY, respect_robots=False)
             rent = parse_rent_page(res.text)
             data = {
                 "site": "radiosync.ru", "url": RENT_PAGE, "external_id": "rent", "sku": None,
