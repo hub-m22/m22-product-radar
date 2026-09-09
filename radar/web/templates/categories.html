@@ -1,7 +1,8 @@
 {% extends "base.html" %}{% import "_macros.html" as m %}
 {% block title %}Категории — M22 Product Radar{% endblock %}
 {% block content %}
-<h1>Категории: где M22 по цене и что требует внимания</h1>
+<div class="topbar"><div><h1>Цены по категориям</h1></div></div>
+{% include "_pricing_tabs.html" %}
 <div class="sub">Для каждой категории: наши модели, предложения конкурентов, доля предложений дешевле самой дешёвой модели M22, сигналы и действия. Цены наушников приведены к штуке, если в названии указано количество в упаковке.</div>
 <div class="card compact tbl-wrap"><table>
 <thead><tr><th>Категория</th><th>Статус</th><th class="num">Моделей M22</th><th class="num">Цены M22</th><th class="num">Продавцов</th><th class="num">Предложений (с ценой)</th><th class="num">Мин / медиана рынка</th><th class="num">Дешевле M22</th><th class="num">Сигналы</th><th class="num">Действия</th><th class="num">Закупки</th></tr></thead>

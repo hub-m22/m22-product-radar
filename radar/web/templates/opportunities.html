@@ -1,7 +1,8 @@
 {% extends "base.html" %}{% import "_macros.html" as m %}
 {% block title %}Новые возможности — M22 Product Radar{% endblock %}
 {% block content %}
-<div class="topbar"><div><h1>Новые возможности (Product Discovery)</h1><div class="sub">Карточки гипотез: система собирает доказательства, решение принимает человек. Автоматического скоринга нет.</div></div>
+<div class="topbar"><div><h1>Гипотезы: что исследовать</h1><div class="sub">Карточки гипотез по новым категориям, моделям и нишам: система собирает доказательства, решение принимает человек.</div></div>
+{% include "_market_tabs.html" %}
 <div class="actions-row"><a class="btn sec small" href="/export/hypotheses.xlsx">XLSX</a></div></div>
 {% set statuses = [("new","Новая"),("research","Исследуется"),("approved","Одобрена"),("rejected","Отклонена"),("parked","Отложена")] %}
 {% set show_product = False %}{% set show_competitor = False %}{% set show_conf = False %}

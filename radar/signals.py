@@ -23,6 +23,10 @@ MOVED_TYPES = {
     "m22_price_below_market": "раздел «Пересмотр цен»",
     "cross_site_discrepancy": "раздел «Наши сайты»",
     "source_error": "раздел «Источники»",
+    "new_competitor": "реестр «Конкуренты» (конкурентов добавляем сами — это не событие рынка)",
+    "product_appeared": "«Матрица конкурентов» → «Что появилось / исчезло»",
+    "new_kit_solution": "«Матрица конкурентов» → «Что появилось / исчезло»",
+    "product_disappeared": "«Матрица конкурентов» → «Что появилось / исчезло»",
 }
 SIGNAL_TYPES = {
     "competitor_price_change": "Изменение цены конкурента",
@@ -587,9 +591,7 @@ def run_all(conn: sqlite3.Connection) -> dict:
     retire_moved_types(conn)
     stats = {
         "competitor_price_change": detect_competitor_price_changes(conn),
-        "appear_disappear": detect_product_appear_disappear(conn),
         "new_category": detect_new_categories(conn),
-        "new_competitor": detect_new_competitors(conn),
         "multi_competitor": detect_multi_competitor_products(conn),
         "demand": detect_demand(conn),
         "new_use_case": detect_new_use_cases(conn),

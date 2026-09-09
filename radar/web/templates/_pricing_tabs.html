@@ -1,0 +1,4 @@
+<div class="tabs section-tabs" style="margin:6px 0 12px">
+  <a href="/pricing" class="{% if request.url.path == '/pricing' %}active{% endif %}">По товарам</a>
+  <a href="/categories" class="{% if request.url.path.startswith('/categories') %}active{% endif %}">По категориям</a>
+</div>

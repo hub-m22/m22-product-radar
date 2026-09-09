@@ -4,69 +4,52 @@
 <div class="topbar">
   <div><button type="button" class="theme-toggle js-theme-toggle" style="float:right;margin-left:12px" title="Переключить светлую/тёмную тему"><span class="js-theme-icon">🌙</span> <span class="js-theme-label">Тёмная тема</span></button>
   <h1>Обзор</h1>
-  <div class="sub">Данные обновлены: <b>{{ last_update | dt }}</b>. Здесь только сводка; подробности — в разделах по ссылкам. <a href="/logic">Как радар решает, что важно →</a></div></div>
-  <div class="actions-row no-print"><form method="post" action="/analyze" class="inline"><button class="sec small">Пересчитать сигналы</button></form> <a class="btn small" href="/reports">Отчёты</a></div>
+  <div class="sub">Данные обновлены: <b>{{ last_update | dt }}</b>. Четыре вопроса — четыре раздела: цены, ассортимент и рынок, наши сайты, конкуренты. Здесь только сводка. <a href="/logic">Как устроен радар →</a></div></div>
+  <div class="actions-row no-print"><form method="post" action="/analyze" class="inline"><button class="sec small">Пересчитать</button></form> <a class="btn small" href="/reports">Отчёты</a></div>
 </div>
 
 <div class="grid grid-4">
   <div class="card kpi"><span class="v">{{ counts.m22 }}</span><span class="l">товаров M22 в матрице</span><span class="d"><a href="/matrix">m22.ru + radiosync.ru</a></span></div>
   <div class="card kpi"><span class="v">{{ counts.cp }}</span><span class="l">товаров конкурентов с ценой</span><span class="d">{{ counts.comp }} конкурентов · <a href="/competitor-matrix">матрица</a></span></div>
-  <div class="card kpi"><span class="v">{{ counts.matched }}</span><span class="l">товаров M22 с найденным аналогом</span><span class="d">{{ counts.same_photo }} совпадений по фото · <a href="/matches?review=0">проверить сомнительные ({{ counts.review }})</a></span></div>
+  <div class="card kpi"><span class="v">{{ counts.matched }}</span><span class="l">товаров M22 с найденным аналогом</span><span class="d"><a href="/matches?review=0">проверить сомнительные ({{ counts.review }})</a></span></div>
   <div class="card kpi" {% if counts.errors %}style="border-color:var(--high)"{% endif %}><span class="v">{{ counts.errors }}</span><span class="l">источников и страниц с ошибками</span><span class="d"><a href="/sources">раздел «Источники»</a></span></div>
 </div>
 
 {% if limits.notes %}<div class="note" style="margin-top:10px"><b>Ограничения текущих данных:</b> {{ limits.notes | join(' ') }}</div>{% endif %}
 
 <div class="grid grid-2" style="margin-top:14px">
-  <div class="card"><h2>Что делать в первую очередь <span class="small muted">({{ counts.recs }} открытых)</span></h2>
-    <div class="small muted" style="margin-bottom:6px">Действия из событий рынка (ассортимент, сценарии, спрос). Цены — в «Пересмотре цен», ошибки сайтов — в «Наших сайтах», сбои сбора — в «Источниках».</div>
-    {% for r in recs %}<div style="margin-bottom:8px">{{ m.prio(r.priority) }} <a href="/actions/{{ r.id }}">{{ r.title }}</a><div class="small muted">{{ r.owner }} · до {{ r.due_date }} · уверенность {{ (r.confidence * 100) | int }}%</div></div>{% else %}<div class="muted small">Открытых действий нет.</div>{% endfor %}
-    <a class="small" href="/actions">Все действия →</a></div>
-
-  <div class="card"><h2>Цены M22 против рынка</h2>
-    <div class="small" style="margin-bottom:6px">Снизить или обосновать: <b style="color:var(--high)">{{ pricing_summ.lower }}</b> · можно поднять: <b style="color:#2a9d5c">{{ pricing_summ.raise }}</b> · в рынке: <b>{{ pricing_summ.keep }}</b> · мало данных: {{ pricing_summ.no_data }}. Считается по надёжным сопоставлениям (3+ предложения от 2+ продавцов).</div>
+  <div class="card"><h2>1. Цены: где M22 против рынка</h2>
+    <div class="small" style="margin-bottom:6px">Снизить или обосновать: <b style="color:var(--high)">{{ pricing_summ.lower }}</b> · можно поднять: <b style="color:#2a9d5c">{{ pricing_summ.raise }}</b> · в рынке: <b>{{ pricing_summ.keep }}</b> · мало данных: {{ pricing_summ.no_data }}.</div>
     {% for r in pricing_top %}<div class="small" style="margin-bottom:6px"><span class="badge {{ 'sev-high' if r.verdict == 'lower' else 'st-new' }}">{{ r.verdict_ru }}</span> <a href="/matrix/{{ r.p.id }}">{{ r.p.name[:55] }}</a> <span class="muted">{{ r.p.price | money }} против медианы {{ r.median | money }} ({{ '%+d' % r.gap }} %)</span></div>{% else %}<div class="muted small">Отклонений от рынка нет или сопоставимых предложений недостаточно.</div>{% endfor %}
-    <a class="btn small" href="/pricing">Пересмотр цен: все товары →</a></div>
+    {% set st = {} %}{% for c in cat_overview if c.m22_n %}{% set _ = st.update({c.status: st.get(c.status, 0) + 1}) %}{% endfor %}
+    <div class="small muted" style="margin-top:6px">По категориям: внимание {{ st.get('attention', 0) }} · следить {{ st.get('watch', 0) }} · в порядке {{ st.get('ok', 0) }} · мало данных {{ st.get('no_data', 0) }}.</div>
+    <a class="btn small" href="/pricing">По товарам →</a> <a class="small" href="/categories">по категориям →</a></div>
+
+  <div class="card"><h2>2. Ассортимент и рынок: что ввести</h2>
+    <div class="small muted" style="margin-bottom:6px">Ходовые модели у нескольких продавцов, которых нет у M22; категории без товаров M22 ({{ counts.gap_cats }}); гипотез на рассмотрении: {{ counts.hyps }}.</div>
+    {% for s in multi %}<div class="small" style="margin-bottom:6px">{{ m.sev(s.severity) }} <a href="/signals/{{ s.id }}">{{ s.title }}</a></div>{% else %}<div class="muted small">Ходовых моделей без аналога у M22 не найдено.</div>{% endfor %}
+    {% for g in gap_cats %}<div class="small">▫ <a href="/categories/{{ g.slug }}">{{ g.name_ru }}</a> — есть у конкурентов, нет у M22</div>{% endfor %}
+    <a class="btn small" href="/market">Что ввести →</a> <a class="small" href="/opportunities">гипотезы →</a> <a class="small" href="/actions">действия ({{ counts.recs }})</a></div>
 </div>
 
 <div class="grid grid-2" style="margin-top:14px">
-  <div class="card"><h2>Наши сайты: ошибки и наличие</h2>
+  <div class="card"><h2>3. Наши сайты: ошибки и наличие</h2>
     <div class="small" style="margin-bottom:6px">Замечаний по m22.ru и radiosync.ru: срочных <b style="color:var(--high)">{{ audit.counts.P1 }}</b>, важных <b>{{ audit.counts.P2 }}</b>, косметика {{ audit.counts.P3 }}. Нельзя купить сейчас: <b>{{ stock.total }}</b> карточек ({% for st, n in stock.by_status.most_common() %}{{ st }} {{ n }}{% if not loop.last %}, {% endif %}{% endfor %}).</div>
-    <a class="btn small" href="/site-audit">Ошибки и замечания →</a> <a class="small" href="/site-audit/stock">Наличие →</a></div>
-  <div class="card"><h2>Категории: где мы по цене</h2>
-    <div class="small" style="margin-bottom:6px">{% set st = {} %}{% for c in cat_overview if c.m22_n %}{% set _ = st.update({c.status: st.get(c.status, 0) + 1}) %}{% endfor %}
-      внимание: <b style="color:var(--high)">{{ st.get('attention', 0) }}</b> · следить: <b>{{ st.get('watch', 0) }}</b> · ок: {{ st.get('ok', 0) }} · пробел: {{ st.get('gap', 0) }} · мало данных: {{ st.get('no_data', 0) }}.</div>
-    {% for c in cat_overview if c.m22_n and c.status in ('attention', 'watch') %}<div class="small">▫ <a href="/categories/{{ c.slug }}">{{ c.name }}</a> — {{ c.verdict[:110] }}</div>{% endfor %}
-    <a class="small" href="/categories">Все категории →</a></div>
+    <a class="btn small" href="/site-audit">Ошибки и замечания →</a> <a class="small" href="/site-audit/stock">наличие →</a></div>
+
+  <div class="card"><h2>4. Конкуренты: что изменилось</h2>
+    <div class="small" style="margin-bottom:6px">С базового замера {{ baseline }}: новых позиций <b>{{ counts.new_products }}</b>, изменений цен за 30 дней <b>{{ counts.price_moves }}</b>, разделов конкурентов вне матрицы M22: {{ counts.outscope }}.</div>
+    {% for a in new_comp %}<div class="small" style="margin-bottom:6px">🆕 <a href="/competitors/{{ a.competitor_id }}">{{ a.seller[:24] }}</a>: <a href="{{ a.url }}" target="_blank" rel="noopener">{{ a.name[:55] }}</a> {{ a.price | money }}</div>{% else %}<div class="muted small">Новых позиций после базового замера нет.</div>{% endfor %}
+    <a class="btn small" href="/competitor-matrix?view=changes">Что появилось / исчезло →</a> <a class="small" href="/market?tab=changes">изменения цен →</a> <a class="small" href="/competitors">реестр и показатели →</a></div>
 </div>
 
-<div class="grid grid-3" style="margin-top:14px">
-  <div class="card"><h2>Что изменилось у конкурентов</h2>
-    <div class="small" style="margin-bottom:6px">С базового замера {{ baseline }}: новых позиций <b>{{ counts.new_products }}</b>, исчезло <b>{{ counts.gone_products }}</b>, изменений цен за 30 дней <b>{{ counts.price_moves }}</b>.</div>
-    {% for a in new_comp %}<div class="small" style="margin-bottom:6px">🆕 <a href="/competitors/{{ a.competitor_id }}">{{ a.seller[:24] }}</a>: <a href="{{ a.url }}" target="_blank" rel="noopener">{{ a.name[:55] }}</a> {{ a.price | money }}</div>{% else %}<div class="muted small">Новых позиций после базового замера нет. Изменения цен появятся после второго замера в другой день.</div>{% endfor %}
-    <a class="small" href="/competitor-matrix?view=changes">Что появилось / исчезло →</a></div>
-
-  <div class="card"><h2>Одну модель продают несколько продавцов</h2>
-    <div class="small muted" style="margin-bottom:6px">Ходовые модели рынка, которых нет у M22 — кандидаты на ввод.</div>
-    {% for s in multi %}<div class="small" style="margin-bottom:8px">{{ m.sev(s.severity) }} <a href="/signals/{{ s.id }}">{{ s.title }}</a></div>{% else %}<div class="muted small">Таких моделей не найдено.</div>{% endfor %}
-    <a class="small" href="/signals?type=multi_competitor_product">Все →</a></div>
-
-  <div class="card"><h2>Пробелы и новые ниши</h2>
-    <div class="small" style="margin-bottom:6px">Категорий, где у конкурентов есть товары, а у M22 нет: <b>{{ counts.gap_cats }}</b>. Разделов конкурентов вне матрицы M22: <b>{{ counts.outscope }}</b>. Гипотез на рассмотрении: <b>{{ counts.hyps }}</b>.</div>
-    {% for g in gap_cats %}<div class="small">▫ <a href="/categories/{{ g.slug }}">{{ g.name_ru }}</a></div>{% endfor %}
-    {% for h in hyps %}<div class="small" style="margin-top:4px">💡 <a href="/opportunities/{{ h.id }}">{{ h.title }}</a> {{ m.status(h.decision_status) }}</div>{% endfor %}
-    <a class="small" href="/competitor-matrix?view=sitecats">Категории на сайтах и ниши →</a> · <a class="small" href="/opportunities">Гипотезы →</a></div>
-</div>
-
-<div class="grid grid-2" style="margin-top:14px">
-  <div class="card"><h2>Состояние данных</h2>
-    {% if bad_sources or bad_pages %}
-      {% for s in bad_sources %}<div class="small">❌ <b>{{ s.name }}</b> — {{ (s.last_error or 'ошибка')[:90] }} ({{ s.consecutive_failures }} подряд)</div>{% endfor %}
-      {% for p in bad_pages %}<div class="small">⚠ {{ p.cname[:30] }}: <a href="{{ p.url }}" target="_blank" rel="noopener">{{ p.url[:55] }}</a> — {{ p.last_status }}</div>{% endfor %}
-    {% else %}<div class="small">✅ Все источники и страницы мониторинга в норме.</div>{% endif %}
-    <table style="margin-top:8px"><thead><tr><th>Последние сборы</th><th>Завершён</th><th>Статус</th><th>Итог</th></tr></thead><tbody>
-    {% for r in runs %}<tr><td>{{ r.source_key }}</td><td class="nowrap small">{{ r.finished_at | dt }}</td><td><span class="badge src-{{ 'ok' if r.status in ('ok','partial') else 'error' }}">{{ r.status }}</span></td><td class="small">{{ (r.message or '')[:60] }}</td></tr>{% endfor %}
-    </tbody></table>
-    <a class="small" href="/sources">Источники и журнал ошибок →</a></div>
-</div>
+<div class="card" style="margin-top:14px"><h2>Состояние данных</h2>
+  {% if bad_sources or bad_pages %}
+    {% for s in bad_sources %}<div class="small">❌ <b>{{ s.name }}</b> — {{ (s.last_error or 'ошибка')[:90] }} ({{ s.consecutive_failures }} подряд)</div>{% endfor %}
+    {% for p in bad_pages %}<div class="small">⚠ {{ p.cname[:30] }}: <a href="{{ p.url }}" target="_blank" rel="noopener">{{ p.url[:55] }}</a> — {{ p.last_status }}</div>{% endfor %}
+  {% else %}<div class="small">✅ Все источники и страницы мониторинга в норме.</div>{% endif %}
+  <table style="margin-top:8px"><thead><tr><th>Последние сборы</th><th>Завершён</th><th>Статус</th><th>Итог</th></tr></thead><tbody>
+  {% for r in runs %}<tr><td>{{ r.source_key }}</td><td class="nowrap small">{{ r.finished_at | dt }}</td><td><span class="badge src-{{ 'ok' if r.status in ('ok','partial') else 'error' }}">{{ r.status }}</span></td><td class="small">{{ (r.message or '')[:60] }}</td></tr>{% endfor %}
+  </tbody></table>
+  <a class="small" href="/sources">Источники и журнал ошибок →</a></div>
 {% endblock %}

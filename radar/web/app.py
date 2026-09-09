@@ -382,14 +382,34 @@ def action_update(rid: int, status: str = Form(None), owner: str = Form(None), c
 
 
 # ---------------- Сигналы ----------------
-@app.get("/signals", response_class=HTMLResponse)
-def signals_page(request: Request):
+MARKET_TABS = {
+    "intro": ("Ассортимент: что ввести", "Ходовые модели, которые продают несколько независимых продавцов, и категории, которых нет у M22. Каждый пункт — с обоснованием по цене и характеристикам и предлагаемым действием.",
+              ("multi_competitor_product", "new_category", "category_growth_gap")),
+    "changes": ("Изменения у конкурентов", "Изменения цен конкурентов на сопоставимые товары (два замера в разные дни, от 3 %). Появившиеся и исчезнувшие позиции — в «Матрице конкурентов» → «Что появилось / исчезло».",
+                ("competitor_price_change",)),
+    "demand": ("Сценарии и спрос", "Сценарии применения, которые конкуренты описывают, а M22 нет; рост, падение и всплески поискового спроса.",
+               ("new_use_case", "demand_change", "demand_anomaly", "category_growth_existing")),
+}
+
+
+@app.get("/market", response_class=HTMLResponse)
+def market_page(request: Request, tab: str = "intro"):
+    tab = tab if tab in MARKET_TABS else "intro"
+    title, sub, types = MARKET_TABS[tab]
     f = _filters(request)
     where, params = _signal_where(f)
+    where += f" AND s.type IN ({','.join('?' * len(types))})"
+    params += list(types)
     with db.session() as conn:
         rows = db.rows(conn, SIGNAL_SQL + f" WHERE {where} ORDER BY s.status='new' DESC, CASE s.severity WHEN 'high' THEN 0 WHEN 'medium' THEN 1 ELSE 2 END, s.confidence DESC, s.created_at DESC LIMIT 500", params)
         lists = _lists(conn)
-    return render(request, "signals.html", sigs=rows, f=f, **lists)
+    return render(request, "signals.html", sigs=rows, f=f, tab=tab, page_title=title, page_sub=sub, tab_types=[(t, SIGNAL_TYPES[t]) for t in types], **lists)
+
+
+@app.get("/signals")
+def signals_page(request: Request):
+    q = request.url.query
+    return RedirectResponse("/market" + (("?" + q) if q else ""), status_code=302)
 
 
 @app.get("/signals/{sid}", response_class=HTMLResponse)

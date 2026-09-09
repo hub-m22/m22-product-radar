@@ -1,0 +1,7 @@
+<div class="tabs section-tabs" style="margin:6px 0 12px">
+  <a href="/market" class="{% if request.url.path == '/market' and (tab is not defined or tab == 'intro') %}active{% endif %}">Что ввести</a>
+  <a href="/market?tab=changes" class="{% if tab is defined and tab == 'changes' %}active{% endif %}">Изменения у конкурентов</a>
+  <a href="/market?tab=demand" class="{% if tab is defined and tab == 'demand' %}active{% endif %}">Сценарии и спрос</a>
+  <a href="/opportunities" class="{% if request.url.path.startswith('/opportunities') %}active{% endif %}">Гипотезы</a>
+  <a href="/actions" class="{% if request.url.path.startswith('/actions') %}active{% endif %}">Действия</a>
+</div>

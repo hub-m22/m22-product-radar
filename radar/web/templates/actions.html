@@ -1,11 +1,12 @@
 {% extends "base.html" %}{% import "_macros.html" as m %}
 {% block title %}Рекомендуемые действия — M22 Product Radar{% endblock %}
 {% block content %}
-<div class="topbar"><div><h1>Рекомендуемые действия</h1><div class="sub">Действия из событий рынка: ввод моделей и категорий, сценарии применения, реакция на цены конкурентов, спрос. Что делать с ценами M22 — по каждому товару в <a href="/pricing">«Пересмотре цен»</a>; что исправить на сайтах — в <a href="/site-audit">«Наших сайтах»</a>.</div></div>
+<div class="topbar"><div><h1>Действия по ассортименту и рынку</h1><div class="sub">Что решено сделать по событиям рынка, со статусом, ответственным и сроком. Цены — в разделе «Цены», сайты — в «Наших сайтах».</div></div>
 <div class="actions-row"><a class="btn sec small" href="/export/recommendations.csv">CSV</a> <a class="btn sec small" href="/export/recommendations.xlsx">XLSX</a></div></div>
 {% set severities = [("P1","P1"),("P2","P2"),("P3","P3")] %}{% set sev_label = "Приоритет" %}
 {% set statuses = [("new","Новый"),("accepted","Принято"),("in_progress","В работе"),("rejected","Отклонено"),("done","Выполнено")] %}
 {% set show_competitor = False %}
+{% include "_market_tabs.html" %}
 {% include "_filters.html" %}
 <div class="card compact tbl-wrap"><table><thead><tr><th>Приоритет</th><th>Что именно сделать</th><th>Основание</th><th>Уверенность</th><th>Ответственный / срок</th><th>Статус</th></tr></thead>
 <tbody>{% for r in recs %}{{ m.rec_row(r) }}{% else %}<tr><td colspan="6" class="muted">Рекомендаций нет.</td></tr>{% endfor %}</tbody></table></div>

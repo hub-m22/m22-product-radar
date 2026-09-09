@@ -1,8 +1,9 @@
 {% extends "base.html" %}{% import "_macros.html" as m %}
 {% block title %}Пересмотр цен — M22 Product Radar{% endblock %}
 {% block content %}
-<div class="topbar"><div><h1>Пересмотр цен</h1><div class="sub">По каждому товару M22: где рынок и что делать с ценой. Считается только по надёжным сопоставлениям (идентичные и точные модели, одинаковое фото, прямые аналоги с совместимыми характеристиками), минимум 3 предложения от 2+ продавцов. Порог отклонения — {{ threshold }} %.</div></div>
+<div class="topbar"><div><h1>Цены: где M22 против рынка</h1><div class="sub">По каждому товару M22: где рынок и что делать с ценой. Считается только по надёжным сопоставлениям (идентичные и точные модели, одинаковое фото, прямые аналоги с совместимыми характеристиками), минимум 3 предложения от 2+ продавцов. Порог отклонения — {{ threshold }} %.</div></div>
 <div class="actions-row"><form method="post" action="/pricing/recalc" class="inline"><button class="small" title="заново сопоставить товары и пересчитать рынок (1–3 минуты)">Обновить сравнение цен</button></form> <a class="btn sec small" href="/export/pricing.xlsx">XLSX</a></div></div>
+{% include "_pricing_tabs.html" %}
 
 <div class="kpis">
   <div class="kpi"><div class="v" style="color:var(--high)">{{ summ.lower }}</div><div class="l">дороже рынка — снизить или обосновать</div></div>
