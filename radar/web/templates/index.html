@@ -27,7 +27,7 @@
 
   <div class="card"><h2>2. Ассортимент и рынок: что ввести</h2>
     <div class="small muted" style="margin-bottom:6px">Ходовые модели у нескольких продавцов, которых нет у M22; категории без товаров M22 ({{ counts.gap_cats }}); гипотез на рассмотрении: {{ counts.hyps }}.</div>
-    {% for s in multi %}<div class="small" style="margin-bottom:6px">{{ m.sev(s.severity) }} <a href="/signals/{{ s.id }}">{{ s.title }}</a></div>{% else %}<div class="muted small">Ходовых моделей без аналога у M22 не найдено.</div>{% endfor %}
+    {% for s in multi %}{% set ev = (s.evidence_json | uj({})) or {} %}<div class="small home-multi">{% if ev.photo %}<img src="{{ ev.photo }}" alt="" referrerpolicy="no-referrer" loading="lazy">{% endif %}<div>{{ m.sev(s.severity) }} <a href="/signals/{{ s.id }}">{{ s.title }}</a>{% if ev.m22_photos %}<div class="muted">против {% for p in ev.m22_photos[:2] %}{% if p.image %}<img src="{{ p.image }}" alt="" referrerpolicy="no-referrer" loading="lazy" class="mini">{% endif %}<a href="/matrix/{{ p.id }}">{{ p.name[:36] }}</a> ({{ p.price | money }}){% if not loop.last %}, {% endif %}{% endfor %}</div>{% endif %}</div></div>{% else %}<div class="muted small">Ходовых моделей без аналога у M22 не найдено.</div>{% endfor %}
     {% for g in gap_cats %}<div class="small">▫ <a href="/categories/{{ g.slug }}">{{ g.name_ru }}</a> — есть у конкурентов, нет у M22</div>{% endfor %}
     <a class="btn small" href="/market">Что ввести →</a> <a class="small" href="/opportunities">гипотезы →</a> <a class="small" href="/actions">действия ({{ counts.recs }})</a></div>
 </div>

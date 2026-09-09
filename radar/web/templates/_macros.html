@@ -8,8 +8,15 @@
 {% macro prio(p) -%}<span class="badge pr-{{ p }}">{{ p }}</span>{%- endmacro %}
 
 {% macro signal_card(s, compact=False) %}
+{% set ev = (s.evidence_json | uj({})) or {} %}
 <div class="sig sev-{{ s.severity }}">
   <div class="t"><a href="/signals/{{ s.id }}">{{ s.title }}</a></div>
+  {% if ev.photo or ev.m22_photos %}
+  <div class="sig-photos">
+    <div class="sig-photo"><a href="{{ ev.url }}" target="_blank" rel="noopener">{% if ev.photo %}<img src="{{ ev.photo }}" alt="" referrerpolicy="no-referrer" loading="lazy">{% else %}<div class="audit-noimg">нет фото</div>{% endif %}</a><div class="small"><b>{{ (ev.brand or '') ~ ' ' ~ (ev.model_key or '') }}</b><br><span class="muted">конкурент{% if ev.pmin %} · от {{ ev.pmin | money }}{% endif %}</span></div></div>
+    {% if ev.m22_photos %}<div class="sig-vs">против</div>{% for p in ev.m22_photos[:3] %}<div class="sig-photo"><a href="/matrix/{{ p.id }}">{% if p.image %}<img src="{{ p.image }}" alt="" referrerpolicy="no-referrer" loading="lazy">{% else %}<div class="audit-noimg">нет фото</div>{% endif %}</a><div class="small"><b>{{ p.name[:34] }}</b><br><span class="muted">M22 · {{ p.price | money }}</span></div></div>{% endfor %}{% endif %}
+  </div>
+  {% endif %}
   {% if not compact %}<div class="w">{{ s.what_happened }}</div>{% endif %}
   {% if s.why_matters %}<div class="why"><b>Почему важно для M22:</b> {{ s.why_matters }}</div>{% endif %}
   {% if s.recommended_action %}<div class="act"><b>Действие:</b> {{ s.recommended_action }} {% if s.type in ('multi_competitor_product','m22_price_above_market','m22_price_below_market') %}<a href="/compare?signal={{ s.id }}">Сравнить характеристики и цены →</a>{% endif %}</div>{% endif %}

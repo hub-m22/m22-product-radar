@@ -151,3 +151,13 @@ html[data-theme="dark"] .pill-check:has(input:checked) { background:var(--accent
 .backbar { margin:0 0 8px; font-size:13px; } .backbar a { font-weight:600; text-decoration:none; padding:3px 10px 3px 8px; border:1px solid var(--line); border-radius:14px; background:#fff; display:inline-block; }
 .backbar a:hover { border-color:var(--accent, #2563eb); }
 html[data-theme="dark"] .backbar a { background:var(--card); color:var(--text); }
+
+/* фото в событиях «что ввести» */
+.sig-photos { display:flex; gap:12px; align-items:flex-start; flex-wrap:wrap; margin:6px 0 8px; }
+.sig-photo { display:flex; gap:8px; align-items:center; max-width:300px; } .sig-photo img { width:84px; height:84px; object-fit:contain; border:1px solid var(--line); border-radius:8px; background:#fff; flex:none; }
+.sig-photos.big .sig-photo img { width:160px; height:160px; } .sig-photos.big .sig-photo { max-width:420px; }
+.sig-vs { align-self:center; font-size:12px; color:var(--muted); text-transform:uppercase; letter-spacing:.05em; padding:0 4px; }
+.th-photo { width:64px; height:64px; object-fit:contain; border:1px solid var(--line); border-radius:6px; background:#fff; display:block; margin-bottom:4px; }
+.home-multi { display:flex; gap:8px; align-items:flex-start; margin-bottom:8px; } .home-multi > img { width:56px; height:56px; object-fit:contain; border:1px solid var(--line); border-radius:6px; background:#fff; flex:none; }
+.home-multi img.mini { width:28px; height:28px; object-fit:contain; border:1px solid var(--line); border-radius:4px; background:#fff; vertical-align:middle; margin-right:3px; }
+html[data-theme="dark"] .sig-photo img, html[data-theme="dark"] .th-photo, html[data-theme="dark"] .home-multi img { background:#fff; }

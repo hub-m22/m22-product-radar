@@ -257,12 +257,14 @@ def _justify_strict(conn: sqlite3.Connection, full: list[dict], cat: str | None)
             if merged.get(k) in (None, False) and v not in (None, False):
                 merged[k] = v
     best = {**best, "norm": merged}
-    m22 = db.rows(conn, "SELECT id, name, url, description, specs_json, price, capacity, kind FROM m22_products WHERE is_active=1 AND in_scope=1 AND parent_url IS NULL AND price IS NOT NULL AND site='m22.ru' AND category_slug=? AND kind=? ORDER BY price", (cat, kind))
+    m22 = db.rows(conn, "SELECT id, name, url, site, description, specs_json, price, capacity, kind, images_json FROM m22_products WHERE is_active=1 AND in_scope=1 AND parent_url IS NULL AND price IS NOT NULL AND site='m22.ru' AND category_slug=? AND kind=? ORDER BY price", (cat, kind))
     peers = []
     for m in m22:
         norm = specmod.normalize(m["name"], m["description"], m["specs_json"], m["price"], m["capacity"])
         unit, _q = catmod.unit_price(m["name"], m["price"], cat, m["kind"], norm.get("capacity") or m["capacity"])
-        peers.append({"id": m["id"], "name": m["name"], "url": m["url"], "price": m["price"], "capacity": norm.get("capacity") or m["capacity"], "norm": norm, "unit": unit})
+        imgs = db.uj(m["images_json"], []) or []
+        img = (f"https://{m['site']}{imgs[0]}" if imgs and imgs[0].startswith("/") else (imgs[0] if imgs else None))
+        peers.append({"id": m["id"], "name": m["name"], "url": m["url"], "price": m["price"], "capacity": norm.get("capacity") or m["capacity"], "norm": norm, "unit": unit, "image": img})
     cap = best.get("capacity")
     if kind in ("system", "kit"):
         price_peers = [p for p in peers if cap and p["capacity"] and abs(p["capacity"] - cap) <= max(2, 0.2 * cap) and p["unit"]]
@@ -311,10 +313,10 @@ def _justify_strict(conn: sqlite3.Connection, full: list[dict], cat: str | None)
     else:
         verdict = "преимуществ перед сопоставимыми моделями M22 по цене и характеристикам не найдено"
     table = {"fields": COMPARE_FIELDS, "competitor": {"name": best["name"], "url": best.get("url"), "price": best["price"], "vals": {**{k: best["norm"].get(k) for k, _ in COMPARE_FIELDS}, "unit": best.get("unit")}},
-             "peers": [{"id": p["id"], "name": p["name"], "url": p["url"], "price": p["price"], "vals": {**{k: p["norm"].get(k) for k, _ in COMPARE_FIELDS}, "unit": p.get("unit")}} for p in shown],
+             "peers": [{"id": p["id"], "name": p["name"], "url": p["url"], "price": p["price"], "image": p.get("image"), "vals": {**{k: p["norm"].get(k) for k, _ in COMPARE_FIELDS}, "unit": p.get("unit")}} for p in shown],
              "kind": catmod.KIND_LABELS.get(kind, kind), "cap": cap,
              "basis": ("тот же тип изделия и та же вместимость (±20 %), цена за место в комплекте" if kind in ("system", "kit") else "тот же тип изделия, цена за единицу")}
-    return {"reasons": reasons, "verdict": verdict, "table": table, "peers": [{"id": p["id"], "name": p["name"], "price": p["price"]} for p in shown]}
+    return {"reasons": reasons, "verdict": verdict, "table": table, "peers": [{"id": p["id"], "name": p["name"], "price": p["price"], "image": p.get("image")} for p in shown]}
 
 
 def detect_multi_competitor_products(conn: sqlite3.Connection) -> int:
@@ -380,8 +382,11 @@ def detect_multi_competitor_products(conn: sqlite3.Connection) -> int:
                          ("закрыт автоматически: модель есть у M22" if has else f"закрыт автоматически: нет обоснования по цене или характеристикам против сопоставимых моделей M22 ({just['verdict']})", dedupe))
             continue
         sev = "high" if len(sellers) >= 3 else "medium"
+        photo = next((it["image"] for it in items if it.get("image") and not _junk_url(it["url"])), None)
+        just["table"]["competitor"]["image"] = photo
         evidence = {"brand": offers[0]["brand"], "model_key": key, "sellers": sellers, "n_comp": len(sellers), "comps": ", ".join(sellers), "pmin": pmin, "pmax": pmax,
-                    "category_slug": cat, "name": offers[0]["name"], "url": own, "items": items, "justification": just, "comparison": just["table"],
+                    "category_slug": cat, "name": offers[0]["name"], "url": own, "items": items, "justification": just, "comparison": just["table"], "photo": photo,
+                    "m22_photos": [{"id": p["id"], "name": p["name"], "image": p.get("image"), "price": p["price"]} for p in just["peers"]],
                     "m22_candidates": just["peers"],
                     "rule": "одинаковый бренд и код модели; сайты одной группы компаний считаются одним продавцом"}
         title = f"Модель {label} продают {len(sellers)} независимых продавца" + ("" if has else ", у M22 её нет")
