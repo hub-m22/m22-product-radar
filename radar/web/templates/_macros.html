@@ -16,8 +16,8 @@
     <div class="sig-photo"><a href="{{ ev.url }}" target="_blank" rel="noopener">{% if ev.photo %}<img src="{{ ev.photo }}" alt="" referrerpolicy="no-referrer" loading="lazy">{% else %}<div class="audit-noimg">нет фото</div>{% endif %}</a><div class="small"><b>{{ (ev.brand or '') ~ ' ' ~ (ev.model_key or '') }}</b> — что предлагается ввести<br><span class="muted">у конкурентов{% if ev.pmin %} · от {{ ev.pmin | money }}{% endif %}</span></div></div>
     {% if ev.m22_photos %}<div class="sig-vs">ближайшее<br>у M22 сейчас</div>{% for p in ev.m22_photos[:3] %}<div class="sig-photo"><a href="/matrix/{{ p.id }}">{% if p.image %}<img src="{{ p.image }}" alt="" referrerpolicy="no-referrer" loading="lazy">{% else %}<div class="audit-noimg">нет фото</div>{% endif %}</a><div class="small"><b>{{ p.name[:34] }}</b><br><span class="muted">M22 · {{ p.price | money }}</span></div></div>{% endfor %}{% endif %}
   </div>
-  {% elif ev.items and ev.items[0].image is defined %}
-  <div class="sig-photos">{% for it in ev.items[:5] if it.image %}<div class="sig-photo"><a href="{{ it.url }}" target="_blank" rel="noopener"><img src="{{ it.image }}" alt="" referrerpolicy="no-referrer" loading="lazy"></a><div class="small"><b>{{ it.name[:40] }}</b><br><span class="muted">{{ it.competitor[:28] }}{% if it.price %} · {{ it.price | money }}{% endif %}</span></div></div>{% endfor %}</div>
+  {% elif ev['items'] and ev['items'][0].image is defined %}
+  <div class="sig-photos">{% for it in ev['items'][:5] if it.image %}<div class="sig-photo"><a href="{{ it.url }}" target="_blank" rel="noopener"><img src="{{ it.image }}" alt="" referrerpolicy="no-referrer" loading="lazy"></a><div class="small"><b>{{ it.name[:40] }}</b><br><span class="muted">{{ it.competitor[:28] }}{% if it.price %} · {{ it.price | money }}{% endif %}</span></div></div>{% endfor %}</div>
   {% elif ev.photo %}
   <div class="sig-photos"><div class="sig-photo"><a href="{{ ev.url or s.source_url }}" target="_blank" rel="noopener"><img src="{{ ev.photo }}" alt="" referrerpolicy="no-referrer" loading="lazy"></a><div class="small"><b>{{ (ev.name or s.title)[:50] }}</b></div></div></div>
   {% endif %}
