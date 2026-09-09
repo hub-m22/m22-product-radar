@@ -38,9 +38,20 @@
     <a class="btn small" href="/site-audit">Ошибки и замечания →</a> <a class="small" href="/site-audit/stock">наличие →</a></div>
 
   <div class="card"><h2>4. Конкуренты: что изменилось</h2>
-    <div class="small" style="margin-bottom:6px">С базового замера {{ baseline }}: новых позиций <b>{{ counts.new_products }}</b>, изменений цен за 30 дней <b>{{ counts.price_moves }}</b>, разделов конкурентов вне матрицы M22: {{ counts.outscope }}.</div>
-    {% for a in new_comp %}<div class="small" style="margin-bottom:6px">🆕 <a href="/competitors/{{ a.competitor_id }}">{{ a.seller[:24] }}</a>: <a href="{{ a.url }}" target="_blank" rel="noopener">{{ a.name[:55] }}</a> {{ a.price | money }}</div>{% else %}<div class="muted small">Новых позиций после базового замера нет.</div>{% endfor %}
-    <a class="btn small" href="/competitor-matrix?view=changes">Что появилось / исчезло →</a> <a class="small" href="/market?tab=changes">изменения цен →</a> <a class="small" href="/competitors">реестр и показатели →</a></div>
+    <div class="small muted" style="margin-bottom:8px">Период: с {{ feed.since | dt }} по {{ feed.today | dt }} (последний сбор конкурентов {{ feed.last_run | dt }}). Отсчёт от базового замера {{ feed.baseline | dt }}: массовые пересборы до него изменениями не считаются.</div>
+
+    <div class="small" style="margin-bottom:4px"><b>🆕 Добавлено: {{ feed.added_n }}</b>{% if feed.added_days %} — {% for d, n in feed.added_days %}{{ d | dt }}: {{ n }}{% if not loop.last %}, {% endif %}{% endfor %}{% endif %}{% if feed.added_sellers %} · у {% for s, n in feed.added_sellers %}{{ s[:22] }} ({{ n }}){% if not loop.last %}, {% endif %}{% endfor %}{% endif %}</div>
+    {% for a in feed.added %}<div class="small" style="margin:0 0 3px 14px"><span class="muted nowrap">{{ a.d | dt }}</span> · <a href="/competitors/{{ a.competitor_id }}">{{ a.seller[:22] }}</a>: <a href="{{ a.url }}" target="_blank" rel="noopener">{{ a.name[:50] }}</a> {% if a.price %}{{ a.price | money }}{% else %}<span class="muted">без цены</span>{% endif %}</div>{% else %}<div class="small muted" style="margin-left:14px">за период ничего не добавлено</div>{% endfor %}
+    {% if feed.added_n > feed.added|length %}<div class="small muted" style="margin-left:14px">… и ещё {{ feed.added_n - feed.added|length }}</div>{% endif %}
+
+    <div class="small" style="margin:8px 0 4px"><b>🗑 Ушло из продажи: {{ feed.gone_n }}</b>{% if feed.gone_days %} — {% for d, n in feed.gone_days %}{{ d | dt }}: {{ n }}{% if not loop.last %}, {% endif %}{% endfor %}{% endif %}{% if feed.gone_sellers %} · у {% for s, n in feed.gone_sellers %}{{ s[:22] }} ({{ n }}){% if not loop.last %}, {% endif %}{% endfor %}{% endif %}</div>
+    {% for g in feed.gone %}<div class="small" style="margin:0 0 3px 14px"><span class="muted nowrap">до {{ g.d | dt }}</span> · <a href="/competitors/{{ g.competitor_id }}">{{ g.seller[:22] }}</a>: <a href="{{ g.url }}" target="_blank" rel="noopener">{{ g.name[:50] }}</a> {{ g.price | money }}</div>{% else %}<div class="small muted" style="margin-left:14px">за период ничего не исчезло (позиция считается ушедшей после двух сборов подряд без неё)</div>{% endfor %}
+    {% if feed.gone_n > feed.gone|length %}<div class="small muted" style="margin-left:14px">… и ещё {{ feed.gone_n - feed.gone|length }}</div>{% endif %}
+
+    <div class="small" style="margin:8px 0 4px"><b>💱 Изменились цены: {{ feed.moves_n }}</b>{% if feed.moves_n %} — повысили {{ feed.up_n }}, снизили {{ feed.down_n }}; {% for d, n in feed.moves_days %}{{ d | dt }}: {{ n }}{% if not loop.last %}, {% endif %}{% endfor %}{% endif %}</div>
+    {% for p in feed.price_moves %}<div class="small" style="margin:0 0 3px 14px"><span class="muted nowrap">{{ p.prev_d | dt }} → {{ p.d | dt }}</span> · <a href="/competitors/{{ p.competitor_id }}">{{ p.seller[:22] }}</a>: <a href="{{ p.url }}" target="_blank" rel="noopener">{{ p.name[:45] }}</a> {{ p.old | money }} → <b>{{ p.new | money }}</b> <span style="color:{{ 'var(--high)' if p.pct < 0 else '#b45309' }}">({{ '%+d' % p.pct }} %)</span></div>{% else %}<div class="small muted" style="margin-left:14px">изменений цен за период нет: нужны два сбора одной позиции в разные дни</div>{% endfor %}
+
+    <div style="margin-top:8px"><a class="btn small" href="/competitor-matrix?view=changes">Полный список: что появилось / исчезло →</a> <a class="small" href="/market?tab=changes">изменения цен →</a> <a class="small" href="/competitors">реестр и показатели →</a></div></div>
 </div>
 
 <div class="card" style="margin-top:14px"><h2>Состояние данных</h2>

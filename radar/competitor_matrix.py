@@ -172,3 +172,53 @@ def export_rows(conn: sqlite3.Connection) -> list[dict]:
                     "сопоставлено_с_M22": r["m22_name"], "тип_сопоставления": r["match_type"], "уверенность": r["match_conf"], "статус": r["state"], "url": r["url"],
                     "впервые": r["first_seen_at"], "последний_раз": r["last_seen_at"], "снято": r["fetched_at"]})
     return out
+
+
+def changes_feed(conn: sqlite3.Connection, days: int = 30, limit: int = 8) -> dict:
+    """Что изменилось у конкурентов за период, с датами: добавлено, ушло из продажи, изменились цены.
+    Считается от базового замера (массовые пересборы до него не считаются изменениями) и не глубже `days` дней."""
+    from datetime import date, timedelta
+
+    baseline = (db.get_setting(conn, "baseline_date") or "")[:10]
+    since = max(baseline, (date.today() - timedelta(days=days)).isoformat())
+    today = date.today().isoformat()
+    added = db.rows(conn, """SELECT cp.id, cp.name, cp.price, cp.url, cp.category_slug, substr(cp.first_seen_at,1,10) AS d, COALESCE(c.group_name, c.name) AS seller, c.id AS competitor_id
+                             FROM competitor_products cp JOIN competitors c ON c.id=cp.competitor_id
+                             WHERE cp.is_active=1 AND c.is_active=1 AND substr(cp.first_seen_at,1,10) > ? ORDER BY cp.first_seen_at DESC, cp.id DESC""", (since,))
+    gone = db.rows(conn, """SELECT cp.id, cp.name, cp.price, cp.url, cp.category_slug, substr(cp.last_seen_at,1,10) AS d, COALESCE(c.group_name, c.name) AS seller, c.id AS competitor_id
+                            FROM competitor_products cp JOIN competitors c ON c.id=cp.competitor_id
+                            WHERE cp.is_active=0 AND c.is_active=1 AND substr(cp.last_seen_at,1,10) > ? ORDER BY cp.last_seen_at DESC, cp.id DESC""", (since,))
+    # изменения цен: два замера в разные дни, оба после базовой даты, отношение не больше 5× (иначе ошибка разбора)
+    moves = db.rows(conn, """SELECT * FROM (
+                                SELECT h.competitor_product_id, h.price, h.observed_at, substr(h.observed_at,1,10) AS d,
+                                       LAG(h.price) OVER (PARTITION BY h.competitor_product_id ORDER BY h.observed_at, h.id) AS prev,
+                                       LAG(substr(h.observed_at,1,10)) OVER (PARTITION BY h.competitor_product_id ORDER BY h.observed_at, h.id) AS prev_d
+                                FROM competitor_price_history h WHERE h.price IS NOT NULL AND h.run_id IS NOT NULL)
+                             WHERE prev IS NOT NULL AND prev != price AND prev_d != d AND d > ? AND prev_d >= ? ORDER BY observed_at DESC""", (since, baseline))
+    price_moves = []
+    for m in moves:
+        if max(m["price"], m["prev"]) / min(m["price"], m["prev"]) > 5 or abs(m["price"] - m["prev"]) / m["prev"] < 0.01:
+            continue  # ошибка разбора или округление копеек — не изменение цены
+        cp = db.row(conn, "SELECT cp.id, cp.name, cp.url, cp.category_slug, COALESCE(c.group_name, c.name) AS seller, c.id AS competitor_id FROM competitor_products cp JOIN competitors c ON c.id=cp.competitor_id WHERE cp.id=?", (m["competitor_product_id"],))
+        if not cp:
+            continue
+        price_moves.append({**cp, "d": m["d"], "prev_d": m["prev_d"], "old": m["prev"], "new": m["price"], "pct": round((m["price"] - m["prev"]) / m["prev"] * 100)})
+
+    def by_day(rows_):
+        out: dict[str, int] = {}
+        for r in rows_:
+            out[r["d"]] = out.get(r["d"], 0) + 1
+        return sorted(out.items(), reverse=True)
+
+    def sellers(rows_):
+        out: dict[str, int] = {}
+        for r in rows_:
+            out[r["seller"]] = out.get(r["seller"], 0) + 1
+        return sorted(out.items(), key=lambda x: -x[1])[:4]
+
+    last_run = db.row(conn, "SELECT MAX(finished_at) t FROM source_runs WHERE source_key='competitors' AND status IN ('ok','partial')")
+    return {"since": since, "today": today, "baseline": baseline, "last_run": (last_run or {}).get("t"),
+            "added": added[:limit], "added_n": len(added), "added_days": by_day(added), "added_sellers": sellers(added),
+            "gone": gone[:limit], "gone_n": len(gone), "gone_days": by_day(gone), "gone_sellers": sellers(gone),
+            "price_moves": price_moves[:limit], "moves_n": len(price_moves), "moves_days": by_day(price_moves),
+            "up_n": sum(1 for m in price_moves if m["pct"] > 0), "down_n": sum(1 for m in price_moves if m["pct"] < 0)}

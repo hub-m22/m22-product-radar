@@ -258,6 +258,7 @@ def index(request: Request):
                                     WHERE cp.is_active=1 AND cp.category_slug IS NOT NULL AND substr(cp.first_seen_at,1,10) > ? ORDER BY cp.first_seen_at DESC LIMIT 6""", (baseline,))
         cov = cmx.coverage(conn)
         gap_cats = cov["gaps"][:6]
+        feed = cmx.changes_feed(conn, days=30, limit=6)
         hyps = db.rows(conn, "SELECT * FROM hypotheses WHERE decision_status IN ('new','research') ORDER BY created_at DESC LIMIT 4")
         bad_sources = db.rows(conn, "SELECT * FROM sources WHERE status='error' OR consecutive_failures>0 ORDER BY consecutive_failures DESC LIMIT 6")
         bad_pages = db.rows(conn, "SELECT mp.*, c.name AS cname FROM monitored_pages mp JOIN competitors c ON c.id=mp.competitor_id WHERE mp.fail_count>=3 AND mp.is_active=1 ORDER BY mp.fail_count DESC LIMIT 6")
@@ -281,7 +282,7 @@ def index(request: Request):
         cat_overview = catmod.overview(conn)
         limits = reports._data_limits(conn)
         last_update = db.row(conn, "SELECT MAX(finished_at) t FROM source_runs")["t"]
-    return render(request, "index.html", recs=recs, pricing_summ=pricing_summ, pricing_top=pricing_top, audit=audit, stock=stock, multi=multi, new_comp=new_comp, gap_cats=gap_cats, hyps=hyps, bad_sources=bad_sources,
+    return render(request, "index.html", recs=recs, pricing_summ=pricing_summ, pricing_top=pricing_top, audit=audit, stock=stock, multi=multi, feed=feed, new_comp=new_comp, gap_cats=gap_cats, hyps=hyps, bad_sources=bad_sources,
                   bad_pages=bad_pages, runs=runs, counts=counts, cat_overview=cat_overview, limits=limits, last_update=last_update, baseline=baseline)
 
 
