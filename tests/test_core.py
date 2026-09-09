@@ -147,7 +147,7 @@ def test_cross_site_discrepancy_by_sku(conn):
     _m22(conn, "Радиогид система Radiosync SGTR02 — RTKGTR113015131", 65000, "RTKGTR113015131", "radiosync.ru")  # разница ≥1 % и ≥500 ₽; округление (70 300 vs 70 200) сигналом не считается
     assert signals.detect_cross_site(conn) == 1
     s = db.row(conn, "SELECT * FROM signals WHERE type='cross_site_discrepancy'")
-    assert "70 300" in s["title"] and "70 200" in s["title"] and s["confidence"] >= 0.9
+    assert "70 300" in s["title"] and "65 000" in s["title"] and s["confidence"] >= 0.9
     assert signals.detect_cross_site(conn) == 0
 
 
