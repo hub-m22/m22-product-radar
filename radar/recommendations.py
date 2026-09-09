@@ -69,9 +69,14 @@ def generate(conn: sqlite3.Connection) -> int:
                  basis=s["what_happened"], expected_effect=effect, confidence=s["confidence"], owner=OWNERS["pricing"], due_date=_due(7), sources_json=srcs,
                  signal_ids_json=[s["id"]], category_slug=s["category_slug"], m22_product_id=p["id"], dedupe_key=f"rec:{s['dedupe_key']}"):
             n += 1
-    # 1а. рекомендации по закрытым/отклонённым сигналам закрываем
-    conn.execute("""UPDATE recommendations SET status='done', comment=COALESCE(comment,'') || ' [закрыта автоматически: сигнал закрыт]' WHERE status='new' AND dedupe_key LIKE 'rec:pvm:%'
-                    AND substr(dedupe_key, 5) IN (SELECT dedupe_key FROM signals WHERE status IN ('done','rejected'))""")
+    # 1а. рекомендации, все сигналы которых закрыты или отклонены, закрываем (любой тип)
+    for r in db.rows(conn, "SELECT id, signal_ids_json FROM recommendations WHERE status='new'"):
+        ids = [int(x) for x in (db.uj(r["signal_ids_json"], []) or []) if str(x).isdigit()]
+        if not ids:
+            continue
+        open_n = db.row(conn, f"SELECT COUNT(*) n FROM signals WHERE id IN ({','.join('?' * len(ids))}) AND status IN ('new','in_research','accepted')", ids)["n"]
+        if open_n == 0:
+            conn.execute("UPDATE recommendations SET status='done', comment=COALESCE(comment,'') || ' [закрыта автоматически: сигналы-основания закрыты]', updated_at=datetime('now') WHERE id=?", (r["id"],))
 
     # 2. Расхождение цен между сайтами — сильный факт
     xs = [s for s in sig("cross_site_discrepancy") if s["old_value"] and s["new_value"] and "отличается" in s["title"]]
@@ -82,7 +87,7 @@ def generate(conn: sqlite3.Connection) -> int:
                  priority="P2", basis=f"Подтверждённое расхождение цен по {len(xs)} позициям при сборе {xs[0]['observed_at'][:10]}.",
                  expected_effect="Исключение потери доверия клиентов и ошибок в тендерных прайс-листах.", confidence=0.95, owner=OWNERS["product"], due_date=_due(5),
                  sources_json=[{"name": "m22.ru / radiosync.ru", "url": s["source_url"]} for s in xs[:12]], signal_ids_json=[s["id"] for s in xs],
-                 dedupe_key="rec:xsite:" + ":".join(str(s["id"]) for s in xs[:12])):
+                 dedupe_key="rec:xsite"):
             n += 1
     miss = [s for s in sig("cross_site_discrepancy") if "не найден на m22.ru" in s["title"]]
     if miss:
@@ -90,7 +95,7 @@ def generate(conn: sqlite3.Connection) -> int:
                  action="Проверить список: " + "; ".join(s["title"].split("«")[1].split("»")[0] for s in miss[:10]) + ". Добавить карточки на m22.ru или снять с radiosync.ru.",
                  priority="P3", basis=f"{len(miss)} позиций radiosync.ru без соответствия по ключу модели на m22.ru.", expected_effect="Единый ассортимент; меньше потерянных заказов на основном магазине.",
                  confidence=0.7, owner=OWNERS["product"], due_date=_due(14), sources_json=[{"name": "radiosync.ru", "url": s["source_url"]} for s in miss[:10]],
-                 signal_ids_json=[s["id"] for s in miss], dedupe_key="rec:xsite-missing:" + ":".join(str(s["id"]) for s in miss[:10])):
+                 signal_ids_json=[s["id"] for s in miss], dedupe_key="rec:xsite-missing"):
             n += 1
 
     # 3. Модель у ≥3 конкурентов, нет у M22 — сильный факт
@@ -169,7 +174,7 @@ def generate(conn: sqlite3.Connection) -> int:
         if _emit(conn, title=f"Восстановить {len(errs)} неработающих источников/страниц",
                  action="Проверить: " + "; ".join(s["title"] for s in errs[:6]) + ". Обновить URL или отключить страницу в разделе «Источники».",
                  priority="P3", basis="Повторные сбои при сборе.", expected_effect="Полнота сигналов по ценам конкурентов.", confidence=1.0, owner=OWNERS["data"], due_date=_due(3),
-                 sources_json=[{"name": s["source"], "url": s["source_url"]} for s in errs[:6]], signal_ids_json=[s["id"] for s in errs], dedupe_key="rec:srcerr:" + ":".join(str(s["id"]) for s in errs[:6])):
+                 sources_json=[{"name": s["source"], "url": s["source_url"]} for s in errs[:6]], signal_ids_json=[s["id"] for s in errs], dedupe_key="rec:srcerr"):
             n += 1
     conn.commit()
     return n

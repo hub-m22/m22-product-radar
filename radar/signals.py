@@ -477,6 +477,7 @@ def detect_cross_site(conn: sqlite3.Connection) -> int:
         if p["sku"]:
             by_sku.setdefault(p["sku"].strip().upper(), p)
     matched_b = set()
+    emitted_xsite: set[str] = set()
     for p in a:
         q = None
         if p["sku"] and p["sku"].strip().upper() in by_sku:
@@ -499,14 +500,28 @@ def detect_cross_site(conn: sqlite3.Connection) -> int:
         matched_b.add(q["id"])
         if q["price"] and p["price"] and abs(q["price"] - p["price"]) >= 1:
             diff = p["price"] - q["price"]
+            # округление (70 300 против 70 200) — не расхождение; разные единицы (за штуку на m22.ru, за упаковку на radiosync.ru) — тоже
+            if abs(diff) < 500 and abs(diff) / q["price"] < 0.01:
+                continue
+            from .categories import unit_price as _unit
+            up, _ = _unit(p["name"], p["price"], p["category_slug"], p["kind"], p["capacity"])
+            uq, _ = _unit(q["name"], q["price"], q["category_slug"], q["kind"], q["capacity"])
+            if max(p["price"], q["price"]) / min(p["price"], q["price"]) > 5:
+                if up and uq and max(up, uq) / min(up, uq) <= 1.05:
+                    continue  # за штуку цены совпадают, отличается лишь фасовка
+                continue  # цены отличаются более чем в 5 раз — это разные единицы измерения, а не расхождение
+            emitted_xsite.add(f"xsite:{p['id']}:{q['id']}")
             if _emit(conn, type="cross_site_discrepancy", severity="medium" if abs(diff) / q["price"] >= 0.03 else "low", fact_kind="fact", category_slug=p["category_slug"], m22_product_id=p["id"],
                      title=f"Цена «{p['name'][:55]}» отличается: m22.ru {_fmt(p['price'])} vs radiosync.ru {_fmt(q['price'])}",
                      what_happened=f"Разница {_fmt(abs(diff))} ({diff / q['price'] * 100:+.1f}%). Модель {p['model_key']}, вместимость {p['capacity'] or '—'}.", old_value=_fmt(q["price"]), new_value=_fmt(p["price"]),
                      observed_at=db.now_iso(), period="текущий замер", source="m22.ru + radiosync.ru", source_url=p["url"], evidence_json={"m22": p["url"], "radiosync": q["url"]},
                      confidence=0.95, why_matters="Клиент, сравнивший два сайта компании, теряет доверие; прайс-листы для тендеров должны совпадать.",
                      recommended_action=f"Синхронизировать цену: установить одинаковую цену на m22.ru и radiosync.ru для «{p['name'][:40]}» (сейчас {_fmt(p['price'])} / {_fmt(q['price'])}).",
-                     dedupe_key=f"xsite:{p['id']}:{q['id']}:{int(p['price'])}:{int(q['price'])}"):
+                     dedupe_key=f"xsite:{p['id']}:{q['id']}"):
                 n += 1
+    for old_sig in db.rows(conn, "SELECT id, dedupe_key FROM signals WHERE type='cross_site_discrepancy' AND status='new' AND dedupe_key LIKE 'xsite:%' AND dedupe_key NOT LIKE 'xsite-missing:%'"):
+        if old_sig["dedupe_key"] not in emitted_xsite:
+            conn.execute("UPDATE signals SET status='done', comment='закрыт автоматически: цены совпали или отличаются лишь округлением/фасовкой' WHERE id=?", (old_sig["id"],))
     # товары radiosync.ru, которых нет на m22.ru по ключу модели
     a_keys = {(p["model_key"]) for p in a if p["model_key"]}
     for q in b:

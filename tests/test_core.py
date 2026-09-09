@@ -144,7 +144,7 @@ def test_price_vs_market_needs_min_comparables(conn):
 
 def test_cross_site_discrepancy_by_sku(conn):
     _m22(conn, "Радиогид система Radiosync SGTR02, на 15 персон", 70300, "RTKGTR113015131", "m22.ru")
-    _m22(conn, "Радиогид система Radiosync SGTR02 — RTKGTR113015131", 70200, "RTKGTR113015131", "radiosync.ru")
+    _m22(conn, "Радиогид система Radiosync SGTR02 — RTKGTR113015131", 65000, "RTKGTR113015131", "radiosync.ru")  # разница ≥1 % и ≥500 ₽; округление (70 300 vs 70 200) сигналом не считается
     assert signals.detect_cross_site(conn) == 1
     s = db.row(conn, "SELECT * FROM signals WHERE type='cross_site_discrepancy'")
     assert "70 300" in s["title"] and "70 200" in s["title"] and s["confidence"] >= 0.9
