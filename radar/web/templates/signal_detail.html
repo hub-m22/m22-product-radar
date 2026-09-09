@@ -1,7 +1,7 @@
 {% extends "base.html" %}{% import "_macros.html" as m %}
 {% block title %}Сигнал #{{ s.id }} — M22 Product Radar{% endblock %}
 {% block content %}
-<a href="/signals">← Сигналы</a>
+
 <h1>{{ s.title }}</h1>
 <div class="sub">{{ m.sev(s.severity) }} {{ m.fact(s.fact_kind) }} {{ m.status(s.status) }} · {{ SIGNAL_TYPES.get(s.type, s.type) }} · уверенность {{ m.conf(s.confidence) }}
   · ручных проверок по этому типу сигналов: <b>{{ fb_type.c }}</b> подтверждено, <b>{{ fb_type.r }}</b> отклонено{% if fb_this %} · этот сигнал: {% for f in fb_this %}{{ 'подтверждён' if f.decision == 'confirmed' else 'отклонён' }} ({{ f.author or 'пользователь' }}, {{ f.created_at[:10] }}){% if not loop.last %}, {% endif %}{% endfor %}{% endif %}</div>

@@ -1,7 +1,7 @@
 {% extends "base.html" %}{% import "_macros.html" as m %}
 {% block title %}{{ c.name }} — конкуренты{% endblock %}
 {% block content %}
-<a href="/competitors">← Конкуренты</a>
+
 <h1><span class="badge {{ {'A':'sev-high','B':'sev-medium','C':'st'}.get(c.tier or 'C') }}">категория {{ c.tier or 'C' }}</span> {{ c.name }} {% if not c.is_active %}<span class="badge st">неактивен</span>{% endif %}</h1>
 {% if unreachable %}<div class="note"><b>Сайт недоступен для автоматической проверки.</b> Все страницы мониторинга отвечают ошибкой (403/404 или запрет в robots.txt). Данные ниже — из ручного исследования на дату проверки; актуальность цен и ассортимента нужно подтверждать вручную по ссылкам.</div>{% endif %}
 <div class="sub"><a href="{{ c.website }}" target="_blank" rel="noopener">{{ c.website }}</a> · проверен {{ c.checked_at or '—' }} · добавлен: {{ c.added_by }} · доступность: {{ c.scrapable or '?' }}</div>

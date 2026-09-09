@@ -5,6 +5,7 @@ import csv
 import io
 import json
 import logging
+import re
 import sqlite3
 from contextlib import asynccontextmanager
 from datetime import date, datetime, timedelta
@@ -169,6 +170,61 @@ def _asset_version() -> str:
         return "0"
 
 
+# ---------- «Назад»: подпись и адрес возврата для каждого экрана ----------
+PAGE_TITLES = [  # префикс пути -> название экрана (самый длинный префикс побеждает)
+    ("/site-audit/stock", "Наши сайты: наличие"), ("/site-audit", "Наши сайты"),
+    ("/competitors/tenders", "Участники тендеров"), ("/competitors/dashboard", "Показатели конкурентов"), ("/competitors/compare", "Сравнительная таблица"),
+    ("/competitors/", "Карточка конкурента"), ("/competitors", "Конкуренты"), ("/matches", "Сопоставления"),
+    ("/competitor-matrix", "Матрица конкурентов"), ("/compare", "Сравнение характеристик и цен"),
+    ("/matrix/", "Карточка товара M22"), ("/matrix", "Матрица M22"),
+    ("/pricing", "Цены"), ("/categories/", "Категория"), ("/categories", "Цены по категориям"),
+    ("/market", "Ассортимент и рынок"), ("/signals/", "Событие рынка"), ("/signals", "Ассортимент и рынок"),
+    ("/opportunities/", "Гипотеза"), ("/opportunities", "Гипотезы"), ("/actions/", "Действие"), ("/actions", "Действия"),
+    ("/demand", "Поисковый спрос"), ("/sources", "Источники"), ("/reports/", "Отчёт"), ("/reports", "Отчёты"),
+    ("/settings", "Настройки"), ("/logic", "Логика радара"), ("/changelog", "Журнал версий"), ("/", "Главная"),
+]
+MARKET_TAB_TITLES = {"changes": "Ассортимент и рынок: изменения у конкурентов", "demand": "Ассортимент и рынок: сценарии и спрос"}
+# родительский экран, если пришли не из радара (прямая ссылка, закладка)
+PARENTS = [
+    (r"^/site-audit/stock", "/site-audit"), (r"^/competitors/(tenders|dashboard|compare|\d+)", "/competitors"), (r"^/matches", "/competitors"),
+    (r"^/matrix/\d+", "/matrix"), (r"^/categories/", "/categories"), (r"^/categories", "/pricing"), (r"^/signals/\d+", "/market"), (r"^/signals", "/market"),
+    (r"^/opportunities/\d+", "/opportunities"), (r"^/opportunities", "/market"), (r"^/actions/\d+", "/actions"), (r"^/actions", "/market"),
+    (r"^/reports/\d+", "/reports"), (r"^/compare", "/market"), (r"^/competitor-matrix", "/competitors"),
+]
+
+
+def _page_title(path: str, query: str = "") -> str:
+    import urllib.parse as _up
+    if path.startswith("/market"):
+        tab = _up.parse_qs(query).get("tab", [""])[0]
+        if tab in MARKET_TAB_TITLES:
+            return MARKET_TAB_TITLES[tab]
+    for prefix, title in PAGE_TITLES:
+        if path == prefix or (prefix != "/" and path.startswith(prefix)):
+            return title
+    return "Главная"
+
+
+def _back(request: Request) -> dict | None:
+    """Куда вести стрелка «Назад»: на экран, с которого пришли (со всеми фильтрами), иначе на родительский раздел."""
+    import urllib.parse as _up
+    path = request.url.path
+    if path in ("/", "/login") or path.startswith("/static/"):
+        return None
+    ref = request.headers.get("referer") or ""
+    try:
+        u = _up.urlparse(ref)
+    except ValueError:
+        u = None
+    if u and u.netloc == request.url.netloc and u.path and u.path != path and not u.path.startswith(("/login", "/static/")):
+        href = u.path + (("?" + u.query) if u.query else "")
+        return {"href": href, "label": _page_title(u.path, u.query), "kind": "откуда пришли"}
+    for rx, parent in PARENTS:
+        if re.match(rx, path):
+            return {"href": parent, "label": _page_title(parent), "kind": "раздел"}
+    return {"href": "/", "label": "Главная", "kind": "раздел"}
+
+
 def render(request: Request, name: str, **ctx) -> HTMLResponse:
     with db.session() as conn:
         last_collect = db.row(conn, "SELECT MAX(finished_at) AS t FROM source_runs WHERE status IN ('ok','partial')")
@@ -177,7 +233,7 @@ def render(request: Request, name: str, **ctx) -> HTMLResponse:
     ctx.update({"request": request, "last_update": last_collect["t"] if last_collect else None, "source_errors": errors, "owners": [o for o in owners if o],
                 "now": datetime.now().strftime("%d.%m.%Y %H:%M"), "path": request.url.path,
                 # версия и метка статики — при каждом запросе, чтобы после обновления кода/файлов не требовался перезапуск и не мешал кэш браузера
-                "app_version": __import__("radar").get_version(), "asset_version": _asset_version()})
+                "app_version": __import__("radar").get_version(), "asset_version": _asset_version(), "back": _back(request), "page_title": ctx.get("page_title") or _page_title(request.url.path, request.url.query)})
     return templates.TemplateResponse(request, name, ctx)
 
 

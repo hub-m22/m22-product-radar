@@ -1,7 +1,7 @@
 {% extends "base.html" %}{% import "_macros.html" as m %}
 {% block title %}{{ h.title }} — гипотеза{% endblock %}
 {% block content %}
-<a href="/opportunities">← Новые возможности</a>
+
 <h1>{{ h.title }} {{ m.status(h.decision_status) }}</h1>
 <div class="sub">{{ CATEGORY_NAMES.get(h.category_slug, h.category_slug or '—') }} · ответственный: {{ h.owner or '—' }} · создана {{ h.created_at }}</div>
 <div class="grid grid-2">

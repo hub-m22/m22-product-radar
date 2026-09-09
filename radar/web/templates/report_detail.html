@@ -1,7 +1,7 @@
 {% extends "base.html" %}{% import "_macros.html" as m %}
 {% block title %}Отчёт #{{ r.id }} — M22 Product Radar{% endblock %}
 {% block content %}
-<a href="/reports" class="no-print">← Отчёты</a>
+
 <div class="topbar"><div><h1>Еженедельный отчёт {{ rep.period_start }} — {{ rep.period_end }}</h1>
 <div class="sub">Сформирован {{ rep.generated_at | dt }} UTC · товаров M22: {{ rep.stats.m22_products }} · конкурентов: {{ rep.stats.competitors }} · предложений с ценой: {{ rep.stats.priced }} · сигналов: {{ rep.stats.signals_total }} (высокой важности {{ rep.stats.signals_high }}) · рекомендаций: {{ rep.stats.recommendations }}</div></div>
 <div class="actions-row no-print"><a class="btn small" href="/reports/{{ r.id }}/export.pdf">PDF</a> <a class="btn sec small" href="/reports/{{ r.id }}/export.xlsx">XLSX</a> <a class="btn sec small" href="/reports/{{ r.id }}/export.csv">CSV</a> <a class="btn sec small" href="/reports/{{ r.id }}/export.json">JSON</a></div></div>

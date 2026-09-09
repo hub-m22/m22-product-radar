@@ -1,7 +1,7 @@
 {% extends "base.html" %}{% import "_macros.html" as m %}
 {% block title %}{{ s.name }} — категории{% endblock %}
 {% block content %}
-<a href="/categories">← Категории</a>
+
 <h1>{{ s.name }}</h1>
 <div class="note {% if s.status == 'ok' %}ok-note{% endif %}"><b>{{ {'ok':'Всё в порядке','watch':'Следить','attention':'Требует внимания','gap':'Категории нет у M22','no_data':'Мало данных'}.get(s.status, s.status) }}.</b> {{ s.verdict }}</div>
 <div class="grid grid-4">

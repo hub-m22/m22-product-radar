@@ -1,7 +1,7 @@
 {% extends "base.html" %}{% import "_macros.html" as m %}
 {% block title %}Сопоставления — M22 Product Radar{% endblock %}
 {% block content %}
-<a href="/competitors">← Конкуренты</a>
+
 <h1>Сопоставление товаров конкурентов с матрицей M22</h1>
 <div class="tabs"><a href="/matches?review=1" class="{% if only_review %}active{% endif %}">На ручной проверке</a><a href="/matches?review=0" class="{% if not only_review %}active{% endif %}">Все</a> <a class="btn sec small" href="/export/matches.xlsx">XLSX</a></div>
 <div class="card compact tbl-wrap"><table><thead><tr><th>Товар конкурента</th><th>Товар M22</th><th>Тип</th><th>Уверенность</th><th>Причины</th><th>Решение</th></tr></thead><tbody>

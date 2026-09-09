@@ -27,6 +27,7 @@
     </div>
   </aside>
   <main>
+    {% if back %}<div class="backbar no-print"><a href="{{ back.href }}" title="вернуться: {{ back.kind }}">← Назад: {{ back.label }}</a><span class="muted small"> · сейчас: {{ page_title }}</span></div>{% endif %}
     {% block content %}{% endblock %}
   </main>
 </div>

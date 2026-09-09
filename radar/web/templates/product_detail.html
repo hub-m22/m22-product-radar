@@ -1,7 +1,7 @@
 {% extends "base.html" %}{% import "_macros.html" as m %}
 {% block title %}{{ p.name }} — матрица M22{% endblock %}
 {% block content %}
-<a href="/matrix">← Матрица M22</a>
+
 <h1>{{ p.name }}</h1>
 <div class="sub">{{ p.site }} · <a href="{{ p.url }}" target="_blank" rel="noopener">страница товара ↗</a> · {{ CATEGORY_NAMES.get(p.category_slug, p.category_slug or '—') }} · модель {{ p.model_key or '—' }} · артикул {{ p.sku or '—' }} · снято {{ p.fetched_at | dt }}</div>
 <div class="grid grid-3">

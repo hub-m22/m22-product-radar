@@ -1,7 +1,7 @@
 {% extends "base.html" %}{% import "_macros.html" as m %}
 {% block title %}Сравнение — M22 Product Radar{% endblock %}
 {% block content %}
-{% if signal_id %}<a href="/signals/{{ signal_id }}">← К сигналу</a>{% else %}<a href="/matrix">← Матрица M22</a>{% endif %}
+
 <h1>Сравнение характеристик и цен</h1>
 <div class="sub">{{ title }}</div>
 <div class="note {% if just.reasons %}ok-note{% endif %}"><b>Вывод по сравнению:</b> {{ just.verdict }}.
