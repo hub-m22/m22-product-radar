@@ -128,10 +128,11 @@ def test_matching_and_price_vs_market(conn):
     assert s and "дороже" in s["title"] and s["m22_product_id"] == m["id"]
     # защита от повторов
     assert signals.detect_price_vs_market(conn) == 0
-    # рекомендация формируется только при ≥3 сопоставимых
-    assert recommendations.generate(conn) >= 1
-    r = db.row(conn, "SELECT * FROM recommendations WHERE m22_product_id=?", (m["id"],))
-    assert r and r["priority"] in ("P1", "P2") and "рассмотреть возможность" not in r["action"].lower()
+    # цены против рынка — только в «Пересмотре цен»: действий по ценовым сигналам больше нет, а сигнал закрывается при пересчёте
+    recommendations.generate(conn)
+    assert db.row(conn, "SELECT id FROM recommendations WHERE m22_product_id=?", (m["id"],)) is None
+    signals.retire_moved_types(conn)
+    assert db.row(conn, "SELECT status FROM signals WHERE id=?", (s["id"],))["status"] == "done"
 
 
 def test_price_vs_market_needs_min_comparables(conn):

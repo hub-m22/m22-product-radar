@@ -17,6 +17,13 @@ from .normalize import CATEGORY_NAMES
 
 log = logging.getLogger(__name__)
 
+# Типы, которые больше не создаются как сигналы: у каждой темы теперь одно место.
+MOVED_TYPES = {
+    "m22_price_above_market": "раздел «Пересмотр цен»",
+    "m22_price_below_market": "раздел «Пересмотр цен»",
+    "cross_site_discrepancy": "раздел «Наши сайты»",
+    "source_error": "раздел «Источники»",
+}
 SIGNAL_TYPES = {
     "competitor_price_change": "Изменение цены конкурента",
     "product_appeared": "Появление товара у конкурента",
@@ -560,20 +567,32 @@ def detect_source_errors(conn: sqlite3.Connection) -> int:
     return n
 
 
+def retire_moved_types(conn: sqlite3.Connection) -> int:
+    """Темы, у которых появился свой раздел (цены против рынка, расхождения между сайтами, ошибки сбора),
+    в сигналах не дублируются: открытые сигналы этих типов закрываются с пометкой, куда смотреть."""
+    n = 0
+    for t, where in MOVED_TYPES.items():
+        cur = conn.execute("UPDATE signals SET status='done', comment=?, updated_at=datetime('now') WHERE type=? AND status IN ('new','in_research','accepted')",
+                           (f"перенесено: теперь это {where}", t))
+        n += cur.rowcount
+    return n
+
+
+ACTIVE_SIGNAL_TYPES = {k: v for k, v in SIGNAL_TYPES.items() if k not in MOVED_TYPES}
+
+
 def run_all(conn: sqlite3.Connection) -> dict:
     if not db.get_setting(conn, "baseline_date"):
         db.set_setting(conn, "baseline_date", db.now_iso())
+    retire_moved_types(conn)
     stats = {
         "competitor_price_change": detect_competitor_price_changes(conn),
         "appear_disappear": detect_product_appear_disappear(conn),
         "new_category": detect_new_categories(conn),
         "new_competitor": detect_new_competitors(conn),
         "multi_competitor": detect_multi_competitor_products(conn),
-        "price_vs_market": detect_price_vs_market(conn),
         "demand": detect_demand(conn),
         "new_use_case": detect_new_use_cases(conn),
-        "cross_site": detect_cross_site(conn),
-        "source_errors": detect_source_errors(conn),
     }
     conn.commit()
     log.info("signals: %s", stats)

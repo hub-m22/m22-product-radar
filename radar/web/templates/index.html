@@ -19,14 +19,25 @@
 
 <div class="grid grid-2" style="margin-top:14px">
   <div class="card"><h2>Что делать в первую очередь <span class="small muted">({{ counts.recs }} открытых)</span></h2>
-    <div class="small muted" style="margin-bottom:6px">По одному действию на товар, по убыванию приоритета. Полный список со статусами и комментариями — в разделе «Рекомендуемые действия».</div>
+    <div class="small muted" style="margin-bottom:6px">Действия из событий рынка (ассортимент, сценарии, спрос). Цены — в «Пересмотре цен», ошибки сайтов — в «Наших сайтах», сбои сбора — в «Источниках».</div>
     {% for r in recs %}<div style="margin-bottom:8px">{{ m.prio(r.priority) }} <a href="/actions/{{ r.id }}">{{ r.title }}</a><div class="small muted">{{ r.owner }} · до {{ r.due_date }} · уверенность {{ (r.confidence * 100) | int }}%</div></div>{% else %}<div class="muted small">Открытых действий нет.</div>{% endfor %}
     <a class="small" href="/actions">Все действия →</a></div>
 
-  <div class="card"><h2>Цены: где M22 отличается от рынка <span class="small muted">({{ counts.price_signals }})</span></h2>
-    <div class="small muted" style="margin-bottom:6px">Только там, где есть минимум 3 сопоставимых предложения от 2+ продавцов и разрыв от 10 %.</div>
-    {% for s in price_signals %}<div class="small" style="margin-bottom:8px">{{ m.sev(s.severity) }} <a href="/signals/{{ s.id }}">{{ s.title }}</a></div>{% else %}<div class="muted small">Ценовых расхождений с рынком нет или сопоставимых предложений недостаточно.</div>{% endfor %}
-    <a class="btn small" href="/pricing">Пересмотр цен: что поднять, что снизить →</a> <a class="small" href="/signals?type=cross_site_discrepancy">расхождения m22.ru / radiosync.ru</a></div>
+  <div class="card"><h2>Цены M22 против рынка</h2>
+    <div class="small" style="margin-bottom:6px">Снизить или обосновать: <b style="color:var(--high)">{{ pricing_summ.lower }}</b> · можно поднять: <b style="color:#2a9d5c">{{ pricing_summ.raise }}</b> · в рынке: <b>{{ pricing_summ.keep }}</b> · мало данных: {{ pricing_summ.no_data }}. Считается по надёжным сопоставлениям (3+ предложения от 2+ продавцов).</div>
+    {% for r in pricing_top %}<div class="small" style="margin-bottom:6px"><span class="badge {{ 'sev-high' if r.verdict == 'lower' else 'st-new' }}">{{ r.verdict_ru }}</span> <a href="/matrix/{{ r.p.id }}">{{ r.p.name[:55] }}</a> <span class="muted">{{ r.p.price | money }} против медианы {{ r.median | money }} ({{ '%+d' % r.gap }} %)</span></div>{% else %}<div class="muted small">Отклонений от рынка нет или сопоставимых предложений недостаточно.</div>{% endfor %}
+    <a class="btn small" href="/pricing">Пересмотр цен: все товары →</a></div>
+</div>
+
+<div class="grid grid-2" style="margin-top:14px">
+  <div class="card"><h2>Наши сайты: ошибки и наличие</h2>
+    <div class="small" style="margin-bottom:6px">Замечаний по m22.ru и radiosync.ru: срочных <b style="color:var(--high)">{{ audit.counts.P1 }}</b>, важных <b>{{ audit.counts.P2 }}</b>, косметика {{ audit.counts.P3 }}. Нельзя купить сейчас: <b>{{ stock.total }}</b> карточек ({% for st, n in stock.by_status.most_common() %}{{ st }} {{ n }}{% if not loop.last %}, {% endif %}{% endfor %}).</div>
+    <a class="btn small" href="/site-audit">Ошибки и замечания →</a> <a class="small" href="/site-audit/stock">Наличие →</a></div>
+  <div class="card"><h2>Категории: где мы по цене</h2>
+    <div class="small" style="margin-bottom:6px">{% set st = {} %}{% for c in cat_overview if c.m22_n %}{% set _ = st.update({c.status: st.get(c.status, 0) + 1}) %}{% endfor %}
+      внимание: <b style="color:var(--high)">{{ st.get('attention', 0) }}</b> · следить: <b>{{ st.get('watch', 0) }}</b> · ок: {{ st.get('ok', 0) }} · пробел: {{ st.get('gap', 0) }} · мало данных: {{ st.get('no_data', 0) }}.</div>
+    {% for c in cat_overview if c.m22_n and c.status in ('attention', 'watch') %}<div class="small">▫ <a href="/categories/{{ c.slug }}">{{ c.name }}</a> — {{ c.verdict[:110] }}</div>{% endfor %}
+    <a class="small" href="/categories">Все категории →</a></div>
 </div>
 
 <div class="grid grid-3" style="margin-top:14px">
@@ -48,14 +59,6 @@
 </div>
 
 <div class="grid grid-2" style="margin-top:14px">
-  <div class="card"><h2>Категории: где мы по цене</h2>
-    <div class="tbl-wrap"><table><thead><tr><th>Категория</th><th>Статус</th><th class="num">M22</th><th class="num">Конкур.</th><th class="num">Дешевле M22</th></tr></thead><tbody>
-      {% for c in cat_overview %}{% if c.m22_n %}<tr><td><a href="/categories/{{ c.slug }}">{{ c.name }}</a></td>
-        <td><span class="badge {{ {'ok':'sev-low','watch':'sev-medium','attention':'sev-high','gap':'sev-high','no_data':'st'}.get(c.status, 'st') }}">{{ {'ok':'ок','watch':'следить','attention':'внимание','gap':'пробел','no_data':'мало данных'}.get(c.status, c.status) }}</span></td>
-        <td class="num">{{ c.m22_n }}</td><td class="num">{{ c.priced }}</td><td class="num">{% if c.cheaper_share is not none %}{{ c.cheaper_share }}%{% else %}<span class="muted">нет данных</span>{% endif %}</td></tr>{% endif %}{% endfor %}
-    </tbody></table></div>
-    <a class="small" href="/categories">Все категории →</a></div>
-
   <div class="card"><h2>Состояние данных</h2>
     {% if bad_sources or bad_pages %}
       {% for s in bad_sources %}<div class="small">❌ <b>{{ s.name }}</b> — {{ (s.last_error or 'ошибка')[:90] }} ({{ s.consecutive_failures }} подряд)</div>{% endfor %}

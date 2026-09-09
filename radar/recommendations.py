@@ -44,31 +44,7 @@ def generate(conn: sqlite3.Connection) -> int:
     n = 0
     sig = lambda t: db.rows(conn, "SELECT * FROM signals WHERE type=? AND status NOT IN ('rejected','done') ORDER BY created_at DESC", (t,))  # noqa: E731
 
-    # 1. Цена относительно рынка (сильный факт: ≥3 сопоставимых)
-    for s in sig("m22_price_above_market") + sig("m22_price_below_market"):
-        ev = db.uj(s["evidence_json"], {}) or {}
-        comps = ev.get("comparables") or []
-        if len(comps) < 3 or (s["confidence"] or 0) < 0.5:
-            continue
-        p = db.row(conn, "SELECT * FROM m22_products WHERE id=?", (s["m22_product_id"],))
-        if not p:
-            continue
-        above = s["type"] == "m22_price_above_market"
-        gap = abs((p["price"] - ev["median"]) / ev["median"] * 100)
-        prio = "P1" if gap >= 20 else "P2"
-        srcs = [{"name": f"{c['competitor_name']} — {c['name'][:50]} ({c.get('specs', '')})", "url": c["url"], "price": c["price"]} for c in comps]
-        if above:
-            action = (f"Провести ценовой разбор «{p['name']}»: цена {p['price']:,.0f} ₽ против медианы {ev['median']:,.0f} ₽ у {len(comps)} конкурентов. "
-                      f"Решение: снизить до {ev['median'] * 0.97:,.0f}–{ev['median'] * 1.05:,.0f} ₽ или добавить в карточку явные преимущества (гарантия 2 года, наличие, поддержка) и проверить конверсию 2 недели.").replace(",", " ")
-            effect = "Рост конверсии карточки и B2B-запросов в заказы; защита маржи при осознанном премиум-позиционировании."
-        else:
-            action = (f"Проверить повышение цены на «{p['name']}»: медиана {len(comps)} сопоставимых конкурентов выше цены M22 на {gap:.0f}% "
-                      f"({ev['median']:,.0f} ₽ против {p['price']:,.0f} ₽). Поднять цену на 5–10% и следить за конверсией 2 недели.").replace(",", " ")
-            effect = f"Прирост маржи до {gap:.0f}% на позицию без потери спроса (при сохранении конверсии)."
-        if _emit(conn, title=f"{'Проверить обоснованность цены' if above else 'Проверить повышение цены'}: {p['name'][:60]}", action=action, priority=prio,
-                 basis=s["what_happened"], expected_effect=effect, confidence=s["confidence"], owner=OWNERS["pricing"], due_date=_due(7), sources_json=srcs,
-                 signal_ids_json=[s["id"]], category_slug=s["category_slug"], m22_product_id=p["id"], dedupe_key=f"rec:{s['dedupe_key']}"):
-            n += 1
+    # Цены против рынка — раздел «Пересмотр цен», а не действия: там вердикт по каждому товару и он обновляется сам.
     # 1а. рекомендации, все сигналы которых закрыты или отклонены, закрываем (любой тип)
     for r in db.rows(conn, "SELECT id, signal_ids_json FROM recommendations WHERE status='new'"):
         ids = [int(x) for x in (db.uj(r["signal_ids_json"], []) or []) if str(x).isdigit()]
@@ -78,26 +54,7 @@ def generate(conn: sqlite3.Connection) -> int:
         if open_n == 0:
             conn.execute("UPDATE recommendations SET status='done', comment=COALESCE(comment,'') || ' [закрыта автоматически: сигналы-основания закрыты]', updated_at=datetime('now') WHERE id=?", (r["id"],))
 
-    # 2. Расхождение цен между сайтами — сильный факт
-    xs = [s for s in sig("cross_site_discrepancy") if s["old_value"] and s["new_value"] and "отличается" in s["title"]]
-    if xs:
-        items = "; ".join(f"{s['title'].split('«')[1].split('»')[0]}: {s['new_value']} / {s['old_value']}" for s in xs[:12])
-        if _emit(conn, title=f"Синхронизировать цены между m22.ru и radiosync.ru ({len(xs)} позиций)",
-                 action=f"Установить одинаковые цены на обоих сайтах для позиций: {items}. Назначить один источник истины (прайс-лист) и обновлять оба сайта из него.",
-                 priority="P2", basis=f"Подтверждённое расхождение цен по {len(xs)} позициям при сборе {xs[0]['observed_at'][:10]}.",
-                 expected_effect="Исключение потери доверия клиентов и ошибок в тендерных прайс-листах.", confidence=0.95, owner=OWNERS["product"], due_date=_due(5),
-                 sources_json=[{"name": "m22.ru / radiosync.ru", "url": s["source_url"]} for s in xs[:12]], signal_ids_json=[s["id"] for s in xs],
-                 dedupe_key="rec:xsite"):
-            n += 1
-    miss = [s for s in sig("cross_site_discrepancy") if "не найден на m22.ru" in s["title"]]
-    if miss:
-        if _emit(conn, title=f"Выровнять ассортимент: {len(miss)} позиций radiosync.ru нет на m22.ru",
-                 action="Проверить список: " + "; ".join(s["title"].split("«")[1].split("»")[0] for s in miss[:10]) + ". Добавить карточки на m22.ru или снять с radiosync.ru.",
-                 priority="P3", basis=f"{len(miss)} позиций radiosync.ru без соответствия по ключу модели на m22.ru.", expected_effect="Единый ассортимент; меньше потерянных заказов на основном магазине.",
-                 confidence=0.7, owner=OWNERS["product"], due_date=_due(14), sources_json=[{"name": "radiosync.ru", "url": s["source_url"]} for s in miss[:10]],
-                 signal_ids_json=[s["id"] for s in miss], dedupe_key="rec:xsite-missing"):
-            n += 1
-
+    # Расхождения между m22.ru и radiosync.ru — раздел «Наши сайты».
     # 3. Модель у ≥3 конкурентов, нет у M22 — сильный факт
     for s in sig("multi_competitor_product"):
         ev = db.uj(s["evidence_json"], {}) or {}
@@ -168,13 +125,6 @@ def generate(conn: sqlite3.Connection) -> int:
                  category_slug=s["category_slug"], m22_product_id=s["m22_product_id"], dedupe_key=f"rec:{s['dedupe_key']}"):
             n += 1
 
-    # 8. Ошибки источников
-    errs = sig("source_error")
-    if errs:
-        if _emit(conn, title=f"Восстановить {len(errs)} неработающих источников/страниц",
-                 action="Проверить: " + "; ".join(s["title"] for s in errs[:6]) + ". Обновить URL или отключить страницу в разделе «Источники».",
-                 priority="P3", basis="Повторные сбои при сборе.", expected_effect="Полнота сигналов по ценам конкурентов.", confidence=1.0, owner=OWNERS["data"], due_date=_due(3),
-                 sources_json=[{"name": s["source"], "url": s["source_url"]} for s in errs[:6]], signal_ids_json=[s["id"] for s in errs], dedupe_key="rec:srcerr"):
-            n += 1
+    # Ошибки сбора — раздел «Источники»; в действия не попадают.
     conn.commit()
     return n

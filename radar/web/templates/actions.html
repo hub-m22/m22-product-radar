@@ -1,7 +1,7 @@
 {% extends "base.html" %}{% import "_macros.html" as m %}
 {% block title %}Рекомендуемые действия — M22 Product Radar{% endblock %}
 {% block content %}
-<div class="topbar"><div><h1>Рекомендуемые действия</h1><div class="sub">Только конкретные действия с фактическим основанием. Сильные рекомендации — при ≥3 сопоставимых предложениях или подтверждённом факте.</div></div>
+<div class="topbar"><div><h1>Рекомендуемые действия</h1><div class="sub">Действия из событий рынка: ввод моделей и категорий, сценарии применения, реакция на цены конкурентов, спрос. Что делать с ценами M22 — по каждому товару в <a href="/pricing">«Пересмотре цен»</a>; что исправить на сайтах — в <a href="/site-audit">«Наших сайтах»</a>.</div></div>
 <div class="actions-row"><a class="btn sec small" href="/export/recommendations.csv">CSV</a> <a class="btn sec small" href="/export/recommendations.xlsx">XLSX</a></div></div>
 {% set severities = [("P1","P1"),("P2","P2"),("P3","P3")] %}{% set sev_label = "Приоритет" %}
 {% set statuses = [("new","Новый"),("accepted","Принято"),("in_progress","В работе"),("rejected","Отклонено"),("done","Выполнено")] %}

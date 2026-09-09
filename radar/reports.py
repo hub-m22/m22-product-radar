@@ -62,12 +62,23 @@ def build_weekly(conn: sqlite3.Connection, days: int = 7) -> dict:
                 "why": s["why_matters"], "action": s["recommended_action"], "category": _cat(s["category_slug"]), "observed_at": s["observed_at"]}
 
     top5 = [brief(s) for s in sigs if s["type"] != "source_error"][:5]
-    m22_changes = [brief(s) for s in by_type("m22_price_above_market", "m22_price_below_market", "cross_site_discrepancy", "competitor_price_change") if s["m22_product_id"]][:10]
+    # положение цен M22 — из раздела «Пересмотр цен» (единственный источник по ценам против рынка)
+    from . import pricing as _pricing
+    m22_changes = []
+    for r in _pricing.review(conn):
+        if r["verdict"] in ("lower", "raise"):
+            m22_changes.append({"id": r["p"]["id"], "title": f"{r['verdict_ru']}: {r['p']['name'][:60]}", "type": "Пересмотр цен", "severity": "high" if r["verdict"] == "lower" else "medium",
+                                "confidence": None, "fact_kind": "inference", "what": r["why"], "period": "текущий замер", "source": "пересмотр цен", "source_url": r["p"]["url"],
+                                "why": None, "action": None, "category": r["category"], "observed_at": None})
+    m22_changes = m22_changes[:10]
     price_changes = [brief(s) for s in by_type("competitor_price_change")][:15]
     new_products = [brief(s) for s in by_type("product_appeared", "new_kit_solution", "multi_competitor_product", "new_category")][:15]
     demand = [brief(s) for s in by_type("demand_change", "demand_anomaly", "category_growth_existing", "category_growth_gap")][:15]
     gaps = [brief(s) for s in by_type("new_category", "multi_competitor_product", "category_growth_gap") if "отсутствует" in s["title"] or "нет у M22" in s["title"] or "у M22 её нет" in s["title"] or s["type"] == "new_category"][:15]
-    risks = [brief(s) for s in sigs if s["severity"] == "high"][:8] + [brief(s) for s in by_type("source_error")][:3]
+    risks = [brief(s) for s in sigs if s["severity"] == "high"][:8] + [{"id": None, "title": f"Источник «{x['name']}» не работает ({x['consecutive_failures']} сбоев подряд)", "type": "Источники", "severity": "low",
+                                                                          "confidence": 1.0, "fact_kind": "fact", "what": (x["last_error"] or "")[:200], "period": None, "source": x["key"], "source_url": x["url"],
+                                                                          "why": None, "action": "Раздел «Источники»", "category": "—", "observed_at": x["last_run_at"]}
+                                                                         for x in db.rows(conn, "SELECT * FROM sources WHERE status='error' ORDER BY consecutive_failures DESC LIMIT 3")]
     owner_decisions = [{"id": r["id"], "title": r["title"], "action": r["action"], "priority": r["priority"], "confidence": r["confidence"], "basis": r["basis"], "due": r["due_date"]}
                        for r in recs if r["priority"] == "P1" or (r["owner"] or "") == "Собственник"][:8]
     next_week = [{"id": r["id"], "title": r["title"], "action": r["action"], "priority": r["priority"], "owner": r["owner"], "due": r["due_date"], "confidence": r["confidence"],

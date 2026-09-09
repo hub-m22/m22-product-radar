@@ -28,7 +28,8 @@ from .. import specs as specmod
 from ..importers import TYPE_NAMES
 from ..logging_setup import setup_logging
 from ..normalize import CATEGORY_NAMES, classify_category
-from ..signals import SIGNAL_TYPES
+from ..signals import ACTIVE_SIGNAL_TYPES, SIGNAL_TYPES
+from .. import pricing as pricingmod
 
 log = logging.getLogger(__name__)
 HERE = Path(__file__).parent
@@ -153,7 +154,7 @@ def fmt_dt(v):
 
 
 templates.env.filters.update({"money": fmt_money, "rub": fmt_rub, "pct": fmt_pct, "dt": fmt_dt, "uj": lambda t, d=None: db.uj(t, d)})
-templates.env.globals.update({"CATEGORY_NAMES": CATEGORY_NAMES, "SIGNAL_TYPES": SIGNAL_TYPES, "STATUS_NAMES": STATUS_NAMES, "SEV_NAMES": SEV_NAMES, "FACT_NAMES": FACT_NAMES,
+templates.env.globals.update({"CATEGORY_NAMES": CATEGORY_NAMES, "SIGNAL_TYPES": SIGNAL_TYPES, "ACTIVE_SIGNAL_TYPES": ACTIVE_SIGNAL_TYPES, "STATUS_NAMES": STATUS_NAMES, "SEV_NAMES": SEV_NAMES, "FACT_NAMES": FACT_NAMES,
                               "MATCH_NAMES": MATCH_NAMES, "SOURCE_STATUS": SOURCE_STATUS, "MVP_NAMES": MVP_NAMES, "TYPE_NAMES": TYPE_NAMES, "app_version": __import__("radar").get_version(), "asset_version": str(int(__import__("time").time()))})
 
 
@@ -247,7 +248,11 @@ def index(request: Request):
             recs.append(r)
             if len(recs) >= 6:
                 break
-        price_signals = db.rows(conn, SIGNAL_SQL + " WHERE s.type IN ('m22_price_above_market','m22_price_below_market') AND s.status='new' ORDER BY s.severity='high' DESC, s.confidence DESC LIMIT 6")
+        pr_rows = pricingmod.review(conn)
+        pricing_summ = pricingmod.summary(pr_rows)
+        pricing_top = sorted([r for r in pr_rows if r["verdict"] in ("lower", "raise")], key=lambda r: -abs(r["gap"] or 0))[:5]
+        audit = site_audit.run(conn)
+        stock = site_audit.stock_report(conn)
         multi = db.rows(conn, SIGNAL_SQL + " WHERE s.type='multi_competitor_product' AND s.status IN ('new','in_research') ORDER BY s.severity='high' DESC, s.confidence DESC LIMIT 5")
         new_comp = db.rows(conn, """SELECT cp.id, cp.name, cp.price, cp.url, COALESCE(c.group_name, c.name) AS seller, c.id AS competitor_id FROM competitor_products cp JOIN competitors c ON c.id=cp.competitor_id
                                     WHERE cp.is_active=1 AND cp.category_slug IS NOT NULL AND substr(cp.first_seen_at,1,10) > ? ORDER BY cp.first_seen_at DESC LIMIT 6""", (baseline,))
@@ -266,7 +271,6 @@ def index(request: Request):
             "review": db.row(conn, "SELECT COUNT(*) n FROM product_matches pm JOIN competitor_products cp ON cp.id=pm.competitor_product_id WHERE cp.is_active=1 AND pm.needs_review=1 AND pm.review_status='auto'")["n"],
             "errors": db.row(conn, "SELECT (SELECT COUNT(*) FROM sources WHERE status='error' OR consecutive_failures>0) + (SELECT COUNT(*) FROM monitored_pages WHERE fail_count>=3 AND is_active=1) n")["n"],
             "recs": len(recs_all),
-            "price_signals": db.row(conn, "SELECT COUNT(*) n FROM signals WHERE type IN ('m22_price_above_market','m22_price_below_market') AND status='new'")["n"],
             "new_products": db.row(conn, "SELECT COUNT(*) n FROM competitor_products WHERE is_active=1 AND category_slug IS NOT NULL AND substr(first_seen_at,1,10) > ?", (baseline,))["n"],
             "gone_products": db.row(conn, "SELECT COUNT(*) n FROM signals WHERE type='product_disappeared' AND status='new'")["n"],
             "price_moves": db.row(conn, "SELECT COUNT(*) n FROM signals WHERE type='competitor_price_change' AND substr(created_at,1,10)>=?", (d30,))["n"],
@@ -277,7 +281,7 @@ def index(request: Request):
         cat_overview = catmod.overview(conn)
         limits = reports._data_limits(conn)
         last_update = db.row(conn, "SELECT MAX(finished_at) t FROM source_runs")["t"]
-    return render(request, "index.html", recs=recs, price_signals=price_signals, multi=multi, new_comp=new_comp, gap_cats=gap_cats, hyps=hyps, bad_sources=bad_sources,
+    return render(request, "index.html", recs=recs, pricing_summ=pricing_summ, pricing_top=pricing_top, audit=audit, stock=stock, multi=multi, new_comp=new_comp, gap_cats=gap_cats, hyps=hyps, bad_sources=bad_sources,
                   bad_pages=bad_pages, runs=runs, counts=counts, cat_overview=cat_overview, limits=limits, last_update=last_update, baseline=baseline)
 
 
