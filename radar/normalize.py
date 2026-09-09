@@ -83,9 +83,14 @@ MODEL_PATTERNS = [
 ]
 
 
+_CYR2LAT = str.maketrans("АВСЕНКМОРТХ", "ABCEHKMOPTX")
+
+
 def model_key(name: str, sku: str | None = None) -> str | None:
     """Нормализованный ключ модели: 'SGTR02', 'UG10', 'TT106', 'AG300' и т.п."""
     text = clean_text(name).upper()
+    # коды моделей, набранные русскими буквами, похожими на латинские («МС-15», «ТТ105»): переводим только токены «буквы+цифры»
+    text = re.sub(r"\b([АВСЕНКМОРТХ]{1,6})(\s?-?\s?\d{2,5}[A-ZА-Я]{0,2})\b", lambda m: m.group(1).translate(_CYR2LAT) + m.group(2), text)
     m = re.search(r"\b(SGTR)\s?-?\s?(\d{2})\s?([A-Z])?\b", text)
     if m:
         return f"SGTR{m.group(2)}{m.group(3) or ''}"
@@ -270,6 +275,8 @@ def detect_kind(name: str) -> str:
     low = name.lower()
     if any(k in low for k in ("комплексное решение", "готовое решение", "прайм", "профи")):
         return "kit"
+    if re.search(r"усилител\w*\s+голос|громкоговорител|мегафон|voice amplifier|рупор", low):
+        return "voice_amp"
     if low.startswith(("радиогид система", "радиогид-система", "система радиогид", "радиогид", "экскурсионная система", "tour guide system", "система синхронного", "комплект для синхронного", "комплект радиогид", "радиосистема")):
         return "system"
     if "аренда" in low or low.startswith("rent"):

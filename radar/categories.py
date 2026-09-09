@@ -11,7 +11,7 @@ from .normalize import CATEGORY_NAMES
 PACK_RE = re.compile(r"(?:(\d{2,5})\s*(?:шт|pcs|штук))|(?:уп\w*\s*(?:по|из|на)?\s*(\d{2,5}))|(?:[xх×]\s*(\d{2,5})\b)", re.I)
 UNIT_CATEGORIES = {"disposable_headphones", "reusable_headphones"}
 KIND_LABELS = {"system": "Системы и комплекты", "receiver": "Приёмники", "transmitter": "Передатчики", "headphones": "Наушники", "microphone": "Микрофоны",
-               "case_charger": "Кейсы и зарядка", "audioguide": "Аудиогиды", "kit": "Готовые решения", "accessory": "Аксессуары", "rental": "Аренда", "other": "Прочее"}
+               "case_charger": "Кейсы и зарядка", "audioguide": "Аудиогиды", "voice_amp": "Усилители голоса", "kit": "Готовые решения", "accessory": "Аксессуары", "rental": "Аренда", "other": "Прочее"}
 
 
 def pack_qty(name: str) -> int | None:

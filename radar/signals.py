@@ -324,10 +324,20 @@ def detect_multi_competitor_products(conn: sqlite3.Connection) -> int:
                             FROM competitor_products cp JOIN competitors c ON c.id=cp.competitor_id
                             WHERE cp.is_active=1 AND c.is_active=1 AND cp.model_key IS NOT NULL AND cp.kind IN ('system','transmitter','receiver','audioguide','kit')""")
     groups: dict[tuple, list[dict]] = {}
+    all_sellers = {(r["seller"] or "").lower(): r["seller"] for r in rows}
     for r in rows:
         brand = (r["brand"] or "").strip().lower().replace(" ", "")
         if not brand and not _distinctive_key(r["model_key"]):
             continue  # короткий код без бренда (T100, R100) - нельзя утверждать, что это одна модель
+        if _junk_url(r["url"]):
+            continue  # запись без страницы товара (адрес главной, корзина) — не подтверждённое предложение
+        # продавец на маркетплейсе («… — продавец Retekess Official») — это тот же продавец, что и его сайт
+        m = re.search(r"— продавец (.+)$", r["name"] or "")
+        if m:
+            tag = m.group(1).strip().lower()
+            first = re.split(r"[\s_\-]+", tag)[0]
+            own = next((orig for low, orig in all_sellers.items() if first and len(first) >= 4 and first in low and "wildberries" not in low and "ozon" not in low), None)
+            r = {**r, "seller": (own if own else f"{r['seller']} · {m.group(1).strip()}")}
         groups.setdefault((brand, r["model_key"]), []).append(r)
     m22_keys = {x["model_key"] for x in db.rows(conn, "SELECT DISTINCT model_key FROM m22_products WHERE is_active=1 AND model_key IS NOT NULL")}
     aliases = db.uj(db.get_setting(conn, "model_aliases"), {}) or {}

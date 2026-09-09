@@ -54,7 +54,7 @@ ALIASES: dict[str, str] = {}  # код модели у конкурента -> �
 
 KIND_GROUPS = {
     "system": "system", "kit": "system", "transmitter": "transmitter", "receiver": "receiver", "case_charger": "accessory",
-    "headphones": "headphones", "microphone": "microphone", "audioguide": "audioguide", "accessory": "accessory",
+    "headphones": "headphones", "microphone": "microphone", "audioguide": "audioguide", "accessory": "accessory", "voice_amp": "voice_amp",
     "rental": "rental", "other": "other",
 }
 
