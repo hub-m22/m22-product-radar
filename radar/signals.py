@@ -230,6 +230,93 @@ def _junk_url(u: str) -> bool:
     return pth == "" or "/cart" in pth
 
 
+COMPARE_FIELDS = [("unit", "Цена за ед./место, ₽"), ("range_m", "Дальность, м"), ("channels", "Каналов"), ("battery_h", "Автономность, ч"), ("weight_g", "Вес, г"),
+                  ("freq_band", "Диапазон"), ("two_way", "Двусторонняя связь"), ("display", "Экран"), ("capacity", "Вместимость")]
+
+
+def _justify_strict(conn: sqlite3.Connection, full: list[dict], cat: str | None) -> dict:
+    """Обоснование «стоит ли вводить модель» только против сопоставимых моделей M22: тот же тип изделия,
+    для комплектов — та же вместимость. Причина засчитывается, только если у конкурента есть данные по этому полю.
+    Возвращает reasons (пусто — сигнала быть не должно), таблицу сравнения и список моделей M22, с которыми сравнивали."""
+    from collections import Counter
+    from . import categories as catmod
+
+    kind = Counter(f["kind"] for f in full).most_common(1)[0][0]
+    offers = []
+    for f in [x for x in full if x["kind"] == kind]:
+        norm = specmod.normalize(f["name"], f["description"], f["specs_json"], f["price"], f["capacity"])
+        unit, _q = catmod.unit_price(f["name"], f["price"], cat, f["kind"], norm.get("capacity") or f["capacity"])
+        offers.append({"id": f["id"], "name": f["name"], "price": f["price"], "url": f.get("url"), "capacity": norm.get("capacity") or f["capacity"], "norm": norm, "unit": unit,
+                       "specs_n": sum(1 for k in ("range_m", "channels", "battery_h", "weight_g", "freq_band") if norm.get(k))})
+    priced = [o for o in offers if o["unit"]]
+    best = min(priced, key=lambda o: o["unit"]) if priced else max(offers, key=lambda o: o["specs_n"])
+    # сводим характеристики по всем предложениям модели (у одного продавца может быть полнее описание)
+    merged = dict(best["norm"])
+    for o in offers:
+        for k, v in o["norm"].items():
+            if merged.get(k) in (None, False) and v not in (None, False):
+                merged[k] = v
+    best = {**best, "norm": merged}
+    m22 = db.rows(conn, "SELECT id, name, url, description, specs_json, price, capacity, kind FROM m22_products WHERE is_active=1 AND in_scope=1 AND parent_url IS NULL AND price IS NOT NULL AND site='m22.ru' AND category_slug=? AND kind=? ORDER BY price", (cat, kind))
+    peers = []
+    for m in m22:
+        norm = specmod.normalize(m["name"], m["description"], m["specs_json"], m["price"], m["capacity"])
+        unit, _q = catmod.unit_price(m["name"], m["price"], cat, m["kind"], norm.get("capacity") or m["capacity"])
+        peers.append({"id": m["id"], "name": m["name"], "url": m["url"], "price": m["price"], "capacity": norm.get("capacity") or m["capacity"], "norm": norm, "unit": unit})
+    cap = best.get("capacity")
+    if kind in ("system", "kit"):
+        price_peers = [p for p in peers if cap and p["capacity"] and abs(p["capacity"] - cap) <= max(2, 0.2 * cap) and p["unit"]]
+    else:
+        price_peers = [p for p in peers if p["unit"]]
+    spec_peers = peers
+    reasons: list[dict] = []
+    # нет сопоставимых моделей M22 этого типа — обоснования по цене/характеристикам быть не может; такие группы — тема раздела «категории и ниши», не событие
+    # цена: только за сопоставимую единицу (за приёмник/передатчик, для комплектов — за место при той же вместимости)
+    if best.get("unit") and price_peers:
+        pm = min(price_peers, key=lambda p: p["unit"])
+        gap = (best["unit"] - pm["unit"]) / pm["unit"] * 100
+        if gap <= -25:
+            unit_lbl = "за место в комплекте" if kind in ("system", "kit") else "за единицу"
+            reasons.append({"kind": "price", "field": "unit", "peer_id": pm["id"], "gap_pct": round(gap),
+                            "text": f"Цена {unit_lbl}: {best['unit']:,.0f} ₽ против {pm['unit']:,.0f} ₽ у «{pm['name'][:60]}» — дешевле на {abs(gap):.0f}%.".replace(",", " ")})
+    elif kind in ("system", "kit") and not cap and peers:
+        reasons_note = "вместимость комплекта конкурента неизвестна — по цене не сравнивается"
+    # характеристики: против лучшего значения среди сопоставимых моделей M22; нужны данные с обеих сторон
+    for field, label in (("range_m", "Дальность, м"), ("channels", "Каналов"), ("battery_h", "Автономность, ч")):
+        a = best["norm"].get(field)
+        vals = [(p["norm"].get(field), p) for p in spec_peers if p["norm"].get(field)]
+        if not a or not vals:
+            continue
+        b, pb = max(vals, key=lambda x: x[0])
+        if a >= b * 1.3:
+            reasons.append({"kind": "spec", "field": field, "peer_id": pb["id"], "text": f"{label}: {a:g} против {b:g} у лучшей модели M22 «{pb['name'][:50]}» (+{(a / b - 1) * 100:.0f}%)."})
+    a = best["norm"].get("weight_g")
+    vals = [(p["norm"].get("weight_g"), p) for p in spec_peers if p["norm"].get("weight_g")]
+    if a and vals:
+        b, pb = min(vals, key=lambda x: x[0])
+        if a <= b * 0.7:
+            reasons.append({"kind": "spec", "field": "weight_g", "peer_id": pb["id"], "text": f"Вес: {a:g} г против {b:g} г у самой лёгкой модели M22 «{pb['name'][:50]}»."})
+    if best["norm"].get("two_way") and spec_peers and not any(p["norm"].get("two_way") for p in spec_peers):
+        reasons.append({"kind": "spec", "field": "two_way", "text": "Двусторонняя связь, которой нет у сопоставимых моделей M22 этого типа."})
+    if best["norm"].get("freq_band") == "2.4 ГГц" and spec_peers and all(p["norm"].get("freq_band") not in (None, "2.4 ГГц") for p in spec_peers):
+        reasons.append({"kind": "spec", "field": "freq_band", "text": "Цифровой диапазон 2,4 ГГц, тогда как сопоставимые модели M22 работают в UHF/VHF."})
+    shown = (price_peers or spec_peers)
+    shown = sorted(shown, key=lambda p: (abs((p["capacity"] or 0) - (cap or 0)) if cap else 0, p["price"]))[:3]
+    if reasons:
+        verdict = "есть основание рассмотреть ввод: " + ("; ".join(r["kind"] == "price" and "цена" or r["kind"] == "spec" and "характеристики" or "новая группа" for r in reasons))
+    elif not peers:
+        verdict = f"у M22 нет изделий этого типа ({catmod.KIND_LABELS.get(kind, kind).lower()}) в категории — сравнить не с чем; смотрите «категории и ниши»"
+    elif not best.get("unit") and best["specs_n"] == 0:
+        verdict = "у продавцов нет ни цены за сопоставимую единицу, ни характеристик — сравнить не с чем"
+    else:
+        verdict = "преимуществ перед сопоставимыми моделями M22 по цене и характеристикам не найдено"
+    table = {"fields": COMPARE_FIELDS, "competitor": {"name": best["name"], "url": best.get("url"), "price": best["price"], "vals": {**{k: best["norm"].get(k) for k, _ in COMPARE_FIELDS}, "unit": best.get("unit")}},
+             "peers": [{"id": p["id"], "name": p["name"], "url": p["url"], "price": p["price"], "vals": {**{k: p["norm"].get(k) for k, _ in COMPARE_FIELDS}, "unit": p.get("unit")}} for p in shown],
+             "kind": catmod.KIND_LABELS.get(kind, kind), "cap": cap,
+             "basis": ("тот же тип изделия и та же вместимость (±20 %), цена за место в комплекте" if kind in ("system", "kit") else "тот же тип изделия, цена за единицу")}
+    return {"reasons": reasons, "verdict": verdict, "table": table, "peers": [{"id": p["id"], "name": p["name"], "price": p["price"]} for p in shown]}
+
+
 def detect_multi_competitor_products(conn: sqlite3.Connection) -> int:
     n = 0
     rows = db.rows(conn, """SELECT cp.id, cp.name, cp.brand, cp.model_key, cp.category_slug, cp.price, cp.url, cp.image_url, cp.fetched_at, cp.kind,
@@ -271,36 +358,34 @@ def detect_multi_competitor_products(conn: sqlite3.Connection) -> int:
         items = [it for it in items if not _junk_url(it["url"]) or it["competitor_id"] not in good]
         items.sort(key=lambda x: (x["seller"], x["price"] is None, x["price"] or 0))
         own = next((o["url"] for o in offers if o["website"] and o["url"].split("/")[2].replace("www.", "") in o["website"]), offers[0]["url"])
-        # обоснование: сравнение с ближайшими моделями M22 того же типа по цене и характеристикам
-        full = db.rows(conn, "SELECT id, name, description, specs_json, price, capacity, kind FROM competitor_products WHERE id IN (%s)" % ",".join(str(o["id"]) for o in offers))
-        kinds = {o["kind"] for o in offers}
+        # обоснование: только против сопоставимых моделей M22 (тот же тип, та же вместимость); без обоснования сигнала нет
+        full = db.rows(conn, "SELECT id, name, url, description, specs_json, price, capacity, kind FROM competitor_products WHERE id IN (%s)" % ",".join(str(o["id"]) for o in offers))
         cat = offers[0]["category_slug"]
-        m22_rows = db.rows(conn, "SELECT id, name, description, specs_json, price, capacity, kind, url FROM m22_products WHERE is_active=1 AND in_scope=1 AND parent_url IS NULL AND price IS NOT NULL AND site='m22.ru' AND category_slug=? AND kind IN (%s) ORDER BY price" % ",".join("?" * len(kinds)), [cat, *kinds])
-        offers_n = [{"id": f["id"], "name": f["name"], "price": f["price"], "norm": specmod.normalize(f["name"], f["description"], f["specs_json"], f["price"], f["capacity"])} for f in full]
-        m22_n = [{"id": m["id"], "name": m["name"], "price": m["price"], "url": m["url"], "norm": specmod.normalize(m["name"], m["description"], m["specs_json"], m["price"], m["capacity"])} for m in m22_rows]
-        category_in_m22 = bool(db.row(conn, "SELECT 1 FROM m22_products WHERE is_active=1 AND in_scope=1 AND category_slug=?", (cat,)))
-        just = specmod.justify(offers_n, m22_n, category_in_m22)
-        if not just["reasons"]:
-            sev = "low" if has else "medium"
+        if not cat:
+            continue
+        just = _justify_strict(conn, full, cat)
+        dedupe = f"multi:{brand}:{key}"
+        if not just["reasons"] or has:
+            conn.execute("UPDATE signals SET status='done', comment=?, updated_at=datetime('now') WHERE dedupe_key=? AND status IN ('new','in_research')",
+                         ("закрыт автоматически: модель есть у M22" if has else f"закрыт автоматически: нет обоснования по цене или характеристикам против сопоставимых моделей M22 ({just['verdict']})", dedupe))
+            continue
+        sev = "high" if len(sellers) >= 3 else "medium"
         evidence = {"brand": offers[0]["brand"], "model_key": key, "sellers": sellers, "n_comp": len(sellers), "comps": ", ".join(sellers), "pmin": pmin, "pmax": pmax,
-                    "category_slug": cat, "name": offers[0]["name"], "url": own, "items": items, "justification": just,
-                    "m22_candidates": [{"id": m["id"], "name": m["name"], "price": m["price"]} for m in m22_n],
+                    "category_slug": cat, "name": offers[0]["name"], "url": own, "items": items, "justification": just, "comparison": just["table"],
+                    "m22_candidates": just["peers"],
                     "rule": "одинаковый бренд и код модели; сайты одной группы компаний считаются одним продавцом"}
         title = f"Модель {label} продают {len(sellers)} независимых продавца" + ("" if has else ", у M22 её нет")
         reasons_txt = " ".join(r["text"] for r in just["reasons"])
-        what = (f"Продавцы: {', '.join(sellers)}. Цены {_fmt(pmin)} - {_fmt(pmax)}. Правило сопоставления: одинаковый бренд и код модели ({label}); "
-                f"сайты одной группы компаний считаются одним продавцом. Сравнение с M22: {just['verdict']}. {reasons_txt}")
-        why = (("Основание для вывода аналога: " + reasons_txt) if just["reasons"] else
-               ("Несколько продавцов держат одну модель, но преимуществ перед M22 по цене и характеристикам не найдено - это наблюдение, а не повод для вывода аналога." if not has
-                else "Модель есть и у M22, и у нескольких продавцов - ценовая конкуренция по ней будет прямой."))
-        action = ((f"Запросить у 2-3 поставщиков цену и образец {label}; проверить в разделе сравнения: {reasons_txt} Посчитать маржу." if not has
-                   else f"Проверить цену M22 на {label} относительно диапазона {_fmt(pmin)} - {_fmt(pmax)}.") if just["reasons"]
-                  else f"Действий не требуется. Открыть сравнение характеристик и цен, если появятся новые данные по {label}.")
-        dedupe = f"multi:{brand}:{key}"
+        peers_txt = ", ".join(f"«{p['name'][:45]}» ({_fmt(p['price'])})" for p in just["peers"]) or "нет"
+        what = (f"Продавцы: {', '.join(sellers)}. Цены {_fmt(pmin)} - {_fmt(pmax)}. Правило: одинаковый бренд и код модели ({label}); сайты одной группы считаются одним продавцом. "
+                f"Сравнивали с моделями M22 того же типа ({just['table']['kind'].lower()}{', вместимость ' + str(just['table']['cap']) if just['table']['cap'] else ''}): {peers_txt}.")
+        why = "Основание для ввода: " + reasons_txt
+        action = f"Запросить у 2-3 поставщиков цену и образец {label}; проверить обоснование в таблице сравнения ниже; посчитать маржу при цене на 5 % ниже минимальной рыночной ({_fmt(pmin)})."
         emitted_multi.add(dedupe)
-        existing = db.row(conn, "SELECT id FROM signals WHERE dedupe_key=?", (dedupe,))
+        existing = db.row(conn, "SELECT id, status FROM signals WHERE dedupe_key=?", (dedupe,))
         if existing:
-            conn.execute("UPDATE signals SET title=?, what_happened=?, new_value=?, severity=?, evidence_json=?, source_url=?, why_matters=?, recommended_action=?, updated_at=datetime('now') WHERE id=?",
+            conn.execute("UPDATE signals SET title=?, what_happened=?, new_value=?, severity=?, evidence_json=?, source_url=?, why_matters=?, recommended_action=?, updated_at=datetime('now')" +
+                         (", status='new', comment=NULL" if existing["status"] == "done" and "закрыт автоматически" in (db.row(conn, "SELECT comment FROM signals WHERE id=?", (existing["id"],))["comment"] or "") else "") + " WHERE id=?",
                          (title, what, f"{len(sellers)} продавцов", sev, db.j(evidence), own, why, action, existing["id"]))
             continue
         if _emit(conn, type="multi_competitor_product", severity=sev, fact_kind="fact", category_slug=offers[0]["category_slug"], title=title, what_happened=what,
