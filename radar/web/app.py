@@ -440,7 +440,7 @@ def action_update(rid: int, status: str = Form(None), owner: str = Form(None), c
 
 # ---------------- Сигналы ----------------
 MARKET_TABS = {
-    "intro": ("Ассортимент: что ввести", "Ходовые модели, которые продают несколько независимых продавцов, и категории, которых нет у M22. Каждый пункт — с обоснованием по цене и характеристикам и предлагаемым действием.",
+    "intro": ("Ассортимент: что ввести", "Ходовые модели, которые продают несколько независимых продавцов, а у M22 их нет, и категории без товаров M22. У каждой — фото, обоснование по цене и характеристикам относительно ближайшего, что у M22 есть сейчас, и предлагаемое действие. Показаны открытые события; закрытые — через фильтр «Статус».",
               ("multi_competitor_product", "new_category", "category_growth_gap")),
     "changes": ("Изменения у конкурентов", "Изменения цен конкурентов на сопоставимые товары (два замера в разные дни, от 3 %). Появившиеся и исчезнувшие позиции — в «Матрице конкурентов» → «Что появилось / исчезло».",
                 ("competitor_price_change",)),
@@ -457,6 +457,8 @@ def market_page(request: Request, tab: str = "intro"):
     where, params = _signal_where(f)
     where += f" AND s.type IN ({','.join('?' * len(types))})"
     params += list(types)
+    if not f["status"]:
+        where += " AND s.status IN ('new','in_research','accepted')"  # закрытые — только по фильтру «Статус»
     with db.session() as conn:
         rows = db.rows(conn, SIGNAL_SQL + f" WHERE {where} ORDER BY s.status='new' DESC, CASE s.severity WHEN 'high' THEN 0 WHEN 'medium' THEN 1 ELSE 2 END, s.confidence DESC, s.created_at DESC LIMIT 500", params)
         lists = _lists(conn)

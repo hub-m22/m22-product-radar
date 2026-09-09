@@ -129,7 +129,7 @@ def detect_competitor_price_changes(conn: sqlite3.Connection, days: int = 30) ->
                  title=f"{cp['competitor_name']} {direction} цену на «{cp['name'][:70]}» на {abs(pct):.0f}%",
                  what_happened=f"Цена изменилась с {_fmt(old)} на {_fmt(new)} ({pct:+.1f}%).", old_value=_fmt(old), new_value=_fmt(new),
                  observed_at=hist[0]["observed_at"], period=f"{hist[1]['observed_at'][:10]} → {hist[0]['observed_at'][:10]}",
-                 source=cp["competitor_name"], source_url=cp["url"], evidence_json={"history": hist, "match": m}, confidence=0.9,
+                 source=cp["competitor_name"], source_url=cp["url"], evidence_json={"history": hist, "match": m, "photo": cp.get("image_url"), "url": cp["url"], "name": cp["name"]}, confidence=0.9,
                  why_matters=why, recommended_action=action, dedupe_key=f"cpc:{cp['id']}:{hist[0]['id']}"):
             n += 1
     return n
@@ -553,7 +553,7 @@ USE_CASES = {
 def detect_new_use_cases(conn: sqlite3.Connection) -> int:
     n = 0
     m22_text = " ".join((r["name"] or "") + " " + (r["description"] or "") for r in db.rows(conn, "SELECT name, description FROM m22_products WHERE is_active=1 AND in_scope=1")).lower()
-    comps = db.rows(conn, "SELECT cp.name, cp.description, cp.url, cp.category_slug, c.name AS competitor_name, c.id AS competitor_id FROM competitor_products cp JOIN competitors c ON c.id=cp.competitor_id WHERE cp.is_active=1")
+    comps = db.rows(conn, "SELECT cp.name, cp.description, cp.url, cp.image_url, cp.price, cp.category_slug, c.name AS competitor_name, c.id AS competitor_id FROM competitor_products cp JOIN competitors c ON c.id=cp.competitor_id WHERE cp.is_active=1")
     found: dict[str, list[dict]] = {}
     for cp in comps:
         text = ((cp["name"] or "") + " " + (cp["description"] or "")).lower()
@@ -565,10 +565,13 @@ def detect_new_use_cases(conn: sqlite3.Connection) -> int:
         if len(comp_names) < 2:
             continue
         cat = items[0]["category_slug"]
+        items = sorted(items, key=lambda i: (not i.get("image_url"), _junk_url(i["url"])))  # сначала позиции с фото и настоящей страницей
+        ev_items = [{"name": i["name"], "url": i["url"], "competitor": i["competitor_name"], "image": (i.get("image_url") if not _junk_url(i["url"]) else None), "price": i.get("price")} for i in items[:10]]
+        conn.execute("UPDATE signals SET evidence_json=?, updated_at=datetime('now') WHERE dedupe_key=? AND status!='done'", (db.j({"items": ev_items, "photo": next((x["image"] for x in ev_items if x["image"]), None)}), f"usecase:{label}"))
         if _emit(conn, type="new_use_case", severity="medium", fact_kind="inference", category_slug=cat,
                  title=f"Сценарий «{label}» упоминают {len(comp_names)} конкурентов, M22 — нет",
                  what_happened=f"Упоминания в описаниях товаров: {', '.join(comp_names)}. Пример: {items[0]['name'][:80]}", new_value=f"{len(comp_names)} конкурентов",
-                 observed_at=db.now_iso(), source="описания товаров конкурентов", source_url=items[0]["url"], evidence_json={"items": [{"name": i["name"], "url": i["url"], "competitor": i["competitor_name"]} for i in items[:10]]},
+                 observed_at=db.now_iso(), source="описания товаров конкурентов", source_url=items[0]["url"], evidence_json={"items": ev_items, "photo": next((x["image"] for x in ev_items if x["image"]), None)},
                  confidence=0.6, why_matters="Существующие радиогиды M22 закрывают этот сценарий, но он не отражён в описаниях и посадочных страницах — теряется поисковый трафик.",
                  recommended_action=f"Добавить сценарий «{label}» в описания SGTR02/SGTR03/SGTR13 и создать посадочную страницу под запрос «радиогид для {label.split()[0]}…».",
                  dedupe_key=f"usecase:{label}"):
