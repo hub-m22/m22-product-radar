@@ -1,0 +1,3 @@
+2026-09-07 20:48:51,169 INFO radar.collectors.competitor_generic: sitemap https://crystal-sound.com/sitemap.xml: +0 страниц
+{"7": {"name": "CrystalSound", "collect": {"pages": 86, "seen": 82, "changed": 74, "errors": 1}, "enrich": {"products": 88, "checked": 11, "updated": 6}, "sec": 234}}
+DONE {"7": {"name": "CrystalSound", "collect": {"pages": 86, "seen": 82, "changed": 74, "errors": 1}, "enrich": {"products": 88, "checked": 11, "updated": 6}, "sec": 234}}

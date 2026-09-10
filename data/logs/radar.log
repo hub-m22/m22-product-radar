@@ -753,3 +753,447 @@
 2026-09-07 17:49:06,477 INFO httpx: HTTP Request: GET http://testserver/competitors/compare "HTTP/1.1 200 OK"
 2026-09-07 17:49:06,580 INFO httpx: HTTP Request: GET http://testserver/competitors "HTTP/1.1 200 OK"
 2026-09-07 17:49:06,669 INFO httpx: HTTP Request: GET http://testserver/competitors/9 "HTTP/1.1 200 OK"
+2026-09-07 17:49:42,169 INFO apscheduler.scheduler: Adding job tentatively -- it will be properly scheduled when the scheduler starts
+2026-09-07 17:49:42,170 INFO apscheduler.scheduler: Adding job tentatively -- it will be properly scheduled when the scheduler starts
+2026-09-07 17:49:42,170 INFO apscheduler.scheduler: Adding job tentatively -- it will be properly scheduled when the scheduler starts
+2026-09-07 17:49:42,171 INFO apscheduler.scheduler: Adding job tentatively -- it will be properly scheduled when the scheduler starts
+2026-09-07 17:49:42,172 INFO apscheduler.scheduler: Added job "_run_job" to job store "default"
+2026-09-07 17:49:42,172 INFO apscheduler.scheduler: Added job "_run_job" to job store "default"
+2026-09-07 17:49:42,172 INFO apscheduler.scheduler: Added job "_run_job" to job store "default"
+2026-09-07 17:49:42,172 INFO apscheduler.scheduler: Added job "_run_job" to job store "default"
+2026-09-07 17:49:42,172 INFO apscheduler.scheduler: Scheduler started
+2026-09-07 17:49:42,173 INFO radar.scheduler: scheduler started
+2026-09-07 19:33:56,928 INFO apscheduler.scheduler: Adding job tentatively -- it will be properly scheduled when the scheduler starts
+2026-09-07 19:33:56,928 INFO apscheduler.scheduler: Adding job tentatively -- it will be properly scheduled when the scheduler starts
+2026-09-07 19:33:56,929 INFO apscheduler.scheduler: Adding job tentatively -- it will be properly scheduled when the scheduler starts
+2026-09-07 19:33:56,929 INFO apscheduler.scheduler: Adding job tentatively -- it will be properly scheduled when the scheduler starts
+2026-09-07 19:33:56,930 INFO apscheduler.scheduler: Added job "_run_job" to job store "default"
+2026-09-07 19:33:56,930 INFO apscheduler.scheduler: Added job "_run_job" to job store "default"
+2026-09-07 19:33:56,930 INFO apscheduler.scheduler: Added job "_run_job" to job store "default"
+2026-09-07 19:33:56,931 INFO apscheduler.scheduler: Added job "_run_job" to job store "default"
+2026-09-07 19:33:56,931 INFO apscheduler.scheduler: Scheduler started
+2026-09-07 19:33:56,931 INFO radar.scheduler: scheduler started
+2026-09-07 19:43:30,412 INFO apscheduler.scheduler: Adding job tentatively -- it will be properly scheduled when the scheduler starts
+2026-09-07 19:43:30,412 INFO apscheduler.scheduler: Adding job tentatively -- it will be properly scheduled when the scheduler starts
+2026-09-07 19:43:30,412 INFO apscheduler.scheduler: Adding job tentatively -- it will be properly scheduled when the scheduler starts
+2026-09-07 19:43:30,419 INFO apscheduler.scheduler: Adding job tentatively -- it will be properly scheduled when the scheduler starts
+2026-09-07 19:43:30,419 INFO apscheduler.scheduler: Added job "_run_job" to job store "default"
+2026-09-07 19:43:30,419 INFO apscheduler.scheduler: Added job "_run_job" to job store "default"
+2026-09-07 19:43:30,419 INFO apscheduler.scheduler: Added job "_run_job" to job store "default"
+2026-09-07 19:43:30,419 INFO apscheduler.scheduler: Added job "_run_job" to job store "default"
+2026-09-07 19:43:30,419 INFO apscheduler.scheduler: Scheduler started
+2026-09-07 19:43:30,419 INFO radar.scheduler: scheduler started
+2026-09-07 20:01:47,510 INFO apscheduler.scheduler: Adding job tentatively -- it will be properly scheduled when the scheduler starts
+2026-09-07 20:01:47,510 INFO apscheduler.scheduler: Adding job tentatively -- it will be properly scheduled when the scheduler starts
+2026-09-07 20:01:47,510 INFO apscheduler.scheduler: Adding job tentatively -- it will be properly scheduled when the scheduler starts
+2026-09-07 20:01:47,511 INFO apscheduler.scheduler: Adding job tentatively -- it will be properly scheduled when the scheduler starts
+2026-09-07 20:01:47,512 INFO apscheduler.scheduler: Added job "_run_job" to job store "default"
+2026-09-07 20:01:47,512 INFO apscheduler.scheduler: Added job "_run_job" to job store "default"
+2026-09-07 20:01:47,512 INFO apscheduler.scheduler: Added job "_run_job" to job store "default"
+2026-09-07 20:01:47,512 INFO apscheduler.scheduler: Added job "_run_job" to job store "default"
+2026-09-07 20:01:47,512 INFO apscheduler.scheduler: Scheduler started
+2026-09-07 20:01:47,513 INFO radar.scheduler: scheduler started
+2026-09-07 20:06:26,474 INFO apscheduler.scheduler: Adding job tentatively -- it will be properly scheduled when the scheduler starts
+2026-09-07 20:06:26,475 INFO apscheduler.scheduler: Adding job tentatively -- it will be properly scheduled when the scheduler starts
+2026-09-07 20:06:26,476 INFO apscheduler.scheduler: Adding job tentatively -- it will be properly scheduled when the scheduler starts
+2026-09-07 20:06:26,476 INFO apscheduler.scheduler: Adding job tentatively -- it will be properly scheduled when the scheduler starts
+2026-09-07 20:06:26,477 INFO apscheduler.scheduler: Added job "_run_job" to job store "default"
+2026-09-07 20:06:26,477 INFO apscheduler.scheduler: Added job "_run_job" to job store "default"
+2026-09-07 20:06:26,478 INFO apscheduler.scheduler: Added job "_run_job" to job store "default"
+2026-09-07 20:06:26,478 INFO apscheduler.scheduler: Added job "_run_job" to job store "default"
+2026-09-07 20:06:26,478 INFO apscheduler.scheduler: Scheduler started
+2026-09-07 20:06:26,478 INFO radar.scheduler: scheduler started
+2026-09-07 20:35:14,832 INFO radar.collectors.competitor_generic: sitemap https://www.cromi.ru/sitemap.xml: +1 страниц
+2026-09-07 20:40:51,152 INFO radar.collectors.competitor_generic: sitemap https://sinexpo.ru/sitemap.xml: +6 страниц
+2026-09-07 20:41:26,529 INFO radar.collectors.competitor_generic: sitemap https://www.cromi.ru/sitemap.xml: +1 страниц
+2026-09-07 20:41:26,697 INFO radar.collectors.competitor_generic: sitemap https://sinexpo.ru/sitemap.xml: +0 страниц
+2026-09-07 20:41:27,408 INFO radar.collectors.competitor_generic: sitemap https://spbaudio.ru/sitemap.xml: +0 страниц
+2026-09-07 20:41:27,775 INFO radar.collectors.competitor_generic: sitemap https://retekess.com.ru/sitemap.xml: +1 страниц
+2026-09-07 20:43:56,616 INFO apscheduler.scheduler: Adding job tentatively -- it will be properly scheduled when the scheduler starts
+2026-09-07 20:43:56,617 INFO apscheduler.scheduler: Adding job tentatively -- it will be properly scheduled when the scheduler starts
+2026-09-07 20:43:56,617 INFO apscheduler.scheduler: Adding job tentatively -- it will be properly scheduled when the scheduler starts
+2026-09-07 20:43:56,617 INFO apscheduler.scheduler: Adding job tentatively -- it will be properly scheduled when the scheduler starts
+2026-09-07 20:43:56,618 INFO apscheduler.scheduler: Added job "_run_job" to job store "default"
+2026-09-07 20:43:56,618 INFO apscheduler.scheduler: Added job "_run_job" to job store "default"
+2026-09-07 20:43:56,619 INFO apscheduler.scheduler: Added job "_run_job" to job store "default"
+2026-09-07 20:43:56,619 INFO apscheduler.scheduler: Added job "_run_job" to job store "default"
+2026-09-07 20:43:56,619 INFO apscheduler.scheduler: Scheduler started
+2026-09-07 20:43:56,619 INFO radar.scheduler: scheduler started
+2026-09-07 20:46:56,466 INFO radar.collectors.competitor_generic: sitemap https://tour-audio.ru/sitemap.xml: +0 страниц
+2026-09-07 20:48:18,452 INFO radar.collectors.competitor_generic: sitemap https://sin24.ru/sitemap.xml: +0 страниц
+2026-09-07 20:48:51,169 INFO radar.collectors.competitor_generic: sitemap https://crystal-sound.com/sitemap.xml: +0 страниц
+2026-09-07 20:52:07,656 INFO radar.collectors.competitor_generic: sitemap https://spbsinhro.ru/sitemap.xml: +0 страниц
+2026-09-07 20:52:46,148 INFO radar.collectors.competitor_generic: sitemap https://radio-tourist.ru/sitemap.xml: +0 страниц
+2026-09-07 20:58:28,083 INFO radar.collectors.competitor_generic: sitemap https://retekess.com.ru/sitemap.xml: +1 страниц
+2026-09-07 21:07:16,620 INFO apscheduler.scheduler: Adding job tentatively -- it will be properly scheduled when the scheduler starts
+2026-09-07 21:07:16,621 INFO apscheduler.scheduler: Adding job tentatively -- it will be properly scheduled when the scheduler starts
+2026-09-07 21:07:16,622 INFO apscheduler.scheduler: Adding job tentatively -- it will be properly scheduled when the scheduler starts
+2026-09-07 21:07:16,622 INFO apscheduler.scheduler: Adding job tentatively -- it will be properly scheduled when the scheduler starts
+2026-09-07 21:07:16,623 INFO apscheduler.scheduler: Added job "_run_job" to job store "default"
+2026-09-07 21:07:16,623 INFO apscheduler.scheduler: Added job "_run_job" to job store "default"
+2026-09-07 21:07:16,623 INFO apscheduler.scheduler: Added job "_run_job" to job store "default"
+2026-09-07 21:07:16,624 INFO apscheduler.scheduler: Added job "_run_job" to job store "default"
+2026-09-07 21:07:16,624 INFO apscheduler.scheduler: Scheduler started
+2026-09-07 21:07:16,624 INFO radar.scheduler: scheduler started
+2026-09-07 21:36:25,704 INFO radar.signals: signals: {'competitor_price_change': 0, 'appear_disappear': 1167, 'new_category': 0, 'new_competitor': 17, 'multi_competitor': 3, 'price_vs_market': 10, 'demand': 0, 'new_use_case': 0, 'cross_site': 0, 'source_errors': 2}
+2026-09-07 21:38:28,751 INFO apscheduler.scheduler: Adding job tentatively -- it will be properly scheduled when the scheduler starts
+2026-09-07 21:38:28,751 INFO apscheduler.scheduler: Adding job tentatively -- it will be properly scheduled when the scheduler starts
+2026-09-07 21:38:28,751 INFO apscheduler.scheduler: Adding job tentatively -- it will be properly scheduled when the scheduler starts
+2026-09-07 21:38:28,752 INFO apscheduler.scheduler: Adding job tentatively -- it will be properly scheduled when the scheduler starts
+2026-09-07 21:38:28,753 INFO apscheduler.scheduler: Added job "_run_job" to job store "default"
+2026-09-07 21:38:28,753 INFO apscheduler.scheduler: Added job "_run_job" to job store "default"
+2026-09-07 21:38:28,753 INFO apscheduler.scheduler: Added job "_run_job" to job store "default"
+2026-09-07 21:38:28,753 INFO apscheduler.scheduler: Added job "_run_job" to job store "default"
+2026-09-07 21:38:28,753 INFO apscheduler.scheduler: Scheduler started
+2026-09-07 21:38:28,754 INFO radar.scheduler: scheduler started
+2026-09-08 16:49:10,258 INFO apscheduler.scheduler: Adding job tentatively -- it will be properly scheduled when the scheduler starts
+2026-09-08 16:49:10,258 INFO apscheduler.scheduler: Adding job tentatively -- it will be properly scheduled when the scheduler starts
+2026-09-08 16:49:10,258 INFO apscheduler.scheduler: Adding job tentatively -- it will be properly scheduled when the scheduler starts
+2026-09-08 16:49:10,258 INFO apscheduler.scheduler: Adding job tentatively -- it will be properly scheduled when the scheduler starts
+2026-09-08 16:49:10,258 INFO apscheduler.scheduler: Added job "_run_job" to job store "default"
+2026-09-08 16:49:10,258 INFO apscheduler.scheduler: Added job "_run_job" to job store "default"
+2026-09-08 16:49:10,258 INFO apscheduler.scheduler: Added job "_run_job" to job store "default"
+2026-09-08 16:49:10,258 INFO apscheduler.scheduler: Added job "_run_job" to job store "default"
+2026-09-08 16:49:10,258 INFO apscheduler.scheduler: Scheduler started
+2026-09-08 16:49:10,258 INFO radar.scheduler: scheduler started
+2026-09-08 16:51:57,252 INFO apscheduler.scheduler: Adding job tentatively -- it will be properly scheduled when the scheduler starts
+2026-09-08 16:51:57,252 INFO apscheduler.scheduler: Adding job tentatively -- it will be properly scheduled when the scheduler starts
+2026-09-08 16:51:57,252 INFO apscheduler.scheduler: Adding job tentatively -- it will be properly scheduled when the scheduler starts
+2026-09-08 16:51:57,252 INFO apscheduler.scheduler: Adding job tentatively -- it will be properly scheduled when the scheduler starts
+2026-09-08 16:51:57,256 INFO apscheduler.scheduler: Added job "_run_job" to job store "default"
+2026-09-08 16:51:57,256 INFO apscheduler.scheduler: Added job "_run_job" to job store "default"
+2026-09-08 16:51:57,258 INFO apscheduler.scheduler: Added job "_run_job" to job store "default"
+2026-09-08 16:51:57,258 INFO apscheduler.scheduler: Added job "_run_job" to job store "default"
+2026-09-08 16:51:57,258 INFO apscheduler.scheduler: Scheduler started
+2026-09-08 16:51:57,258 INFO radar.scheduler: scheduler started
+2026-09-08 16:55:30,327 INFO apscheduler.scheduler: Adding job tentatively -- it will be properly scheduled when the scheduler starts
+2026-09-08 16:55:30,327 INFO apscheduler.scheduler: Adding job tentatively -- it will be properly scheduled when the scheduler starts
+2026-09-08 16:55:30,327 INFO apscheduler.scheduler: Adding job tentatively -- it will be properly scheduled when the scheduler starts
+2026-09-08 16:55:30,327 INFO apscheduler.scheduler: Adding job tentatively -- it will be properly scheduled when the scheduler starts
+2026-09-08 16:55:30,327 INFO apscheduler.scheduler: Added job "_run_job" to job store "default"
+2026-09-08 16:55:30,327 INFO apscheduler.scheduler: Added job "_run_job" to job store "default"
+2026-09-08 16:55:30,327 INFO apscheduler.scheduler: Added job "_run_job" to job store "default"
+2026-09-08 16:55:30,327 INFO apscheduler.scheduler: Added job "_run_job" to job store "default"
+2026-09-08 16:55:30,327 INFO apscheduler.scheduler: Scheduler started
+2026-09-08 16:55:30,327 INFO radar.scheduler: scheduler started
+2026-09-08 17:25:34,609 INFO radar.signals: signals: {'competitor_price_change': 0, 'appear_disappear': 1206, 'new_category': 0, 'new_competitor': 0, 'multi_competitor': 0, 'price_vs_market': 4, 'demand': 0, 'new_use_case': 0, 'cross_site': 0, 'source_errors': 0}
+2026-09-08 17:25:41,310 INFO apscheduler.scheduler: Adding job tentatively -- it will be properly scheduled when the scheduler starts
+2026-09-08 17:25:41,310 INFO apscheduler.scheduler: Adding job tentatively -- it will be properly scheduled when the scheduler starts
+2026-09-08 17:25:41,310 INFO apscheduler.scheduler: Adding job tentatively -- it will be properly scheduled when the scheduler starts
+2026-09-08 17:25:41,310 INFO apscheduler.scheduler: Adding job tentatively -- it will be properly scheduled when the scheduler starts
+2026-09-08 17:25:41,314 INFO apscheduler.scheduler: Added job "_run_job" to job store "default"
+2026-09-08 17:25:41,314 INFO apscheduler.scheduler: Added job "_run_job" to job store "default"
+2026-09-08 17:25:41,314 INFO apscheduler.scheduler: Added job "_run_job" to job store "default"
+2026-09-08 17:25:41,314 INFO apscheduler.scheduler: Added job "_run_job" to job store "default"
+2026-09-08 17:25:41,314 INFO apscheduler.scheduler: Scheduler started
+2026-09-08 17:25:41,316 INFO radar.scheduler: scheduler started
+2026-09-08 17:42:33,694 INFO apscheduler.scheduler: Adding job tentatively -- it will be properly scheduled when the scheduler starts
+2026-09-08 17:42:33,694 INFO apscheduler.scheduler: Adding job tentatively -- it will be properly scheduled when the scheduler starts
+2026-09-08 17:42:33,697 INFO apscheduler.scheduler: Adding job tentatively -- it will be properly scheduled when the scheduler starts
+2026-09-08 17:42:33,698 INFO apscheduler.scheduler: Adding job tentatively -- it will be properly scheduled when the scheduler starts
+2026-09-08 17:42:33,700 INFO apscheduler.scheduler: Added job "_run_job" to job store "default"
+2026-09-08 17:42:33,700 INFO apscheduler.scheduler: Added job "_run_job" to job store "default"
+2026-09-08 17:42:33,700 INFO apscheduler.scheduler: Added job "_run_job" to job store "default"
+2026-09-08 17:42:33,700 INFO apscheduler.scheduler: Added job "_run_job" to job store "default"
+2026-09-08 17:42:33,700 INFO apscheduler.scheduler: Scheduler started
+2026-09-08 17:42:33,700 INFO radar.scheduler: scheduler started
+2026-09-08 17:44:26,788 INFO apscheduler.scheduler: Adding job tentatively -- it will be properly scheduled when the scheduler starts
+2026-09-08 17:44:26,788 INFO apscheduler.scheduler: Adding job tentatively -- it will be properly scheduled when the scheduler starts
+2026-09-08 17:44:26,788 INFO apscheduler.scheduler: Adding job tentatively -- it will be properly scheduled when the scheduler starts
+2026-09-08 17:44:26,788 INFO apscheduler.scheduler: Adding job tentatively -- it will be properly scheduled when the scheduler starts
+2026-09-08 17:44:26,788 INFO apscheduler.scheduler: Added job "_run_job" to job store "default"
+2026-09-08 17:44:26,788 INFO apscheduler.scheduler: Added job "_run_job" to job store "default"
+2026-09-08 17:44:26,788 INFO apscheduler.scheduler: Added job "_run_job" to job store "default"
+2026-09-08 17:44:26,793 INFO apscheduler.scheduler: Added job "_run_job" to job store "default"
+2026-09-08 17:44:26,793 INFO apscheduler.scheduler: Scheduler started
+2026-09-08 17:44:26,795 INFO radar.scheduler: scheduler started
+2026-09-08 17:52:50,487 INFO apscheduler.scheduler: Adding job tentatively -- it will be properly scheduled when the scheduler starts
+2026-09-08 17:52:50,487 INFO apscheduler.scheduler: Adding job tentatively -- it will be properly scheduled when the scheduler starts
+2026-09-08 17:52:50,487 INFO apscheduler.scheduler: Adding job tentatively -- it will be properly scheduled when the scheduler starts
+2026-09-08 17:52:50,487 INFO apscheduler.scheduler: Adding job tentatively -- it will be properly scheduled when the scheduler starts
+2026-09-08 17:52:50,501 INFO apscheduler.scheduler: Added job "_run_job" to job store "default"
+2026-09-08 17:52:50,501 INFO apscheduler.scheduler: Added job "_run_job" to job store "default"
+2026-09-08 17:52:50,501 INFO apscheduler.scheduler: Added job "_run_job" to job store "default"
+2026-09-08 17:52:50,501 INFO apscheduler.scheduler: Added job "_run_job" to job store "default"
+2026-09-08 17:52:50,501 INFO apscheduler.scheduler: Scheduler started
+2026-09-08 17:52:50,504 INFO radar.scheduler: scheduler started
+2026-09-08 17:57:51,947 INFO apscheduler.scheduler: Adding job tentatively -- it will be properly scheduled when the scheduler starts
+2026-09-08 17:57:51,948 INFO apscheduler.scheduler: Adding job tentatively -- it will be properly scheduled when the scheduler starts
+2026-09-08 17:57:51,948 INFO apscheduler.scheduler: Adding job tentatively -- it will be properly scheduled when the scheduler starts
+2026-09-08 17:57:51,948 INFO apscheduler.scheduler: Adding job tentatively -- it will be properly scheduled when the scheduler starts
+2026-09-08 17:57:51,951 INFO apscheduler.scheduler: Added job "_run_job" to job store "default"
+2026-09-08 17:57:51,951 INFO apscheduler.scheduler: Added job "_run_job" to job store "default"
+2026-09-08 17:57:51,951 INFO apscheduler.scheduler: Added job "_run_job" to job store "default"
+2026-09-08 17:57:51,951 INFO apscheduler.scheduler: Added job "_run_job" to job store "default"
+2026-09-08 17:57:51,951 INFO apscheduler.scheduler: Scheduler started
+2026-09-08 17:57:51,951 INFO radar.scheduler: scheduler started
+2026-09-08 18:21:34,873 INFO apscheduler.scheduler: Adding job tentatively -- it will be properly scheduled when the scheduler starts
+2026-09-08 18:21:34,874 INFO apscheduler.scheduler: Adding job tentatively -- it will be properly scheduled when the scheduler starts
+2026-09-08 18:21:34,875 INFO apscheduler.scheduler: Adding job tentatively -- it will be properly scheduled when the scheduler starts
+2026-09-08 18:21:34,875 INFO apscheduler.scheduler: Adding job tentatively -- it will be properly scheduled when the scheduler starts
+2026-09-08 18:21:34,878 INFO apscheduler.scheduler: Added job "_run_job" to job store "default"
+2026-09-08 18:21:34,878 INFO apscheduler.scheduler: Added job "_run_job" to job store "default"
+2026-09-08 18:21:34,878 INFO apscheduler.scheduler: Added job "_run_job" to job store "default"
+2026-09-08 18:21:34,880 INFO apscheduler.scheduler: Added job "_run_job" to job store "default"
+2026-09-08 18:21:34,880 INFO apscheduler.scheduler: Scheduler started
+2026-09-08 18:21:34,880 INFO radar.scheduler: scheduler started
+2026-09-08 18:31:21,085 INFO radar.signals: signals: {'competitor_price_change': 0, 'appear_disappear': 1206, 'new_category': 0, 'new_competitor': 0, 'multi_competitor': 0, 'price_vs_market': 1, 'demand': 0, 'new_use_case': 0, 'cross_site': 5, 'source_errors': 0}
+2026-09-08 18:32:06,728 INFO radar.signals: signals: {'competitor_price_change': 0, 'appear_disappear': 1206, 'new_category': 0, 'new_competitor': 0, 'multi_competitor': 0, 'price_vs_market': 0, 'demand': 0, 'new_use_case': 0, 'cross_site': 0, 'source_errors': 0}
+2026-09-08 18:32:14,867 INFO apscheduler.scheduler: Adding job tentatively -- it will be properly scheduled when the scheduler starts
+2026-09-08 18:32:14,869 INFO apscheduler.scheduler: Adding job tentatively -- it will be properly scheduled when the scheduler starts
+2026-09-08 18:32:14,869 INFO apscheduler.scheduler: Adding job tentatively -- it will be properly scheduled when the scheduler starts
+2026-09-08 18:32:14,870 INFO apscheduler.scheduler: Adding job tentatively -- it will be properly scheduled when the scheduler starts
+2026-09-08 18:32:14,874 INFO apscheduler.scheduler: Added job "_run_job" to job store "default"
+2026-09-08 18:32:14,874 INFO apscheduler.scheduler: Added job "_run_job" to job store "default"
+2026-09-08 18:32:14,874 INFO apscheduler.scheduler: Added job "_run_job" to job store "default"
+2026-09-08 18:32:14,874 INFO apscheduler.scheduler: Added job "_run_job" to job store "default"
+2026-09-08 18:32:14,874 INFO apscheduler.scheduler: Scheduler started
+2026-09-08 18:32:14,874 INFO radar.scheduler: scheduler started
+2026-09-08 18:39:22,833 INFO radar.signals: signals: {'competitor_price_change': 0, 'appear_disappear': 1206, 'new_category': 0, 'new_competitor': 0, 'multi_competitor': 0, 'price_vs_market': 1, 'demand': 0, 'new_use_case': 0, 'cross_site': 0, 'source_errors': 0}
+2026-09-08 18:39:32,123 INFO apscheduler.scheduler: Adding job tentatively -- it will be properly scheduled when the scheduler starts
+2026-09-08 18:39:32,125 INFO apscheduler.scheduler: Adding job tentatively -- it will be properly scheduled when the scheduler starts
+2026-09-08 18:39:32,125 INFO apscheduler.scheduler: Adding job tentatively -- it will be properly scheduled when the scheduler starts
+2026-09-08 18:39:32,127 INFO apscheduler.scheduler: Adding job tentatively -- it will be properly scheduled when the scheduler starts
+2026-09-08 18:39:32,130 INFO apscheduler.scheduler: Added job "_run_job" to job store "default"
+2026-09-08 18:39:32,131 INFO apscheduler.scheduler: Added job "_run_job" to job store "default"
+2026-09-08 18:39:32,131 INFO apscheduler.scheduler: Added job "_run_job" to job store "default"
+2026-09-08 18:39:32,131 INFO apscheduler.scheduler: Added job "_run_job" to job store "default"
+2026-09-08 18:39:32,131 INFO apscheduler.scheduler: Scheduler started
+2026-09-08 18:39:32,133 INFO radar.scheduler: scheduler started
+2026-09-08 18:40:22,403 INFO radar.signals: signals: {'competitor_price_change': 0, 'appear_disappear': 1206, 'new_category': 0, 'new_competitor': 0, 'multi_competitor': 0, 'price_vs_market': 0, 'demand': 0, 'new_use_case': 0, 'cross_site': 0, 'source_errors': 0}
+2026-09-08 18:40:42,051 INFO apscheduler.scheduler: Adding job tentatively -- it will be properly scheduled when the scheduler starts
+2026-09-08 18:40:42,053 INFO apscheduler.scheduler: Adding job tentatively -- it will be properly scheduled when the scheduler starts
+2026-09-08 18:40:42,053 INFO apscheduler.scheduler: Adding job tentatively -- it will be properly scheduled when the scheduler starts
+2026-09-08 18:40:42,053 INFO apscheduler.scheduler: Adding job tentatively -- it will be properly scheduled when the scheduler starts
+2026-09-08 18:40:42,057 INFO apscheduler.scheduler: Added job "_run_job" to job store "default"
+2026-09-08 18:40:42,057 INFO apscheduler.scheduler: Added job "_run_job" to job store "default"
+2026-09-08 18:40:42,057 INFO apscheduler.scheduler: Added job "_run_job" to job store "default"
+2026-09-08 18:40:42,057 INFO apscheduler.scheduler: Added job "_run_job" to job store "default"
+2026-09-08 18:40:42,057 INFO apscheduler.scheduler: Scheduler started
+2026-09-08 18:40:42,061 INFO radar.scheduler: scheduler started
+2026-09-08 19:00:56,344 INFO apscheduler.scheduler: Adding job tentatively -- it will be properly scheduled when the scheduler starts
+2026-09-08 19:00:56,346 INFO apscheduler.scheduler: Adding job tentatively -- it will be properly scheduled when the scheduler starts
+2026-09-08 19:00:56,346 INFO apscheduler.scheduler: Adding job tentatively -- it will be properly scheduled when the scheduler starts
+2026-09-08 19:00:56,348 INFO apscheduler.scheduler: Adding job tentatively -- it will be properly scheduled when the scheduler starts
+2026-09-08 19:00:56,351 INFO apscheduler.scheduler: Added job "_run_job" to job store "default"
+2026-09-08 19:00:56,351 INFO apscheduler.scheduler: Added job "_run_job" to job store "default"
+2026-09-08 19:00:56,351 INFO apscheduler.scheduler: Added job "_run_job" to job store "default"
+2026-09-08 19:00:56,353 INFO apscheduler.scheduler: Added job "_run_job" to job store "default"
+2026-09-08 19:00:56,353 INFO apscheduler.scheduler: Scheduler started
+2026-09-08 19:00:56,353 INFO radar.scheduler: scheduler started
+2026-09-08 19:23:45,281 INFO apscheduler.scheduler: Adding job tentatively -- it will be properly scheduled when the scheduler starts
+2026-09-08 19:23:45,281 INFO apscheduler.scheduler: Adding job tentatively -- it will be properly scheduled when the scheduler starts
+2026-09-08 19:23:45,281 INFO apscheduler.scheduler: Adding job tentatively -- it will be properly scheduled when the scheduler starts
+2026-09-08 19:23:45,281 INFO apscheduler.scheduler: Adding job tentatively -- it will be properly scheduled when the scheduler starts
+2026-09-08 19:23:45,281 INFO apscheduler.scheduler: Added job "_run_job" to job store "default"
+2026-09-08 19:23:45,281 INFO apscheduler.scheduler: Added job "_run_job" to job store "default"
+2026-09-08 19:23:45,281 INFO apscheduler.scheduler: Added job "_run_job" to job store "default"
+2026-09-08 19:23:45,281 INFO apscheduler.scheduler: Added job "_run_job" to job store "default"
+2026-09-08 19:23:45,281 INFO apscheduler.scheduler: Scheduler started
+2026-09-08 19:23:45,281 INFO radar.scheduler: scheduler started
+2026-09-08 19:26:53,034 INFO radar.signals: signals: {'competitor_price_change': 0, 'appear_disappear': 1206, 'new_category': 0, 'new_competitor': 0, 'multi_competitor': 0, 'price_vs_market': 1, 'demand': 0, 'new_use_case': 0, 'cross_site': 0, 'source_errors': 6}
+2026-09-08 19:28:20,253 INFO radar.signals: signals: {'competitor_price_change': 0, 'appear_disappear': 1206, 'new_category': 0, 'new_competitor': 0, 'multi_competitor': 0, 'price_vs_market': 0, 'demand': 0, 'new_use_case': 0, 'cross_site': 0, 'source_errors': 0}
+2026-09-08 19:29:07,957 INFO radar.signals: signals: {'competitor_price_change': 0, 'appear_disappear': 1206, 'new_category': 0, 'new_competitor': 0, 'multi_competitor': 0, 'price_vs_market': 1, 'demand': 0, 'new_use_case': 0, 'cross_site': 0, 'source_errors': 0}
+2026-09-08 19:29:43,640 INFO radar.signals: signals: {'competitor_price_change': 0, 'appear_disappear': 1206, 'new_category': 0, 'new_competitor': 0, 'multi_competitor': 0, 'price_vs_market': 0, 'demand': 0, 'new_use_case': 0, 'cross_site': 0, 'source_errors': 0}
+2026-09-08 19:30:16,853 INFO radar.signals: signals: {'competitor_price_change': 0, 'appear_disappear': 1206, 'new_category': 0, 'new_competitor': 0, 'multi_competitor': 0, 'price_vs_market': 0, 'demand': 0, 'new_use_case': 0, 'cross_site': 0, 'source_errors': 0}
+2026-09-08 19:30:44,970 INFO apscheduler.scheduler: Adding job tentatively -- it will be properly scheduled when the scheduler starts
+2026-09-08 19:30:44,970 INFO apscheduler.scheduler: Adding job tentatively -- it will be properly scheduled when the scheduler starts
+2026-09-08 19:30:44,970 INFO apscheduler.scheduler: Adding job tentatively -- it will be properly scheduled when the scheduler starts
+2026-09-08 19:30:44,970 INFO apscheduler.scheduler: Adding job tentatively -- it will be properly scheduled when the scheduler starts
+2026-09-08 19:30:44,974 INFO apscheduler.scheduler: Added job "_run_job" to job store "default"
+2026-09-08 19:30:44,974 INFO apscheduler.scheduler: Added job "_run_job" to job store "default"
+2026-09-08 19:30:44,974 INFO apscheduler.scheduler: Added job "_run_job" to job store "default"
+2026-09-08 19:30:44,974 INFO apscheduler.scheduler: Added job "_run_job" to job store "default"
+2026-09-08 19:30:44,974 INFO apscheduler.scheduler: Scheduler started
+2026-09-08 19:30:44,975 INFO radar.scheduler: scheduler started
+2026-09-08 19:31:45,173 INFO apscheduler.scheduler: Adding job tentatively -- it will be properly scheduled when the scheduler starts
+2026-09-08 19:31:45,174 INFO apscheduler.scheduler: Adding job tentatively -- it will be properly scheduled when the scheduler starts
+2026-09-08 19:31:45,174 INFO apscheduler.scheduler: Adding job tentatively -- it will be properly scheduled when the scheduler starts
+2026-09-08 19:31:45,174 INFO apscheduler.scheduler: Adding job tentatively -- it will be properly scheduled when the scheduler starts
+2026-09-08 19:31:45,175 INFO apscheduler.scheduler: Added job "_run_job" to job store "default"
+2026-09-08 19:31:45,176 INFO apscheduler.scheduler: Added job "_run_job" to job store "default"
+2026-09-08 19:31:45,176 INFO apscheduler.scheduler: Added job "_run_job" to job store "default"
+2026-09-08 19:31:45,176 INFO apscheduler.scheduler: Added job "_run_job" to job store "default"
+2026-09-08 19:31:45,176 INFO apscheduler.scheduler: Scheduler started
+2026-09-08 19:31:45,177 INFO radar.scheduler: scheduler started
+2026-09-09 14:52:13,660 INFO apscheduler.scheduler: Adding job tentatively -- it will be properly scheduled when the scheduler starts
+2026-09-09 14:52:13,660 INFO apscheduler.scheduler: Adding job tentatively -- it will be properly scheduled when the scheduler starts
+2026-09-09 14:52:13,660 INFO apscheduler.scheduler: Adding job tentatively -- it will be properly scheduled when the scheduler starts
+2026-09-09 14:52:13,660 INFO apscheduler.scheduler: Adding job tentatively -- it will be properly scheduled when the scheduler starts
+2026-09-09 14:52:13,664 INFO apscheduler.scheduler: Added job "_run_job" to job store "default"
+2026-09-09 14:52:13,664 INFO apscheduler.scheduler: Added job "_run_job" to job store "default"
+2026-09-09 14:52:13,664 INFO apscheduler.scheduler: Added job "_run_job" to job store "default"
+2026-09-09 14:52:13,664 INFO apscheduler.scheduler: Added job "_run_job" to job store "default"
+2026-09-09 14:52:13,664 INFO apscheduler.scheduler: Scheduler started
+2026-09-09 14:52:13,664 INFO radar.scheduler: scheduler started
+2026-09-09 14:52:38,081 INFO radar.collectors.m22: m22.ru: 250 страниц товаров в контуре
+2026-09-09 14:54:10,361 INFO apscheduler.scheduler: Adding job tentatively -- it will be properly scheduled when the scheduler starts
+2026-09-09 14:54:10,361 INFO apscheduler.scheduler: Adding job tentatively -- it will be properly scheduled when the scheduler starts
+2026-09-09 14:54:10,362 INFO apscheduler.scheduler: Adding job tentatively -- it will be properly scheduled when the scheduler starts
+2026-09-09 14:54:10,362 INFO apscheduler.scheduler: Adding job tentatively -- it will be properly scheduled when the scheduler starts
+2026-09-09 14:54:10,363 INFO apscheduler.scheduler: Added job "_run_job" to job store "default"
+2026-09-09 14:54:10,363 INFO apscheduler.scheduler: Added job "_run_job" to job store "default"
+2026-09-09 14:54:10,365 INFO apscheduler.scheduler: Added job "_run_job" to job store "default"
+2026-09-09 14:54:10,365 INFO apscheduler.scheduler: Added job "_run_job" to job store "default"
+2026-09-09 14:54:10,365 INFO apscheduler.scheduler: Scheduler started
+2026-09-09 14:54:10,366 INFO radar.scheduler: scheduler started
+2026-09-09 15:00:59,781 INFO radar.collectors.radiosync: radiosync.ru: 27 страниц товаров
+2026-09-09 15:01:56,936 INFO radar.collectors.competitor_generic: sitemap https://crystal-sound.com/sitemap.xml: +0 страниц
+2026-09-09 15:01:59,563 INFO radar.collectors.competitor_generic: sitemap https://www.cromi.ru/sitemap.xml: +0 страниц
+2026-09-09 15:02:01,378 INFO radar.collectors.competitor_generic: sitemap https://sinexpo.ru/sitemap.xml: +0 страниц
+2026-09-09 15:02:02,787 INFO radar.collectors.competitor_generic: sitemap https://radio-tourist.ru/sitemap.xml: +0 страниц
+2026-09-09 15:02:04,570 INFO radar.collectors.competitor_generic: sitemap https://retekess.com.ru/sitemap.xml: +1 страниц
+2026-09-09 15:02:07,373 INFO radar.collectors.competitor_generic: sitemap https://conferencepro.ru/sitemap.xml: +1 страниц
+2026-09-09 15:02:25,213 INFO radar.collectors.competitor_generic: sitemap https://mikrofon78.ru/sitemap.xml: +7 страниц
+2026-09-09 15:02:27,140 INFO radar.collectors.competitor_generic: sitemap https://spbaudio.ru/sitemap.xml: +0 страниц
+2026-09-09 15:02:38,777 INFO radar.collectors.competitor_generic: sitemap https://tour-audio.ru/sitemap.xml: +0 страниц
+2026-09-09 15:02:40,311 INFO radar.collectors.competitor_generic: sitemap https://spbsinhro.ru/sitemap.xml: +0 страниц
+2026-09-09 15:02:41,719 INFO radar.collectors.competitor_generic: sitemap https://www.radioguide.rent/sitemap.xml: +0 страниц
+2026-09-09 15:02:43,330 INFO radar.collectors.competitor_generic: sitemap https://sin24.ru/sitemap.xml: +0 страниц
+2026-09-09 15:09:16,405 INFO radar.signals: signals: {'competitor_price_change': 0, 'appear_disappear': 1188, 'new_category': 0, 'new_competitor': 0, 'multi_competitor': 0, 'price_vs_market': 3, 'demand': 0, 'new_use_case': 0, 'cross_site': 0, 'source_errors': 1}
+2026-09-09 15:09:23,728 INFO apscheduler.scheduler: Adding job tentatively -- it will be properly scheduled when the scheduler starts
+2026-09-09 15:09:23,729 INFO apscheduler.scheduler: Adding job tentatively -- it will be properly scheduled when the scheduler starts
+2026-09-09 15:09:23,729 INFO apscheduler.scheduler: Adding job tentatively -- it will be properly scheduled when the scheduler starts
+2026-09-09 15:09:23,729 INFO apscheduler.scheduler: Adding job tentatively -- it will be properly scheduled when the scheduler starts
+2026-09-09 15:09:23,730 INFO apscheduler.scheduler: Added job "_run_job" to job store "default"
+2026-09-09 15:09:23,730 INFO apscheduler.scheduler: Added job "_run_job" to job store "default"
+2026-09-09 15:09:23,730 INFO apscheduler.scheduler: Added job "_run_job" to job store "default"
+2026-09-09 15:09:23,730 INFO apscheduler.scheduler: Added job "_run_job" to job store "default"
+2026-09-09 15:09:23,730 INFO apscheduler.scheduler: Scheduler started
+2026-09-09 15:09:23,731 INFO radar.scheduler: scheduler started
+2026-09-09 15:10:44,289 INFO apscheduler.scheduler: Adding job tentatively -- it will be properly scheduled when the scheduler starts
+2026-09-09 15:10:44,289 INFO apscheduler.scheduler: Adding job tentatively -- it will be properly scheduled when the scheduler starts
+2026-09-09 15:10:44,289 INFO apscheduler.scheduler: Adding job tentatively -- it will be properly scheduled when the scheduler starts
+2026-09-09 15:10:44,289 INFO apscheduler.scheduler: Adding job tentatively -- it will be properly scheduled when the scheduler starts
+2026-09-09 15:10:44,289 INFO apscheduler.scheduler: Added job "_run_job" to job store "default"
+2026-09-09 15:10:44,289 INFO apscheduler.scheduler: Added job "_run_job" to job store "default"
+2026-09-09 15:10:44,289 INFO apscheduler.scheduler: Added job "_run_job" to job store "default"
+2026-09-09 15:10:44,289 INFO apscheduler.scheduler: Added job "_run_job" to job store "default"
+2026-09-09 15:10:44,289 INFO apscheduler.scheduler: Scheduler started
+2026-09-09 15:10:44,289 INFO radar.scheduler: scheduler started
+2026-09-09 15:25:10,624 INFO apscheduler.scheduler: Adding job tentatively -- it will be properly scheduled when the scheduler starts
+2026-09-09 15:25:10,627 INFO apscheduler.scheduler: Adding job tentatively -- it will be properly scheduled when the scheduler starts
+2026-09-09 15:25:10,627 INFO apscheduler.scheduler: Adding job tentatively -- it will be properly scheduled when the scheduler starts
+2026-09-09 15:25:10,627 INFO apscheduler.scheduler: Adding job tentatively -- it will be properly scheduled when the scheduler starts
+2026-09-09 15:25:10,627 INFO apscheduler.scheduler: Added job "_run_job" to job store "default"
+2026-09-09 15:25:10,627 INFO apscheduler.scheduler: Added job "_run_job" to job store "default"
+2026-09-09 15:25:10,629 INFO apscheduler.scheduler: Added job "_run_job" to job store "default"
+2026-09-09 15:25:10,629 INFO apscheduler.scheduler: Added job "_run_job" to job store "default"
+2026-09-09 15:25:10,629 INFO apscheduler.scheduler: Scheduler started
+2026-09-09 15:25:10,629 INFO radar.scheduler: scheduler started
+2026-09-09 15:34:00,411 INFO apscheduler.scheduler: Adding job tentatively -- it will be properly scheduled when the scheduler starts
+2026-09-09 15:34:00,411 INFO apscheduler.scheduler: Adding job tentatively -- it will be properly scheduled when the scheduler starts
+2026-09-09 15:34:00,415 INFO apscheduler.scheduler: Adding job tentatively -- it will be properly scheduled when the scheduler starts
+2026-09-09 15:34:00,415 INFO apscheduler.scheduler: Adding job tentatively -- it will be properly scheduled when the scheduler starts
+2026-09-09 15:34:00,415 INFO apscheduler.scheduler: Added job "_run_job" to job store "default"
+2026-09-09 15:34:00,415 INFO apscheduler.scheduler: Added job "_run_job" to job store "default"
+2026-09-09 15:34:00,415 INFO apscheduler.scheduler: Added job "_run_job" to job store "default"
+2026-09-09 15:34:00,415 INFO apscheduler.scheduler: Added job "_run_job" to job store "default"
+2026-09-09 15:34:00,415 INFO apscheduler.scheduler: Scheduler started
+2026-09-09 15:34:00,417 INFO radar.scheduler: scheduler started
+2026-09-09 15:43:51,618 INFO apscheduler.scheduler: Adding job tentatively -- it will be properly scheduled when the scheduler starts
+2026-09-09 15:43:51,618 INFO apscheduler.scheduler: Adding job tentatively -- it will be properly scheduled when the scheduler starts
+2026-09-09 15:43:51,618 INFO apscheduler.scheduler: Adding job tentatively -- it will be properly scheduled when the scheduler starts
+2026-09-09 15:43:51,618 INFO apscheduler.scheduler: Adding job tentatively -- it will be properly scheduled when the scheduler starts
+2026-09-09 15:43:51,620 INFO apscheduler.scheduler: Added job "_run_job" to job store "default"
+2026-09-09 15:43:51,620 INFO apscheduler.scheduler: Added job "_run_job" to job store "default"
+2026-09-09 15:43:51,620 INFO apscheduler.scheduler: Added job "_run_job" to job store "default"
+2026-09-09 15:43:51,620 INFO apscheduler.scheduler: Added job "_run_job" to job store "default"
+2026-09-09 15:43:51,620 INFO apscheduler.scheduler: Scheduler started
+2026-09-09 15:43:51,621 INFO radar.scheduler: scheduler started
+2026-09-09 15:44:17,643 INFO apscheduler.scheduler: Adding job tentatively -- it will be properly scheduled when the scheduler starts
+2026-09-09 15:44:17,643 INFO apscheduler.scheduler: Adding job tentatively -- it will be properly scheduled when the scheduler starts
+2026-09-09 15:44:17,643 INFO apscheduler.scheduler: Adding job tentatively -- it will be properly scheduled when the scheduler starts
+2026-09-09 15:44:17,645 INFO apscheduler.scheduler: Adding job tentatively -- it will be properly scheduled when the scheduler starts
+2026-09-09 15:44:17,645 INFO apscheduler.scheduler: Added job "_run_job" to job store "default"
+2026-09-09 15:44:17,645 INFO apscheduler.scheduler: Added job "_run_job" to job store "default"
+2026-09-09 15:44:17,645 INFO apscheduler.scheduler: Added job "_run_job" to job store "default"
+2026-09-09 15:44:17,645 INFO apscheduler.scheduler: Added job "_run_job" to job store "default"
+2026-09-09 15:44:17,645 INFO apscheduler.scheduler: Scheduler started
+2026-09-09 15:44:17,645 INFO radar.scheduler: scheduler started
+2026-09-09 15:56:37,263 WARNING radar.http: fetch error (1/3) https://1okey.ru/chem-otlichayutsya-naushniki-dlya-ekskursij-ot-obychnyh: HTTPSConnectionPool(host='1okey.ru', port=443): Max retries exceeded with url: /chem-otlichayutsya-naushniki-dlya-ekskursij-ot-obychnyh (Caused by SSLError(SSLCertVerificationError(1, "[SSL: CERTIFICATE_VERIFY_FAILED] certificate verify failed: Hostname mismatch, certificate is not valid for '1okey.ru'. (_ssl.c:1010)")))
+2026-09-09 15:56:39,886 WARNING radar.http: fetch error (2/3) https://1okey.ru/chem-otlichayutsya-naushniki-dlya-ekskursij-ot-obychnyh: HTTPSConnectionPool(host='1okey.ru', port=443): Max retries exceeded with url: /chem-otlichayutsya-naushniki-dlya-ekskursij-ot-obychnyh (Caused by SSLError(SSLCertVerificationError(1, "[SSL: CERTIFICATE_VERIFY_FAILED] certificate verify failed: Hostname mismatch, certificate is not valid for '1okey.ru'. (_ssl.c:1010)")))
+2026-09-09 15:56:44,509 WARNING radar.http: fetch error (3/3) https://1okey.ru/chem-otlichayutsya-naushniki-dlya-ekskursij-ot-obychnyh: HTTPSConnectionPool(host='1okey.ru', port=443): Max retries exceeded with url: /chem-otlichayutsya-naushniki-dlya-ekskursij-ot-obychnyh (Caused by SSLError(SSLCertVerificationError(1, "[SSL: CERTIFICATE_VERIFY_FAILED] certificate verify failed: Hostname mismatch, certificate is not valid for '1okey.ru'. (_ssl.c:1010)")))
+2026-09-09 15:59:03,093 INFO apscheduler.scheduler: Adding job tentatively -- it will be properly scheduled when the scheduler starts
+2026-09-09 15:59:03,093 INFO apscheduler.scheduler: Adding job tentatively -- it will be properly scheduled when the scheduler starts
+2026-09-09 15:59:03,094 INFO apscheduler.scheduler: Adding job tentatively -- it will be properly scheduled when the scheduler starts
+2026-09-09 15:59:03,094 INFO apscheduler.scheduler: Adding job tentatively -- it will be properly scheduled when the scheduler starts
+2026-09-09 15:59:03,095 INFO apscheduler.scheduler: Added job "_run_job" to job store "default"
+2026-09-09 15:59:03,096 INFO apscheduler.scheduler: Added job "_run_job" to job store "default"
+2026-09-09 15:59:03,096 INFO apscheduler.scheduler: Added job "_run_job" to job store "default"
+2026-09-09 15:59:03,096 INFO apscheduler.scheduler: Added job "_run_job" to job store "default"
+2026-09-09 15:59:03,096 INFO apscheduler.scheduler: Scheduler started
+2026-09-09 15:59:03,096 INFO radar.scheduler: scheduler started
+2026-09-09 16:01:10,314 WARNING radar.collectors.trends: Google Trends 429 — пауза 60 с
+2026-09-09 16:04:33,383 INFO radar.signals: signals: {'competitor_price_change': 0, 'appear_disappear': 1200, 'new_category': 0, 'new_competitor': 0, 'multi_competitor': 0, 'price_vs_market': 0, 'demand': 0, 'new_use_case': 0, 'cross_site': 7, 'source_errors': 4}
+2026-09-09 16:44:02,246 INFO apscheduler.scheduler: Adding job tentatively -- it will be properly scheduled when the scheduler starts
+2026-09-09 16:44:02,246 INFO apscheduler.scheduler: Adding job tentatively -- it will be properly scheduled when the scheduler starts
+2026-09-09 16:44:02,246 INFO apscheduler.scheduler: Adding job tentatively -- it will be properly scheduled when the scheduler starts
+2026-09-09 16:44:02,246 INFO apscheduler.scheduler: Adding job tentatively -- it will be properly scheduled when the scheduler starts
+2026-09-09 16:44:02,246 INFO apscheduler.scheduler: Added job "_run_job" to job store "default"
+2026-09-09 16:44:02,246 INFO apscheduler.scheduler: Added job "_run_job" to job store "default"
+2026-09-09 16:44:02,246 INFO apscheduler.scheduler: Added job "_run_job" to job store "default"
+2026-09-09 16:44:02,246 INFO apscheduler.scheduler: Added job "_run_job" to job store "default"
+2026-09-09 16:44:02,246 INFO apscheduler.scheduler: Scheduler started
+2026-09-09 16:44:02,246 INFO radar.scheduler: scheduler started
+2026-09-09 20:03:04,386 INFO radar.collectors.m22: m22.ru: 250 страниц товаров в контуре
+2026-09-09 20:06:52,361 INFO apscheduler.scheduler: Adding job tentatively -- it will be properly scheduled when the scheduler starts
+2026-09-09 20:06:52,361 INFO apscheduler.scheduler: Adding job tentatively -- it will be properly scheduled when the scheduler starts
+2026-09-09 20:06:52,361 INFO apscheduler.scheduler: Adding job tentatively -- it will be properly scheduled when the scheduler starts
+2026-09-09 20:06:52,361 INFO apscheduler.scheduler: Adding job tentatively -- it will be properly scheduled when the scheduler starts
+2026-09-09 20:06:52,364 INFO apscheduler.scheduler: Added job "_run_job" to job store "default"
+2026-09-09 20:06:52,364 INFO apscheduler.scheduler: Added job "_run_job" to job store "default"
+2026-09-09 20:06:52,364 INFO apscheduler.scheduler: Added job "_run_job" to job store "default"
+2026-09-09 20:06:52,364 INFO apscheduler.scheduler: Added job "_run_job" to job store "default"
+2026-09-09 20:06:52,364 INFO apscheduler.scheduler: Scheduler started
+2026-09-09 20:06:52,366 INFO radar.scheduler: scheduler started
+2026-09-09 20:11:29,654 INFO radar.collectors.radiosync: radiosync.ru: 27 страниц товаров
+2026-09-09 20:12:28,164 INFO radar.collectors.competitor_generic: sitemap https://crystal-sound.com/sitemap.xml: +0 страниц
+2026-09-09 20:12:30,055 INFO radar.collectors.competitor_generic: sitemap https://www.cromi.ru/sitemap.xml: +0 страниц
+2026-09-09 20:12:32,956 INFO radar.collectors.competitor_generic: sitemap https://sinexpo.ru/sitemap.xml: +0 страниц
+2026-09-09 20:12:34,514 INFO radar.collectors.competitor_generic: sitemap https://radio-tourist.ru/sitemap.xml: +0 страниц
+2026-09-09 20:12:37,176 INFO radar.collectors.competitor_generic: sitemap https://retekess.com.ru/sitemap.xml: +1 страниц
+2026-09-09 20:12:41,204 INFO radar.collectors.competitor_generic: sitemap https://conferencepro.ru/sitemap.xml: +1 страниц
+2026-09-09 20:13:01,806 INFO radar.collectors.competitor_generic: sitemap https://mikrofon78.ru/sitemap.xml: +0 страниц
+2026-09-09 20:13:03,808 INFO radar.collectors.competitor_generic: sitemap https://spbaudio.ru/sitemap.xml: +0 страниц
+2026-09-09 20:13:15,327 INFO radar.collectors.competitor_generic: sitemap https://tour-audio.ru/sitemap.xml: +0 страниц
+2026-09-09 20:13:17,320 INFO radar.collectors.competitor_generic: sitemap https://spbsinhro.ru/sitemap.xml: +0 страниц
+2026-09-09 20:13:19,030 INFO radar.collectors.competitor_generic: sitemap https://www.radioguide.rent/sitemap.xml: +0 страниц
+2026-09-09 20:13:20,936 INFO radar.collectors.competitor_generic: sitemap https://sin24.ru/sitemap.xml: +0 страниц
+2026-09-09 20:28:03,421 INFO radar.signals: signals: {'competitor_price_change': 0, 'new_category': 0, 'multi_competitor': 0, 'demand': 0, 'new_use_case': 0}
+2026-09-09 20:31:00,591 INFO apscheduler.scheduler: Adding job tentatively -- it will be properly scheduled when the scheduler starts
+2026-09-09 20:31:00,591 INFO apscheduler.scheduler: Adding job tentatively -- it will be properly scheduled when the scheduler starts
+2026-09-09 20:31:00,591 INFO apscheduler.scheduler: Adding job tentatively -- it will be properly scheduled when the scheduler starts
+2026-09-09 20:31:00,591 INFO apscheduler.scheduler: Adding job tentatively -- it will be properly scheduled when the scheduler starts
+2026-09-09 20:31:00,594 INFO apscheduler.scheduler: Added job "_run_job" to job store "default"
+2026-09-09 20:31:00,594 INFO apscheduler.scheduler: Added job "_run_job" to job store "default"
+2026-09-09 20:31:00,594 INFO apscheduler.scheduler: Added job "_run_job" to job store "default"
+2026-09-09 20:31:00,594 INFO apscheduler.scheduler: Added job "_run_job" to job store "default"
+2026-09-09 20:31:00,594 INFO apscheduler.scheduler: Scheduler started
+2026-09-09 20:31:00,594 INFO radar.scheduler: scheduler started
+2026-09-09 20:36:18,949 INFO apscheduler.scheduler: Adding job tentatively -- it will be properly scheduled when the scheduler starts
+2026-09-09 20:36:18,949 INFO apscheduler.scheduler: Adding job tentatively -- it will be properly scheduled when the scheduler starts
+2026-09-09 20:36:18,949 INFO apscheduler.scheduler: Adding job tentatively -- it will be properly scheduled when the scheduler starts
+2026-09-09 20:36:18,949 INFO apscheduler.scheduler: Adding job tentatively -- it will be properly scheduled when the scheduler starts
+2026-09-09 20:36:18,949 INFO apscheduler.scheduler: Added job "_run_job" to job store "default"
+2026-09-09 20:36:18,949 INFO apscheduler.scheduler: Added job "_run_job" to job store "default"
+2026-09-09 20:36:18,949 INFO apscheduler.scheduler: Added job "_run_job" to job store "default"
+2026-09-09 20:36:18,949 INFO apscheduler.scheduler: Added job "_run_job" to job store "default"
+2026-09-09 20:36:18,949 INFO apscheduler.scheduler: Scheduler started
+2026-09-09 20:36:18,949 INFO radar.scheduler: scheduler started
+2026-09-09 21:13:44,992 WARNING radar.http: fetch error (1/3) https://1okey.ru/chem-otlichayutsya-naushniki-dlya-ekskursij-ot-obychnyh: HTTPSConnectionPool(host='1okey.ru', port=443): Max retries exceeded with url: /chem-otlichayutsya-naushniki-dlya-ekskursij-ot-obychnyh (Caused by SSLError(SSLCertVerificationError(1, "[SSL: CERTIFICATE_VERIFY_FAILED] certificate verify failed: Hostname mismatch, certificate is not valid for '1okey.ru'. (_ssl.c:1010)")))
+2026-09-09 21:13:47,733 WARNING radar.http: fetch error (2/3) https://1okey.ru/chem-otlichayutsya-naushniki-dlya-ekskursij-ot-obychnyh: HTTPSConnectionPool(host='1okey.ru', port=443): Max retries exceeded with url: /chem-otlichayutsya-naushniki-dlya-ekskursij-ot-obychnyh (Caused by SSLError(SSLCertVerificationError(1, "[SSL: CERTIFICATE_VERIFY_FAILED] certificate verify failed: Hostname mismatch, certificate is not valid for '1okey.ru'. (_ssl.c:1010)")))
+2026-09-09 21:13:52,416 WARNING radar.http: fetch error (3/3) https://1okey.ru/chem-otlichayutsya-naushniki-dlya-ekskursij-ot-obychnyh: HTTPSConnectionPool(host='1okey.ru', port=443): Max retries exceeded with url: /chem-otlichayutsya-naushniki-dlya-ekskursij-ot-obychnyh (Caused by SSLError(SSLCertVerificationError(1, "[SSL: CERTIFICATE_VERIFY_FAILED] certificate verify failed: Hostname mismatch, certificate is not valid for '1okey.ru'. (_ssl.c:1010)")))
+2026-09-09 21:15:54,700 WARNING radar.collectors.trends: Google Trends 429 — пауза 60 с
+2026-09-09 21:18:06,652 WARNING radar.collectors.trends: Google Trends 429 — пауза 60 с
+2026-09-09 21:22:42,520 INFO radar.signals: signals: {'competitor_price_change': 0, 'new_category': 0, 'multi_competitor': 0, 'demand': 0, 'new_use_case': 0}
+2026-09-09 23:36:45,212 INFO apscheduler.scheduler: Adding job tentatively -- it will be properly scheduled when the scheduler starts
+2026-09-09 23:36:45,217 INFO apscheduler.scheduler: Adding job tentatively -- it will be properly scheduled when the scheduler starts
+2026-09-09 23:36:45,217 INFO apscheduler.scheduler: Adding job tentatively -- it will be properly scheduled when the scheduler starts
+2026-09-09 23:36:45,219 INFO apscheduler.scheduler: Adding job tentatively -- it will be properly scheduled when the scheduler starts
+2026-09-09 23:36:45,222 INFO apscheduler.scheduler: Added job "_run_job" to job store "default"
+2026-09-09 23:36:45,222 INFO apscheduler.scheduler: Added job "_run_job" to job store "default"
+2026-09-09 23:36:45,249 INFO apscheduler.scheduler: Added job "_run_job" to job store "default"
+2026-09-09 23:36:45,249 INFO apscheduler.scheduler: Added job "_run_job" to job store "default"
+2026-09-09 23:36:45,252 INFO apscheduler.scheduler: Scheduler started
+2026-09-09 23:36:45,255 INFO radar.scheduler: scheduler started

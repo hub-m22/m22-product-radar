@@ -1,0 +1,2 @@
+{"55": {"name": "Центр продажи аудиогидов (audioguide.ru) — группа SPBAUDIO/Cromi", "collect": {"error": "database is locked"}, "enrich": {"products": 3, "checked": 0, "updated": 0}, "sec": 32}}
+DONE {"55": {"name": "Центр продажи аудиогидов (audioguide.ru) — группа SPBAUDIO/Cromi", "collect": {"error": "database is locked"}, "enrich": {"products": 3, "checked": 0, "updated": 0}, "sec": 32}}

@@ -1,0 +1,3 @@
+2026-09-07 20:58:28,083 INFO radar.collectors.competitor_generic: sitemap https://retekess.com.ru/sitemap.xml: +1 страниц
+{"10": {"name": "Retekess (официальный русскоязычный магазин)", "collect": {"pages": 530, "seen": 561, "changed": 248, "errors": 3}, "enrich": {"products": 540, "checked": 118, "updated": 9}, "sec": 1834}}
+DONE {"10": {"name": "Retekess (официальный русскоязычный магазин)", "collect": {"pages": 530, "seen": 561, "changed": 248, "errors": 3}, "enrich": {"products": 540, "checked": 118, "updated": 9}, "sec": 1834}}

@@ -1,0 +1,3 @@
+2026-09-07 20:35:14,832 INFO radar.collectors.competitor_generic: sitemap https://www.cromi.ru/sitemap.xml: +1 страниц
+{"1": {"name": "Cromi / Reinvox (cromi.ru, ИП Пылев — группа Cromi)", "collect": {"pages": 130, "seen": 146, "changed": 92, "errors": 2}, "enrich": {"products": 153, "checked": 27, "updated": 8}, "sec": 336}}
+2026-09-07 20:40:51,152 INFO radar.collectors.competitor_generic: sitemap https://sinexpo.ru/sitemap.xml: +6 страниц

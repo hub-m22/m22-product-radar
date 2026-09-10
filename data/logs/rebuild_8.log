@@ -1,0 +1,3 @@
+2026-09-07 20:46:56,466 INFO radar.collectors.competitor_generic: sitemap https://tour-audio.ru/sitemap.xml: +0 страниц
+{"8": {"name": "TourAudio / ООО Мегазвук", "collect": {"pages": 102, "seen": 100, "changed": 67, "errors": 0}, "enrich": {"products": 96, "checked": 31, "updated": 5}, "sec": 320}}
+DONE {"8": {"name": "TourAudio / ООО Мегазвук", "collect": {"pages": 102, "seen": 100, "changed": 67, "errors": 0}, "enrich": {"products": 96, "checked": 31, "updated": 5}, "sec": 320}}

@@ -1,0 +1,3 @@
+2026-09-07 20:41:27,408 INFO radar.collectors.competitor_generic: sitemap https://spbaudio.ru/sitemap.xml: +0 страниц
+{"3": {"name": "СПб Аудио (spbaudio.ru) — группа SPBAUDIO/Cromi", "collect": {"pages": 143, "seen": 151, "changed": 98, "errors": 2}, "enrich": {"products": 141, "checked": 55, "updated": 3}, "sec": 445}}
+DONE {"3": {"name": "СПб Аудио (spbaudio.ru) — группа SPBAUDIO/Cromi", "collect": {"pages": 143, "seen": 151, "changed": 98, "errors": 2}, "enrich": {"products": 141, "checked": 55, "updated": 3}, "sec": 445}}

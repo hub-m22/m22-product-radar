@@ -1,0 +1,5 @@
+radiosync {'seen': 28, 'changed': 6, 'errors': 0}
+m22 {'seen': 250, 'changed': 127, 'errors': 0}
+renormalize {'updated': 2561}
+[{'site': 'm22.ru', 'in_scope': 0, 'n': 125, 'v': 0}, {'site': 'm22.ru', 'in_scope': 1, 'n': 125, 'v': 0}, {'site': 'radiosync.ru', 'in_scope': 1, 'n': 74, 'v': 46}]
+M22_DONE

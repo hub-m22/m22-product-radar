@@ -1,0 +1,3 @@
+2026-09-07 20:48:18,452 INFO radar.collectors.competitor_generic: sitemap https://sin24.ru/sitemap.xml: +0 страниц
+{"5": {"name": "Sin24.ru (группа Cromi) — реселлер Sennheiser TourGuide", "collect": {"pages": 110, "seen": 206, "changed": 129, "errors": 1}, "enrich": {"products": 154, "checked": 96, "updated": 49}, "sec": 592}}
+DONE {"5": {"name": "Sin24.ru (группа Cromi) — реселлер Sennheiser TourGuide", "collect": {"pages": 110, "seen": 206, "changed": 129, "errors": 1}, "enrich": {"products": 154, "checked": 96, "updated": 49}, "sec": 592}}

@@ -1,0 +1,6 @@
+renormalize {'updated': 2561}
+hashes {'queued': 1614, 'hashed': 1588, 'errors': 23, 'skipped': 3}
+compare {'m22_images': 313, 'competitor_images': 1278, 'same': 1, 'similar': 5}
+matching {'competitor_products': 1541, 'created': 225, 'updated': 3078, 'photo': {'created': 1, 'boosted': 0, 'noted': 0}}
+noise removed 0
+PHOTO_DONE
