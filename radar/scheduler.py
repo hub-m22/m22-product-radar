@@ -21,19 +21,45 @@ _scheduler = None
 JOB_STATE: dict[str, dict] = {}
 
 
+def _summarize(result) -> str:
+    """Итог задачи человеческим языком вместо словаря."""
+    if not isinstance(result, dict):
+        return str(result)[:300]
+    parts = []
+    for k, v in result.items():
+        if isinstance(v, dict):
+            seen, changed, errs = v.get("seen"), v.get("changed"), v.get("errors")
+            if seen is not None:
+                parts.append(f"{k}: {seen} товаров, {changed or 0} изменений" + (f", {errs} ошибок" if errs else ""))
+            elif k == "analysis":
+                sig = v.get("signals") or {}
+                parts.append(f"анализ: сопоставлений {(v.get('matching') or {}).get('created', 0)} новых, событий {sum(x for x in sig.values() if isinstance(x, int))} новых, действий {v.get('recommendations', 0)}")
+            elif k == "matching":
+                parts.append(f"сопоставлений {v.get('created', 0)} новых, {v.get('updated', 0)} обновлено")
+            elif k == "signals":
+                parts.append(f"событий {sum(x for x in v.values() if isinstance(x, int))} новых")
+        elif k == "backup":
+            parts.append("резервная копия сохранена")
+        elif k == "report_id":
+            parts.append(f"отчёт №{v}")
+        elif isinstance(v, (int, str)) and k in ("recommendations", "hypotheses"):
+            parts.append(f"{'действий' if k == 'recommendations' else 'гипотез'} {v}")
+    return "; ".join(parts) or str(result)[:300]
+
+
 def _run_job(name: str, fn, retry: int = 0):
     if not _lock.acquire(blocking=False):
         log.info("job %s пропущен: другой сбор ещё идёт", name)
         return
-    JOB_STATE[name] = {"status": "running", "started_at": db.now_iso()}
+    JOB_STATE[name] = {"status": "running", "started_at": datetime.now().strftime("%Y-%m-%d %H:%M")}
     try:
         with db.session() as conn:
             result = fn(conn)
-        JOB_STATE[name] = {"status": "ok", "finished_at": db.now_iso(), "result": str(result)[:500]}
+        JOB_STATE[name] = {"status": "ok", "finished_at": datetime.now().strftime("%Y-%m-%d %H:%M"), "result": _summarize(result)}
         log.info("job %s: %s", name, result)
     except Exception as exc:  # noqa: BLE001
         log.exception("job %s failed", name)
-        JOB_STATE[name] = {"status": "error", "finished_at": db.now_iso(), "error": str(exc)[:500]}
+        JOB_STATE[name] = {"status": "error", "finished_at": datetime.now().strftime("%Y-%m-%d %H:%M"), "error": str(exc)[:500]}
         with db.session() as conn:
             db.log_error(conn, name, None, f"Задача планировщика упала: {exc}")
         if retry < 2 and _scheduler is not None:
