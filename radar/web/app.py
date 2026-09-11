@@ -181,7 +181,7 @@ PAGE_TITLES = [  # префикс пути -> название экрана (с�
     ("/market", "Ассортимент и рынок"), ("/signals/", "Событие рынка"), ("/signals", "Ассортимент и рынок"),
     ("/opportunities/", "Гипотеза"), ("/opportunities", "Гипотезы"), ("/actions/", "Действие"), ("/actions", "Действия"),
     ("/demand", "Поисковый спрос"), ("/sources", "Источники"), ("/reports/", "Отчёт"), ("/reports", "Отчёты"),
-    ("/settings", "Настройки"), ("/logic", "Логика радара"), ("/changelog", "Журнал версий"), ("/", "Главная"),
+    ("/settings", "Настройки"), ("/admin", "Управление радаром"), ("/logic", "Логика радара"), ("/changelog", "Журнал версий"), ("/", "Главная"),
 ]
 MARKET_TAB_TITLES = {"changes": "Ассортимент и рынок: изменения у конкурентов", "demand": "Ассортимент и рынок: сценарии и спрос"}
 # родительский экран, если пришли не из радара (прямая ссылка, закладка)
@@ -1377,6 +1377,99 @@ def settings_page(request: Request):
     return render(request, "settings.html", settings=settings, cats=cats, thresholds=thresholds, counts=counts, db_path=str(config.DB_PATH), backup_dir=str(config.BACKUP_DIR), extra_fields=profmod.EXTRA_FIELDS, m22_manual=m22_manual,
                   fb_stats=fb_stats, fb_recent=fb_recent, min_checks=feedback.MIN_CHECKS, m22p=m22p, m22p_auto=m22p_auto,
                   schedule={"M22 (час)": config.M22_CRON_HOUR, "Конкуренты (час)": config.COMPETITORS_CRON_HOUR, "Спрос (день недели)": config.TRENDS_CRON_DOW, "Отчёт (день недели)": config.REPORT_CRON_DOW, "Включён": config.SCHEDULE_ENABLED})
+
+
+# ---------------- Управление радаром (то, что раньше делали ярлыки на рабочем столе) ----------------
+JOB_TITLES = {"full_update": "Обновление данных", "m22": "Сбор сайтов M22", "competitors": "Сбор конкурентов", "demand": "Сбор спроса", "analyze": "Пересчёт анализа", "weekly_report": "Отчёт и резервная копия"}
+
+
+def _lan_info() -> dict:
+    import socket
+    import subprocess
+
+    host = socket.gethostname()
+    ips = []
+    try:
+        for info in socket.getaddrinfo(host, None, socket.AF_INET):
+            ip = info[4][0]
+            if ip not in ips and not ip.startswith("127."):
+                ips.append(ip)
+    except OSError:
+        pass
+    fw = None
+    try:
+        out = subprocess.run(["netsh", "advfirewall", "firewall", "show", "rule", "name=M22 Product Radar 8022"], capture_output=True, text=True, timeout=10, encoding="cp866", errors="replace").stdout
+        fw = "8022" in out
+    except Exception:  # noqa: BLE001
+        fw = None
+    task = None
+    try:
+        out = subprocess.run(["schtasks", "/Query", "/TN", "M22 Product Radar"], capture_output=True, text=True, timeout=10, encoding="cp866", errors="replace")
+        task = out.returncode == 0
+    except Exception:  # noqa: BLE001
+        task = None
+    return {"host": host, "ips": ips, "port": config.PORT, "firewall": fw, "task": task, "bind_all": config.HOST in ("0.0.0.0", "")}
+
+
+def _restart_server(delay: int = 2) -> None:
+    """Перезапуск сервера отдельным процессом (scripts/restart_server.ps1): он не зависит от текущего процесса и запускает задачу планировщика."""
+    import subprocess
+
+    script = str(config.BASE_DIR / "scripts" / "restart_server.ps1")
+    args = ["powershell", "-NoProfile", "-ExecutionPolicy", "Bypass", "-File", script, "-Delay", str(delay)]
+    # CREATE_NO_WINDOW: без окна, но с консолью (с DETACHED_PROCESS powershell не стартует). Журнал — data/logs/restart.log
+    subprocess.Popen(args, creationflags=0x08000000 | 0x00000200, close_fds=True, stdin=subprocess.DEVNULL, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+
+
+@app.get("/admin", response_class=HTMLResponse)
+def admin_page(request: Request, msg: str = ""):
+    jobs = {j["id"]: j for j in scheduler.jobs_info()}
+    states = {k: {"title": t, **(scheduler.JOB_STATE.get(k) or {})} for k, t in JOB_TITLES.items()}
+    running = [s["title"] for s in states.values() if s.get("status") == "running"]
+    with db.session() as conn:
+        last_runs = db.rows(conn, "SELECT source_key, MAX(finished_at) t, status FROM source_runs WHERE status IN ('ok','partial','error') GROUP BY source_key")
+        backups = sorted(config.BACKUP_DIR.glob("*.sqlite3"), key=lambda p: p.stat().st_mtime, reverse=True)[:5]
+    return render(request, "admin.html", states=states, running=running, jobs=jobs, lan=_lan_info(), last_runs=last_runs, msg=msg, has_password=bool(config.PASSWORD),
+                  backups=[{"name": b.name, "size_mb": round(b.stat().st_size / 1e6, 1), "mtime": datetime.fromtimestamp(b.stat().st_mtime).strftime("%Y-%m-%d %H:%M")} for b in backups],
+                  schedule={"Сайты M22": f"ежедневно {config.M22_CRON_HOUR:02d}:00", "Конкуренты": f"ежедневно {config.COMPETITORS_CRON_HOUR:02d}:00", "Спрос": f"{config.TRENDS_CRON_DOW} 07:30", "Отчёт и копия": f"{config.REPORT_CRON_DOW} 08:30"})
+
+
+@app.post("/admin/run/{name}")
+def admin_run(name: str):
+    if name not in JOB_TITLES or not scheduler.run_now(name):
+        raise HTTPException(400, "Неизвестная задача")
+    return RedirectResponse("/admin?msg=started", status_code=303)
+
+
+@app.post("/admin/restart")
+def admin_restart():
+    _restart_server()
+    return render_plain_restart()
+
+
+def render_plain_restart():
+    html = ('<!doctype html><meta charset="utf-8"><title>Перезапуск радара</title><meta http-equiv="refresh" content="12;url=/admin?msg=restarted">'
+            '<body style="font-family:system-ui;padding:40px;color:#111"><h2>Радар перезапускается…</h2><p>Через 10–15 секунд страница откроется сама. Если нет — <a href="/admin">нажмите сюда</a>.</p></body>')
+    return HTMLResponse(html)
+
+
+@app.post("/admin/password")
+def admin_password(password: str = Form(...), password2: str = Form(...)):
+    pw = password.strip()
+    if len(pw) < 4 or pw != password2.strip():
+        return RedirectResponse("/admin?msg=pw_mismatch", status_code=303)
+    env = config.BASE_DIR / ".env"
+    lines = env.read_text(encoding="utf-8").splitlines() if env.exists() else []
+    found = False
+    for i, ln in enumerate(lines):
+        if ln.startswith("RADAR_PASSWORD="):
+            lines[i] = f"RADAR_PASSWORD={pw}"
+            found = True
+    if not found:
+        lines.append(f"RADAR_PASSWORD={pw}")
+    env.write_text("\n".join(lines) + "\n", encoding="utf-8")
+    _restart_server(delay=3)
+    return render_plain_restart()
 
 
 @app.post("/settings/update")

@@ -1,0 +1,49 @@
+{% extends "base.html" %}
+{% block title %}Управление радаром — M22 Product Radar{% endblock %}
+{% block content %}
+{% if running %}<meta http-equiv="refresh" content="20">{% endif %}
+<div class="topbar"><div><h1>Управление радаром</h1><div class="sub">Обновление данных, перезапуск, пароль и доступ коллег — всё здесь, ярлыки на рабочем столе больше не нужны (кроме «Запустить радар» на случай, если он выключен).</div></div></div>
+{% if msg == 'started' %}<div class="note">Задача запущена в фоне. Страница обновляется сама каждые 20 секунд, пока идёт работа; можно уйти в другие разделы.</div>
+{% elif msg == 'restarted' %}<div class="note">Радар перезапущен. Версия в левом углу — {{ app_version }}.</div>
+{% elif msg == 'pw_mismatch' %}<div class="note" style="border-color:var(--high)">Пароль не изменён: пароли не совпадают или короче 4 символов.</div>{% endif %}
+
+<div class="grid grid-2">
+  <div class="card"><h3>Обновить данные</h3>
+    <p class="small">Собирает сайты M22 и конкурентов, пересчитывает сопоставления, цены и события, формирует отчёт и резервную копию. Занимает 15–25 минут; радар при этом продолжает работать. По ночам это делается само (расписание ниже), кнопка нужна, если компьютер был выключен.</p>
+    <form method="post" action="/admin/run/full_update" class="inline"><button class="small" {% if running %}disabled{% endif %}>Обновить данные сейчас</button></form>
+    <form method="post" action="/admin/run/analyze" class="inline"><button class="sec small" {% if running %}disabled{% endif %}>Только пересчитать анализ (1–3 мин)</button></form>
+    <form method="post" action="/admin/run/demand" class="inline"><button class="sec small" {% if running %}disabled{% endif %}>Собрать поисковый спрос (долго)</button></form>
+    <table style="margin-top:10px"><thead><tr><th>Задача</th><th>Состояние</th><th>Когда</th><th>Итог</th></tr></thead><tbody>
+    {% for k, s in states.items() %}<tr><td>{{ s.title }}</td><td>{% if s.status == 'running' %}<span class="badge sev-medium">выполняется</span>{% elif s.status == 'ok' %}<span class="badge sev-low">готово</span>{% elif s.status == 'error' %}<span class="badge sev-high">ошибка</span>{% else %}<span class="muted small">не запускалась в этой сессии</span>{% endif %}</td>
+      <td class="small nowrap">{{ (s.finished_at or s.started_at) | dt }}</td><td class="small muted" style="max-width:360px;word-break:break-word">{{ (s.result or s.error or '')[:200] }}</td></tr>{% endfor %}
+    </tbody></table>
+    <h3 style="margin-top:14px">Расписание (само, пока компьютер включён)</h3>
+    <dl class="kv">{% for k, v in schedule.items() %}<dt>{{ k }}</dt><dd>{{ v }}{% set j = jobs.get({'Сайты M22':'m22','Конкуренты':'competitors','Спрос':'demand','Отчёт и копия':'weekly_report'}[k]) %}{% if j and j.next_run %} · следующий запуск {{ j.next_run }}{% endif %}</dd>{% endfor %}</dl>
+    <div class="small muted">Последние успешные сборы: {% for r in last_runs %}{{ r.source_key }} — {{ r.t | dt }}{% if not loop.last %}; {% endif %}{% endfor %}</div>
+  </div>
+
+  <div class="card"><h3>Перезапуск и пароль</h3>
+    <p class="small">Перезапуск нужен после смены пароля или если радар начал вести себя странно. Занимает 10–15 секунд.</p>
+    <form method="post" action="/admin/restart" class="inline" onsubmit="return confirm('Перезапустить радар? Страницы у всех пользователей на 10–15 секунд перестанут открываться.')"><button class="sec small">Перезапустить радар</button></form>
+    <h3 style="margin-top:14px">Пароль для входа</h3>
+    <p class="small">Один общий пароль для всех коллег{% if not has_password %}; сейчас <b>не задан</b> — вход без пароля{% endif %}. После сохранения радар перезапустится, всем нужно будет войти заново.</p>
+    <form method="post" action="/admin/password" class="form-grid">
+      <label>Новый пароль<input type="password" name="password" required minlength="4" autocomplete="new-password"></label>
+      <label>Ещё раз<input type="password" name="password2" required minlength="4" autocomplete="new-password"></label>
+      <div class="full"><button class="small" onclick="return confirm('Сменить пароль и перезапустить радар?')">Сменить пароль</button></div>
+    </form>
+    <h3 style="margin-top:14px">Доступ для коллег</h3>
+    <p class="small">Коллеги в офисной сети открывают радар по ссылке и вводят тот же пароль. Ничего дополнительно включать не нужно.</p>
+    <dl class="kv">
+      <dt>Ссылка</dt><dd><b>http://{{ lan.host }}:{{ lan.port }}</b>{% for ip in lan.ips %} · http://{{ ip }}:{{ lan.port }}{% endfor %}</dd>
+      <dt>Порт в брандмауэре</dt><dd>{% if lan.firewall %}открыт ✓{% elif lan.firewall is sameas false %}<span style="color:var(--high)">не открыт</span> — запустите один раз scripts\open_firewall.bat от администратора{% else %}не удалось проверить{% endif %}</dd>
+      <dt>Приём соединений из сети</dt><dd>{% if lan.bind_all %}включён ✓{% else %}<span style="color:var(--high)">только этот компьютер</span> (RADAR_HOST в .env){% endif %}</dd>
+      <dt>Автозапуск при входе в Windows</dt><dd>{% if lan.task %}настроен ✓ (задача планировщика «M22 Product Radar»){% elif lan.task is sameas false %}<span style="color:var(--high)">не настроен</span>{% else %}не удалось проверить{% endif %}</dd>
+    </dl>
+    <p class="small muted">Радар доступен, пока этот компьютер включён. Если у коллеги включён VPN (AmneziaVPN), ссылка может не открываться — отключить VPN на время работы.</p>
+    <h3 style="margin-top:14px">Резервные копии</h3>
+    <div class="small">{% for b in backups %}{{ b.mtime }} — {{ b.name }} ({{ b.size_mb }} МБ)<br>{% else %}копий пока нет{% endfor %}</div>
+    <div class="actions-row" style="margin-top:6px"><a class="btn sec small" href="/export/backup.sqlite3">Скачать резервную копию сейчас</a></div>
+  </div>
+</div>
+{% endblock %}

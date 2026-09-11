@@ -13,7 +13,7 @@
       <div class="full small muted">Пример: «T130 = SGTR02» — радиогид Retekess T130 и Radiosync SGTR02 идентичны. После сохранения нажмите «Пересчитать сигналы» на главной.</div>
       <div class="full"><button type="submit" class="small">Сохранить</button></div></form>
     <h3>Пороги значимости (из .env)</h3><dl class="kv">{% for k, v in thresholds.items() %}<dt>{{ k }}</dt><dd>{{ v }}</dd>{% endfor %}</dl>
-    <p class="small muted">Пороги задаются переменными окружения RADAR_* в файле .env (см. README); изменение требует перезапуска.</p>
+    <p class="small muted">Пороги задаются переменными окружения RADAR_* в файле .env (см. README); изменение требует перезапуска. Обновление данных, перезапуск, пароль и доступ коллег — в разделе <a href="/admin">«Управление»</a>.</p>
     <h3>Расписание</h3><dl class="kv">{% for k, v in schedule.items() %}<dt>{{ k }}</dt><dd>{{ v }}</dd>{% endfor %}</dl>
   </div>
   <div class="card"><h3>Категории контура исследования</h3>

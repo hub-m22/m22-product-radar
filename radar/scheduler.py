@@ -72,6 +72,18 @@ def collect_demand(conn):
     return r
 
 
+def full_update(conn):
+    """«Обновить данные»: сайты M22, конкуренты, анализ, отчёт, резервная копия — то, что раньше делал ярлык на рабочем столе."""
+    from .collectors import competitor_generic, m22, radiosync
+
+    r = {"m22": m22.run(conn), "radiosync": radiosync.run(conn), "competitors": competitor_generic.run(conn)}
+    r["analysis"] = analyze(conn)
+    rep = reports.build_weekly(conn, days=7)
+    r["report_id"] = reports.save(conn, rep)
+    r["backup"] = str(db.backup(conn, "update"))
+    return r
+
+
 def weekly_report(conn):
     rep = reports.build_weekly(conn, days=7)
     rid = reports.save(conn, rep)
@@ -97,7 +109,7 @@ def start():
 
 def run_now(name: str) -> bool:
     """Запуск задачи из интерфейса в фоне."""
-    fn = {"m22": collect_m22, "competitors": collect_competitors, "demand": collect_demand, "analyze": analyze, "weekly_report": weekly_report}.get(name)
+    fn = {"m22": collect_m22, "competitors": collect_competitors, "demand": collect_demand, "analyze": analyze, "weekly_report": weekly_report, "full_update": full_update}.get(name)
     if fn is None:
         return False
     threading.Thread(target=_run_job, args=[name, fn], daemon=True).start()
