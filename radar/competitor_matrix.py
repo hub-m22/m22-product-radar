@@ -16,7 +16,7 @@ MATRIX_COLS = [("range_m", "Дальность, м"), ("channels", "Канало
 
 
 SPEC_FIELDS = ("range_m", "channels", "freq_band", "battery_h", "weight_g")  # поля, по которым считаем «характеристики сняты»
-TIER_ORDER = {"A": 0, "B": 1, "C": 2}
+TIER_ORDER = {"A": 0, "B": 1, "M": 2, "C": 3}  # M — маркетплейсы (Wildberries, Ozon): площадки, а не конкуренты; цены динамические
 
 
 def rows(conn: sqlite3.Connection, competitor_id: int | None = None, category: str | None = None, kind: str | None = None, include_inactive: bool = True, q: str | None = None,

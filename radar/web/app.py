@@ -472,9 +472,9 @@ def market_intro(request: Request):
     """«Что ввести»: разбор всех моделей конкурентов против матрицы M22 (категория + тип изделия + вместимость)."""
     q = request.query_params
     cats = [x for x in q.getlist("category") if x]
-    verdict, kind, tiers, text = q.get("verdict", ""), q.get("kind", ""), q.get("tiers", "AB"), q.get("q", "").strip().lower()
+    verdict, kind, tiers, text = q.get("verdict", ""), q.get("kind", ""), q.get("tiers", "ABM"), q.get("q", "").strip().lower()
     with db.session() as conn:
-        rows = assortment.candidates(conn, cats or None, ("A",) if tiers == "A" else ("A", "B"))
+        rows = assortment.candidates(conn, cats or None, {"A": ("A",), "AB": ("A", "B"), "M": ("M",)}.get(tiers, ("A", "B", "M")))
         summ = assortment.summary(rows)
         sigs = db.rows(conn, SIGNAL_SQL + " WHERE s.type IN ('new_category','category_growth_gap') AND s.status IN ('new','in_research','accepted') ORDER BY s.created_at DESC LIMIT 10")
         lists = _lists(conn)

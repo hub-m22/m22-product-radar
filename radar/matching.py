@@ -245,7 +245,7 @@ def comparables_for(conn: sqlite3.Connection, m22_product_id: int, min_conf: flo
     """Сопоставимые предложения конкурентов с ценой (для сравнения с рынком)."""
     rows = db.rows(conn, """
         SELECT pm.match_type, pm.confidence, pm.reasons_json, cp.id AS competitor_product_id, cp.name, cp.price, cp.url, cp.capacity, cp.description, cp.specs_json, cp.image_url,
-               c.name AS competitor_name, c.id AS competitor_id
+               c.name AS competitor_name, c.id AS competitor_id, c.tier AS competitor_tier
         FROM product_matches pm JOIN competitor_products cp ON cp.id=pm.competitor_product_id JOIN competitors c ON c.id=cp.competitor_id
         WHERE pm.m22_product_id=? AND pm.review_status!='rejected' AND pm.confidence>=? AND cp.price IS NOT NULL AND cp.is_active=1
           AND cp.currency='RUB' AND pm.match_type IN ('exact_model','identical','direct_analog') AND COALESCE(cp.category_slug,'')!='rental' AND cp.price>=10

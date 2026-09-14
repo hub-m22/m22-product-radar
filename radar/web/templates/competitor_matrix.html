@@ -7,7 +7,7 @@
 <div class="tabs"><a href="/competitor-matrix" class="{% if view == 'matrix' %}active{% endif %}">Товары</a><a href="/competitor-matrix?view=summary" class="{% if view == 'summary' %}active{% endif %}">Сводка по продавцам</a><a href="/competitor-matrix?view=coverage" class="{% if view == 'coverage' %}active{% endif %}">Покрытие категорий</a><a href="/competitor-matrix?view=sitecats" class="{% if view == 'sitecats' %}active{% endif %}">Категории на сайтах</a><a href="/competitor-matrix?view=changes" class="{% if view == 'changes' %}active{% endif %}">Что появилось / исчезло</a></div>
 
 {% if view == 'summary' %}
-<div class="note">Полнота данных по каждому продавцу: сколько товаров снято, у скольких есть цена и технические характеристики. Уровень: <b>A</b> — прямые ключевые конкуренты, <b>B</b> — вторичные (реселлеры, аренда, маркетплейсы), <b>C</b> — косвенные и заменители.</div>
+<div class="note">Полнота данных по каждому продавцу: сколько товаров снято, у скольких есть цена и технические характеристики. Уровень: <b>A</b> — прямые ключевые конкуренты, <b>B</b> — вторичные (реселлеры, аренда, маркетплейсы), <b>C</b> — косвенные и заменители, <b>M</b> — маркетплейсы (Wildberries, Ozon): это не конкуренты, а площадки с разными продавцами, цены на них динамические и меняются ежедневно.</div>
 <div class="kpis">
   <div class="kpi"><div class="v">{{ summ.totals.sellers }}</div><div class="l">продавцов с товарами</div></div>
   <div class="kpi"><div class="v">{{ summ.totals.n }}</div><div class="l">товаров в продаже</div></div>
@@ -18,7 +18,7 @@
 <thead><tr><th>Ур.</th><th style="min-width:220px">Продавец</th><th class="num">Товаров</th><th class="num">С ценой</th><th class="num">С характеристиками</th>{% for k, n in cols %}<th class="num" title="товаров, у которых снято поле «{{ n }}»">{{ n }}</th>{% endfor %}<th class="num">С аналогом M22</th><th class="num">Новых</th><th>Категории</th><th>Последнее снятие</th></tr></thead>
 <tbody>
 {% for s in summ.sellers %}<tr>
-  <td><span class="badge {{ {'A':'sev-high','B':'sev-medium','C':'st'}.get(s.tier, 'st') }}">{{ s.tier or '?' }}</span></td>
+  <td><span class="badge {{ {'A':'sev-high','B':'sev-medium','C':'st','M':'st-new'}.get(s.tier, 'st') }}">{{ s.tier or '?' }}</span></td>
   <td><a href="/competitor-matrix?competitor={{ s.competitor_id }}">{{ s.seller[:60] }}</a></td>
   <td class="num">{{ s.n }}</td>
   <td class="num">{{ s.priced }} <span class="small muted">({{ s.priced_pct }}%)</span></td>
@@ -38,7 +38,7 @@
 <div class="card compact tbl-wrap"><table>
 <thead><tr><th>Ур.</th><th style="min-width:200px">Сайт</th><th class="num" title="разделов верхнего уровня">Разделов</th><th class="num" title="всего разделов с подразделами">Всего</th><th>Категории, как названы на сайте</th></tr></thead>
 <tbody>{% for s in sitecats.sites %}<tr {% if s.tier == 'M22' %}style="background:var(--accent-bg)"{% endif %}>
-  <td><span class="badge {{ {'A':'sev-high','B':'sev-medium','C':'st','M22':'st-new'}.get(s.tier, 'st') }}">{{ s.tier }}</span></td>
+  <td><span class="badge {{ {'A':'sev-high','B':'sev-medium','C':'st','M':'st-new','M22':'st-new'}.get(s.tier, 'st') }}">{{ s.tier }}</span></td>
   <td>{% if s.competitor_id %}<a href="/competitors/{{ s.competitor_id }}">{{ s.site }}</a><div class="small muted">{{ s.seller[:40] }}</div>{% else %}<b>{{ s.site }}</b><div class="small muted">M22</div>{% endif %}</td>
   <td class="num">{{ s.top }}</td><td class="num">{{ s.cats|length }}</td>
   <td class="small">{% for c in s.cats %}<span class="attr" title="{{ 'подраздел «' ~ c.parent ~ '» · ' if c.parent else '' }}наша категория: {% if c.our_slug %}{% for sl in c.our_slug.split(',') %}{{ sitecats.names.get(sl, sl) }}{% if not loop.last %}, {% endif %}{% endfor %}{% else %}вне контура{% endif %}{% if c.source == 'breadcrumbs' %} · из хлебных крошек{% endif %}" {% if c.level > 1 %}style="opacity:.75"{% endif %}>{% if c.url %}<a href="{{ c.url }}" target="_blank" rel="noopener">{{ c.name }}</a>{% else %}{{ c.name }}{% endif %} <span class="muted">{% if c.product_count %}({{ c.product_count }}){% elif c.approx_count %}(≈{{ c.approx_count }}){% else %}(0){% endif %}</span></span> {% endfor %}</td>
@@ -62,7 +62,7 @@
   <div class="tbl-wrap"><table>
   <thead><tr><th>Ур.</th><th style="min-width:160px">Сайт</th><th style="min-width:200px">Раздел на сайте</th><th style="min-width:280px">Что на странице</th><th style="min-width:260px">Примеры позиций</th><th class="num">Товаров в радаре</th></tr></thead>
   <tbody>{% for c in t.cats %}<tr>
-    <td><span class="badge {{ {'A':'sev-high','B':'sev-medium','C':'st'}.get(c.tier, 'st') }}">{{ c.tier }}</span></td>
+    <td><span class="badge {{ {'A':'sev-high','B':'sev-medium','C':'st','M':'st-new'}.get(c.tier, 'st') }}">{{ c.tier }}</span></td>
     <td class="small"><a href="/competitors/{{ c.competitor_id }}">{{ c.site }}</a><div class="muted">{{ c.seller[:40] }}</div></td>
     <td>{% if c.url %}<a href="{{ c.url }}" target="_blank" rel="noopener"><b>{{ c.name }}</b> ↗</a>{% else %}<b>{{ c.name }}</b> <span class="small muted">(из хлебных крошек, отдельной страницы нет)</span>{% endif %}{% if c.in_radar %}<div class="small muted">в радаре: {{ c.in_radar }}</div>{% endif %}</td>
     <td class="small">{% if c.note %}{{ c.note }}{% elif c.enriched_at %}<span class="muted">описания на странице нет</span>{% else %}<span class="muted">ещё не просмотрено — нажмите «Обновить с сайтов»</span>{% endif %}</td>
@@ -93,7 +93,7 @@
 {% else %}
 <form class="filters" method="get">
   <input type="hidden" name="view" value="matrix">
-  <label>Уровень<select name="tier"><option value="">все</option><option value="A" {% if f.tier == 'A' %}selected{% endif %}>A — прямые</option><option value="B" {% if f.tier == 'B' %}selected{% endif %}>B — вторичные</option><option value="C" {% if f.tier == 'C' %}selected{% endif %}>C — косвенные</option></select></label>
+  <label>Уровень<select name="tier"><option value="">все</option><option value="A" {% if f.tier == 'A' %}selected{% endif %}>A — прямые</option><option value="B" {% if f.tier == 'B' %}selected{% endif %}>B — вторичные</option><option value="C" {% if f.tier == 'C' %}selected{% endif %}>C — косвенные</option><option value="M" {% if f.tier == 'M' %}selected{% endif %}>M — маркетплейсы (цены динамические)</option></select></label>
   <label>Продавец<select name="competitor"><option value="">все</option>{% for c in competitors %}<option value="{{ c.id }}" {% if f.competitor == c.id|string %}selected{% endif %}>{{ c.name[:50] }}</option>{% endfor %}</select></label>
   <label>Тип изделия<select name="kind"><option value="">все</option>{% for k, n in kinds.items() %}<option value="{{ k }}" {% if f.kind == k %}selected{% endif %}>{{ n }}</option>{% endfor %}</select></label>
   <label>Статус<select name="state"><option value="active" {% if f.state == 'active' %}selected{% endif %}>в продаже</option><option value="all" {% if f.state == 'all' %}selected{% endif %}>все, включая исчезнувшие</option><option value="gone" {% if f.state == 'gone' %}selected{% endif %}>исчезли</option><option value="new" {% if f.state == 'new' %}selected{% endif %}>новые</option><option value="nomatch" {% if f.state == 'nomatch' %}selected{% endif %}>без аналога у M22</option><option value="photo" {% if f.state == 'photo' %}selected{% endif %}>фото совпадает с M22</option></select></label>
@@ -109,7 +109,7 @@
 <tbody>
 {% for r in rows %}<tr {% if r.state == 'gone' %}style="opacity:.55"{% endif %}>
   <td>{% if r.image_url %}<a href="{{ r.image_url }}" target="_blank" rel="noopener"><img src="{{ r.image_url }}" alt="" loading="lazy" referrerpolicy="no-referrer" width="44" height="44" class="thumb" onerror="this.parentNode.outerHTML='<span class='small muted nophoto' title='ссылка на фото у продавца не открывается'>фото не грузится</span>'"></a>{% else %}<span class="small muted nophoto" title="на странице товара фото не найдено">нет фото</span>{% endif %}</td>
-  <td><span class="badge {{ {'A':'sev-high','B':'sev-medium','C':'st'}.get(r.tier, 'st') }}">{{ r.tier or '?' }}</span></td>
+  <td><span class="badge {{ {'A':'sev-high','B':'sev-medium','C':'st','M':'st-new'}.get(r.tier, 'st') }}">{{ r.tier or '?' }}</span></td>
   <td class="small"><a href="/competitors/{{ r.competitor_id }}">{{ r.seller[:28] }}</a>{% if r.website %}<div class="muted">{{ r.website | replace('https://','') | replace('http://','') | replace('www.','') | trim('/') }}</div>{% endif %}</td>
   <td><a href="{{ r.url }}" target="_blank" rel="noopener">{{ r.name[:60] }}</a>{% if r.dup_count and r.dup_count > 1 %} <span class="small muted" title="та же позиция с той же ценой на других страницах сайта: {{ r.dup_urls | join(', ') }}">({{ r.dup_count }} стр.)</span>{% endif %}{% if r.raw_spec_count %}<div class="small muted" title="сколько параметров снято со страницы">{{ r.raw_spec_count }} парам. на странице</div>{% endif %}</td>
   <td class="small">{{ r.category_name[:24] }}</td><td class="small">{{ r.kind_name }}</td><td class="small">{{ r.model_key or 'нет' }}</td>

@@ -32,7 +32,7 @@ def _group_key(r: dict) -> tuple:
     return ((r["brand"] or "").lower(), r["model_key"] or _norm_name(r["name"]), r["category_slug"], KIND_GROUPS.get(r["kind"] or "other", "other"))
 
 
-def candidates(conn: sqlite3.Connection, categories: list[str] | None = None, tiers: tuple[str, ...] = ("A", "B")) -> list[dict]:
+def candidates(conn: sqlite3.Connection, categories: list[str] | None = None, tiers: tuple[str, ...] = ("A", "B", "M")) -> list[dict]:
     m22 = db.rows(conn, "SELECT id, name, price, capacity, category_slug, kind, url, images_json, description, specs_json, model_key, brand FROM m22_products WHERE is_active=1 AND in_scope=1 AND price IS NOT NULL")
     for m in m22:
         m["norm"] = specmod.normalize(m["name"], m["description"], m["specs_json"], m["price"], m["capacity"])
@@ -133,6 +133,7 @@ def candidates(conn: sqlite3.Connection, categories: list[str] | None = None, ti
             "specs": spec_summary(max(items, key=lambda i: sum(v is not None for v in i["norm"].values()))["norm"]),
             "offers": sorted(items, key=lambda x: x["price"])[:4], "m22_best": m22_best, "m22_unit": m22_unit, "gap_pct": gap_pct, "m22_pool": len(pool),
             "reasons": reasons, "verdict": verdict, "verdict_ru": VERDICTS[verdict], "score": score, "tier": min(i["tier"] for i in items),
+            "marketplace_only": all(i["tier"] == "M" for i in items),
         })
     out.sort(key=lambda x: (-x["score"], x["category_name"], x["pmin"]))
     return out
