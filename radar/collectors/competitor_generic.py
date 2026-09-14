@@ -494,6 +494,9 @@ def run(conn: sqlite3.Connection, competitor_id: int | None = None, page_id: int
             status = "ok" if s else "empty"
             conn.execute("UPDATE monitored_pages SET last_checked_at=datetime('now'), last_status=?, last_error=?, fail_count=? WHERE id=?",
                          (status, None if s else "На странице не найдено товаров с ценой", 0 if s else page["fail_count"] + 1, page["id"]))
+            if not s and page["fail_count"] + 1 >= 5:
+                # пять сборов подряд без товаров — это раздел/статья/лендинг, а не карточка товара; выключаем, чтобы не считать ошибкой
+                conn.execute("UPDATE monitored_pages SET is_active=0, last_error='выключена автоматически: 5 сборов подряд без товаров с ценой (раздел, статья или лендинг)' WHERE id=?", (page["id"],))
             if s and page["kind"] != "product":
                 # позиция каталога, не встреченная на странице ≥2 дней после успешных проверок, считается исчезнувшей
                 conn.execute("UPDATE competitor_products SET is_active=0 WHERE page_id=? AND is_active=1 AND fetched_at IS NOT NULL AND fetched_at < datetime('now', '-2 days') AND url!=?",
@@ -502,13 +505,16 @@ def run(conn: sqlite3.Connection, competitor_id: int | None = None, page_id: int
                 db.log_error(conn, SOURCE_KEY, page["url"], "Не найдено товаров на странице", page["competitor_name"])
         except http.RobotsDisallowed as exc:
             errors += 1
-            conn.execute("UPDATE monitored_pages SET last_checked_at=datetime('now'), last_status='robots_disallowed', last_error=?, fail_count=fail_count+1 WHERE id=?",
-                         (str(exc), page["id"]))
+            conn.execute("UPDATE monitored_pages SET last_checked_at=datetime('now'), last_status='robots_disallowed', last_error=?, fail_count=fail_count+1, is_active=0 WHERE id=?",
+                         ("выключена: сайт запрещает сбор в robots.txt — " + str(exc)[:200], page["id"]))
             db.log_error(conn, SOURCE_KEY, page["url"], str(exc), page["competitor_name"])
         except Exception as exc:  # noqa: BLE001
             errors += 1
             conn.execute("UPDATE monitored_pages SET last_checked_at=datetime('now'), last_status='error', last_error=?, fail_count=fail_count+1 WHERE id=?",
                          (str(exc)[:500], page["id"]))
+            if page["fail_count"] + 1 >= 3 and ("HTTP 404" in str(exc) or "HTTP 403" in str(exc) or "HTTP 410" in str(exc)):
+                note = "выключена: страница удалена с сайта (404)" if "404" in str(exc) or "410" in str(exc) else "выключена: сайт блокирует автоматический сбор (403) — цены только вручную"
+                conn.execute("UPDATE monitored_pages SET is_active=0, last_error=? WHERE id=?", (note + " — " + str(exc)[:200], page["id"]))
             db.log_error(conn, SOURCE_KEY, page["url"], str(exc), page["competitor_name"])
         conn.commit()
     # товары конкурентов, которых не видели > 3 запусков подряд их страницы, помечаем неактивными — делает detect_signals

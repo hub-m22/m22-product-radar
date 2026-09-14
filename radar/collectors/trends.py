@@ -44,8 +44,19 @@ def run(conn: sqlite3.Connection, timeframe: str = "today 5-y", max_groups: int 
     for gi, g in enumerate(groups):
         kw = [q["query"] for q in g]
         try:
-            pt.build_payload(kw, geo="RU", timeframe=timeframe)
-            df = pt.interest_over_time()
+            df = None
+            for attempt in range(4):  # при 429 ждём и повторяем ту же группу, а не теряем её
+                try:
+                    pt.build_payload(kw, geo="RU", timeframe=timeframe)
+                    df = pt.interest_over_time()
+                    break
+                except Exception as exc:  # noqa: BLE001
+                    if ("429" in str(exc) or "TooManyRequests" in type(exc).__name__) and attempt < 3:
+                        wait = 120 * (attempt + 1)
+                        log.warning("Google Trends 429 для %s — пауза %s с, попытка %s/4", kw, wait, attempt + 2)
+                        time.sleep(wait)
+                        continue
+                    raise
             if df is None or df.empty:
                 errors += 1
                 last_error = f"пустой ответ для {kw}"
