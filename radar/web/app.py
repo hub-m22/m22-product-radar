@@ -13,7 +13,7 @@ from pathlib import Path
 from typing import Optional
 
 from fastapi import FastAPI, File, Form, HTTPException, Request, UploadFile
-from fastapi.responses import HTMLResponse, RedirectResponse, Response, StreamingResponse
+from fastapi.responses import FileResponse, HTMLResponse, RedirectResponse, Response, StreamingResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 
@@ -22,6 +22,7 @@ from .. import competitor_matrix as cmx
 from .. import site_categories
 from .. import image_match
 from .. import pricing
+from .. import assortment
 from .. import site_audit
 from .. import profile as profmod
 from .. import config, db, discovery, feedback, importers, matching, recommendations, reports, scheduler, seed, signals
@@ -452,6 +453,8 @@ MARKET_TABS = {
 @app.get("/market", response_class=HTMLResponse)
 def market_page(request: Request, tab: str = "intro"):
     tab = tab if tab in MARKET_TABS else "intro"
+    if tab == "intro":
+        return market_intro(request)
     title, sub, types = MARKET_TABS[tab]
     f = _filters(request)
     where, params = _signal_where(f)
@@ -463,6 +466,48 @@ def market_page(request: Request, tab: str = "intro"):
         rows = db.rows(conn, SIGNAL_SQL + f" WHERE {where} ORDER BY s.status='new' DESC, CASE s.severity WHEN 'high' THEN 0 WHEN 'medium' THEN 1 ELSE 2 END, s.confidence DESC, s.created_at DESC LIMIT 500", params)
         lists = _lists(conn)
     return render(request, "signals.html", sigs=rows, f=f, tab=tab, page_title=title, page_sub=sub, tab_types=[(t, SIGNAL_TYPES[t]) for t in types], **lists)
+
+
+def market_intro(request: Request):
+    """«Что ввести»: разбор всех моделей конкурентов против матрицы M22 (категория + тип изделия + вместимость)."""
+    q = request.query_params
+    cats = [x for x in q.getlist("category") if x]
+    verdict, kind, tiers, text = q.get("verdict", ""), q.get("kind", ""), q.get("tiers", "AB"), q.get("q", "").strip().lower()
+    with db.session() as conn:
+        rows = assortment.candidates(conn, cats or None, ("A",) if tiers == "A" else ("A", "B"))
+        summ = assortment.summary(rows)
+        sigs = db.rows(conn, SIGNAL_SQL + " WHERE s.type IN ('new_category','category_growth_gap') AND s.status IN ('new','in_research','accepted') ORDER BY s.created_at DESC LIMIT 10")
+        lists = _lists(conn)
+    if verdict == "":
+        rows = [r for r in rows if r["verdict"] in ("gap", "consider")]
+    elif verdict != "all":
+        rows = [r for r in rows if r["verdict"] == verdict]
+    if kind:
+        rows = [r for r in rows if r["kind"] == kind]
+    if text:
+        rows = [r for r in rows if text in (r["brand"] + " " + r["model"] + " " + r["name"]).lower()]
+    return render(request, "market_intro.html", rows=rows, summ=summ, sigs=sigs, tab="intro", kinds=assortment.KIND_LABELS,
+                  f={"verdict": verdict, "kind": kind, "tiers": tiers, "q": q.get("q", ""), "categories": cats}, **lists)
+
+
+@app.get("/export/assortment.xlsx")
+def export_assortment():
+    from openpyxl import Workbook
+
+    with db.session() as conn:
+        rows = assortment.candidates(conn)
+    wb = Workbook()
+    ws = wb.active
+    ws.title = "Что ввести"
+    ws.append(["Вердикт", "Бренд", "Модель", "Название", "Категория", "Тип", "Вместимость", "Продавцов", "Позиций", "Цена мин", "Цена медиана", "За ед./место", "Характеристики",
+               "Ближайшее у M22", "Цена M22", "Разница за ед., %", "Почему", "Ссылка"])
+    for r in rows:
+        ws.append([r["verdict_ru"], r["brand"], r["model"], r["name"], r["category_name"], r["kind_name"], r["capacity"], len(r["sellers"]), r["n"], r["pmin"], r["pmed"], r["unit_min"], r["specs"],
+                   r["m22_best"]["name"] if r["m22_best"] else "", r["m22_best"]["price"] if r["m22_best"] else None, r["gap_pct"], "; ".join(r["reasons"]), r["offers"][0]["url"]])
+    path = config.EXPORT_DIR / "assortment.xlsx"
+    path.parent.mkdir(parents=True, exist_ok=True)
+    wb.save(path)
+    return FileResponse(str(path), filename="assortment.xlsx")
 
 
 @app.get("/signals")

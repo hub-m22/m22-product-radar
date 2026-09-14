@@ -1,0 +1,45 @@
+{% extends "base.html" %}{% import "_macros.html" as m %}
+{% block title %}Ассортимент: что ввести — M22 Product Radar{% endblock %}
+{% block content %}
+<div class="topbar"><div><h1>Ассортимент: что ввести</h1><div class="sub">Каждая модель конкурентов уровня A и B сравнена с матрицей M22 внутри той же категории и типа изделия (комплекты — с той же вместимостью). Три вопроса: есть ли у M22 такое вообще; дешевле ли конкурент за единицу или за место; лучше ли он по характеристикам (дальность, каналы, автономность, вес, двусторонняя связь, 2,4 ГГц). Число продавцов — не критерий: почти каждый продавец торгует своим брендом.</div></div>
+<div class="actions-row"><a class="btn sec small" href="/export/assortment.xlsx">XLSX</a></div></div>
+{% include "_market_tabs.html" %}
+
+<div class="kpis">
+  <div class="kpi"><div class="v" style="color:var(--high)">{{ summ.gap }}</div><div class="l">нет у M22 — кандидаты на ввод</div></div>
+  <div class="kpi"><div class="v" style="color:#c98a00">{{ summ.consider }}</div><div class="l">есть аналог, но конкурент выигрывает</div></div>
+  <div class="kpi"><div class="v">{{ summ.covered }}</div><div class="l">у M22 есть аналог не хуже</div></div>
+  <div class="kpi"><div class="v muted">{{ summ.total }}</div><div class="l">моделей конкурентов с ценой</div></div>
+</div>
+<div class="small muted" style="margin:-4px 0 10px">По категориям: {% for c in summ.by_cat %}{{ c.name[:28] }}: <b style="color:var(--high)">{{ c.gap }}</b>/<b style="color:#c98a00">{{ c.consider }}</b>/{{ c.covered }}{% if not loop.last %} · {% endif %}{% endfor %} (нет у M22 / рассмотреть / покрыто).</div>
+
+<form class="filters" method="get">
+  <input type="hidden" name="tab" value="intro">
+  <label>Вердикт<select name="verdict"><option value="" {% if not f.verdict %}selected{% endif %}>нет у M22 + рассмотреть</option><option value="gap" {% if f.verdict == 'gap' %}selected{% endif %}>нет у M22</option><option value="consider" {% if f.verdict == 'consider' %}selected{% endif %}>рассмотреть</option><option value="covered" {% if f.verdict == 'covered' %}selected{% endif %}>покрыто</option><option value="all" {% if f.verdict == 'all' %}selected{% endif %}>все</option></select></label>
+  <label>Тип изделия<select name="kind"><option value="">все</option>{% for k, n in kinds.items() %}<option value="{{ k }}" {% if f.kind == k %}selected{% endif %}>{{ n }}</option>{% endfor %}</select></label>
+  <label>Уровень продавцов<select name="tiers"><option value="AB" {% if f.tiers == 'AB' %}selected{% endif %}>A + B</option><option value="A" {% if f.tiers == 'A' %}selected{% endif %}>только A</option></select></label>
+  <label>Поиск<input type="text" name="q" value="{{ f.q }}" placeholder="модель, бренд, название"></label>
+  <button class="small">Применить</button> <a class="btn sec small" href="/market">Сбросить</a>
+  <div class="cat-pills"><span class="small muted">Категории (можно несколько):</span> {% for c in categories %}<label class="pill-check"><input type="checkbox" name="category" value="{{ c.slug }}" {% if c.slug in f.categories %}checked{% endif %}> {{ c.name_ru }}</label>{% endfor %}</div>
+</form>
+<div class="sub">Показано моделей: {{ rows|length }}.</div>
+
+<div class="card compact tbl-wrap"><table style="min-width:1700px">
+<thead><tr><th>Вердикт</th><th>Фото</th><th style="min-width:240px">Модель конкурента</th><th>Категория / тип</th><th class="num">Продавцов</th><th class="num">Цена (мин – макс)</th><th class="num" title="за штуку или за место в комплекте">За ед./место</th><th style="min-width:180px">Характеристики</th><th style="min-width:260px">Ближайшее у M22</th><th class="num">Разница за ед.</th><th style="min-width:320px">Почему</th></tr></thead>
+<tbody>{% for r in rows %}<tr>
+  <td><span class="badge {{ {'gap':'sev-high','consider':'sev-medium','covered':'sev-low','no_data':'st'}[r.verdict] }}">{{ r.verdict_ru }}</span></td>
+  <td>{% if r.image %}<a href="{{ r.offers[0].url }}" target="_blank" rel="noopener"><img src="{{ r.image }}" alt="" loading="lazy" referrerpolicy="no-referrer" class="thumb" onerror="this.style.display='none'"></a>{% else %}<span class="small muted nophoto">нет фото</span>{% endif %}</td>
+  <td><b>{{ (r.brand ~ ' ' ~ r.model).strip() or r.name[:40] }}</b><div class="small"><a href="{{ r.offers[0].url }}" target="_blank" rel="noopener">{{ r.name[:70] }}</a></div><div class="small muted">{% for it in r.offers[:3] %}{{ it.seller[:20] }} {{ it.price | money }}{% if not loop.last %} · {% endif %}{% endfor %}</div></td>
+  <td class="small">{{ r.category_name[:26] }}<div class="muted">{{ r.kind_name }}{% if r.capacity %} · на {{ r.capacity }}{% endif %}</div></td>
+  <td class="num">{{ r.sellers|length }}<div class="small muted">{{ r.n }} поз.</div></td>
+  <td class="num small">{{ r.pmin | money }}{% if r.pmax != r.pmin %} – {{ r.pmax | money }}{% endif %}</td>
+  <td class="num">{% if r.unit_min %}{{ r.unit_min | money }}{% else %}<span class="muted">—</span>{% endif %}</td>
+  <td class="small">{{ r.specs }}</td>
+  <td class="small">{% if r.m22_best %}{% if r.m22_best.image %}<img src="{{ r.m22_best.image }}" alt="" loading="lazy" referrerpolicy="no-referrer" class="thumb" style="float:left;margin-right:6px" onerror="this.style.display='none'">{% endif %}<a href="/matrix/{{ r.m22_best.id }}">{{ r.m22_best.name[:50] }}</a><div class="muted">{{ r.m22_best.price | money }}{% if r.m22_unit and r.m22_unit != r.m22_best.price %} · за ед. {{ r.m22_unit | money }}{% endif %}{% if r.m22_pool > 1 %} · ещё {{ r.m22_pool - 1 }}{% endif %}</div>{% else %}<span class="muted">нет изделий этого типа{% if r.capacity %} на {{ r.capacity }} мест{% endif %}</span>{% endif %}</td>
+  <td class="num">{% if r.gap_pct is not none %}<b style="color:{{ 'var(--high)' if r.gap_pct <= -25 else 'inherit' }}">{{ '%+d' % r.gap_pct }} %</b>{% else %}<span class="muted">—</span>{% endif %}</td>
+  <td class="small">{% for x in r.reasons %}<div>• {{ x }}</div>{% else %}<span class="muted">преимуществ перед M22 по цене и характеристикам не найдено</span>{% endfor %}</td>
+</tr>{% else %}<tr><td colspan="11" class="muted">Ничего не найдено.</td></tr>{% endfor %}</tbody></table></div>
+
+{% if sigs %}<h3 style="margin-top:18px">События по ассортименту</h3>
+{% for s in sigs %}{{ m.signal_card(s, compact=True) }}{% endfor %}{% endif %}
+{% endblock %}

@@ -293,8 +293,8 @@ def detect_kind(name: str) -> str:
         return "transmitter"
     if head.startswith(("приёмник", "приемник", "receiver")) and not has_tx:
         return "receiver"
-    if (has_tx and has_rx) or (("система" in low or "system" in low or "комплект" in low or "kit" in low or " set" in low) and (has_tx or has_rx)):
-        return "system"
+    if (has_tx and has_rx) or (("система" in head or "system" in head or "комплект" in head or "kit" in head or " set" in head) and (has_tx or has_rx)):
+        return "system"  # «приёмник … для радиосистемы» — приёмник; «система … с приёмниками» — система
     if has_tx:
         return "transmitter"
     if has_rx:
@@ -302,6 +302,8 @@ def detect_kind(name: str) -> str:
     if re.search(r"\bс (?:одн\w+ )?(?:сумк|кейс|чехл|зарядн)|в кейсе|в сумке|with (?:a )?(?:carry\w* )?(?:bag|case)|charging (?:base|case)\b.*(?:system|система)", low) \
             and any(k in low for k in ("система", "system", "комплект", "kit", "радиогид", "tour guide")):
         return "system"  # «система … с сумкой/кейсом для переноски» — это система, а не сумка
+    if re.search(r"\b(система|системы|system|комплект|kit)\b", head) and not re.match(r"^(кейс|сумк|зарядн|чехол|чехлы|док|аккумулятор|антенн|кабель|шнур)", head):
+        return "system"  # «Система аудиогидов Retekess TT125», «Беспроводная система гида T131 … с микрофоном» — это система, а не аудиогид/микрофон
     if any(k in low for k in ("кейс", "докстанц", "док-станц", "сумк", "case", "dock", "зарядн", "charger")):
         return "case_charger"
     if "наушник" in low or "headphone" in low or "earphone" in low:
@@ -325,8 +327,8 @@ def detect_kind(name: str) -> str:
 
 
 CAPACITY_RE = re.compile(r"(?:на|для|до)\s*(\d{1,3})\s*(?:персон|человек|чел\.?|экскурсант|слушател|участник|приемник|приёмник|устройств|слот)", re.I)
-CAPACITY_RE2 = re.compile(r"(\d{1,3})\s*(?:персон|чел|экскурсант|приемник|приёмник|receivers?|слот|устройств)", re.I)
-CAPACITY_RE3 = re.compile(r"\b1\s*[\+x×]\s*(\d{1,3})\b|\b(\d{1,3})\s*(?:pcs|шт)\b", re.I)
+CAPACITY_RE2 = re.compile(r"(?<![A-Za-z\d.,/-])(\d{1,3})\s*(?:персон|чел|экскурсант|приемник|приёмник|receivers?|слот|устройств)", re.I)  # «T131 приемник» — код модели, не вместимость
+CAPACITY_RE3 = re.compile(r"(?<![A-Za-z\d-])1\s*[\+x×]\s*(\d{1,3})\b|(?<![A-Za-z\d.,/-])(\d{1,3})\s*(?:pcs|шт)\b", re.I)
 
 
 def detect_capacity(name: str, description: str | None = None) -> int | None:
