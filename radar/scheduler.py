@@ -123,7 +123,18 @@ def start():
         return None
     from apscheduler.schedulers.background import BackgroundScheduler
 
-    _scheduler = BackgroundScheduler(timezone="Europe/Moscow")
+    # компьютер ночью спит: пропущенный запуск выполняется сразу после пробуждения (в пределах 12 часов), а не теряется
+    _scheduler = BackgroundScheduler(timezone="Europe/Moscow", job_defaults={"coalesce": True, "misfire_grace_time": 12 * 3600})
+    # догоняющий сбор при старте сервера, если последний удачный сбор старше 26 часов (сервер не работал или машина спала)
+    try:
+        with db.session() as conn:
+            last = db.row(conn, "SELECT MAX(finished_at) t FROM source_runs WHERE source_key IN ('m22.ru','competitors') AND status IN ('ok','partial')")
+        stale = not last or not last["t"] or datetime.strptime(last["t"][:19], "%Y-%m-%d %H:%M:%S") < datetime.now() - timedelta(hours=26)
+    except Exception:  # noqa: BLE001
+        stale = False
+    if stale:
+        _scheduler.add_job(_run_job, "date", run_date=datetime.now() + timedelta(minutes=3), args=["catchup", full_update], id="catchup", replace_existing=True)
+        log.info("scheduler: последний сбор старше 26 часов — догоняющий полный сбор через 3 минуты")
     _scheduler.add_job(_run_job, "cron", hour=config.M22_CRON_HOUR, minute=0, args=["m22", collect_m22], id="m22", replace_existing=True)
     _scheduler.add_job(_run_job, "cron", hour=config.COMPETITORS_CRON_HOUR, minute=0, args=["competitors", collect_competitors], id="competitors", replace_existing=True)
     _scheduler.add_job(_run_job, "cron", day_of_week=config.TRENDS_CRON_DOW, hour=7, minute=30, args=["demand", collect_demand], id="demand", replace_existing=True)
