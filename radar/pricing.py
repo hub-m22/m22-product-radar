@@ -24,19 +24,21 @@ def review(conn: sqlite3.Connection, categories: list[str] | None = None, only_w
     out = []
     for p in prods:
         def _uniq(lst):
+            # одно предложение = один продавец (сайты одной группы — один продавец) + одна модель, берётся низшая цена:
+            # тот же товар на cromi.ru, sin24.ru и spbaudio.ru или две страницы одной модели не должны входить в медиану дважды
             u: dict = {}
-            for c in lst:
-                u.setdefault((c["competitor_id"], c["name"]), c)
+            for c in sorted(lst, key=lambda c: c["price"]):
+                u.setdefault((c["seller_key"], c.get("model_key") or c["name"]), c)
             return sorted(u.values(), key=lambda c: c["price"])
 
         firm = _uniq(matching.comparables_for(conn, p["id"], min_conf=0.7))     # надёжно: идентичные, точные, одинаковое фото, прямые аналоги с совместимыми характеристиками
         approx = False
         comps = firm
-        if len(firm) < config.MIN_COMPARABLES or len({c["competitor_id"] for c in firm}) < 2:
+        if len(firm) < config.MIN_COMPARABLES or len({c["seller_key"] for c in firm}) < 2:
             loose = _uniq(matching.comparables_for(conn, p["id"], min_conf=0.6))  # ориентир: прямые аналоги той же категории и типа
             if len(loose) >= config.MIN_COMPARABLES:
                 comps, approx = loose, True
-        sellers = {c["competitor_id"] for c in comps}
+        sellers = {c["seller_key"] for c in comps}
         strong = [c for c in comps if c["match_type"] in STRONG]
         row = {"p": p, "category": CATEGORY_NAMES.get(p["category_slug"], p["category_slug"]), "n": len(comps), "sellers": len(sellers), "strong": len(strong), "comps": comps[:8], "approx": approx}
         # для идентичных/точных моделей достаточно двух предложений: это тот же товар, а не «похожий»

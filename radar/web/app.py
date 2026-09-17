@@ -895,12 +895,41 @@ def pricing_page(request: Request, verdict: str = "", site: str = ""):
     with db.session() as conn:
         rows = pricing.review(conn, cats or None)
         lists = _lists(conn)
+        decisions = {d["m22_product_id"]: d for d in db.rows(conn, "SELECT * FROM price_decisions")}
     if site:
         rows = [r for r in rows if r["p"]["site"] == site]
     summ = pricing.summary(rows)
     if verdict:
         rows = [r for r in rows if r["verdict"] == verdict]
-    return render(request, "pricing.html", rows=rows, summ=summ, f={"verdict": verdict, "site": site, "categories": cats}, threshold=config.MARKET_GAP_THRESHOLD_PCT, **lists)
+    for r in rows:
+        d = decisions.get(r["p"]["id"])
+        r["decision"] = d
+        r["decision_stale"] = bool(d and d["verdict"] != r["verdict"])  # вердикт радара изменился после решения
+    return render(request, "pricing.html", rows=rows, summ=summ, f={"verdict": verdict, "site": site, "categories": cats}, threshold=config.MARKET_GAP_THRESHOLD_PCT,
+                  DECISION_NAMES=PRICE_DECISION_NAMES, **lists)
+
+
+PRICE_DECISION_NAMES = {"approved": "Согласовано", "accepted": "Принято в исполнение", "rejected": "Отклонено", "deferred": "Отложено"}
+
+
+@app.post("/pricing/decision/{pid}")
+def pricing_decision(request: Request, pid: int, status: str = Form(""), author: str = Form(""), comment: str = Form("")):
+    """Решение по ценовому вердикту: кто согласовал / принял в исполнение / отклонил. Пустой статус снимает решение."""
+    with db.session() as conn:
+        if not status:
+            conn.execute("DELETE FROM price_decisions WHERE m22_product_id=?", (pid,))
+        else:
+            row = next((r for r in pricing.review(conn) if r["p"]["id"] == pid), None)
+            verdict, price, median = (row["verdict"], row["p"]["price"], row["median"]) if row else (None, None, None)
+            conn.execute("""INSERT INTO price_decisions(m22_product_id, status, author, comment, verdict, price, median) VALUES(?,?,?,?,?,?,?)
+                            ON CONFLICT(m22_product_id) DO UPDATE SET status=excluded.status, author=excluded.author, comment=excluded.comment,
+                            verdict=excluded.verdict, price=excluded.price, median=excluded.median, updated_at=datetime('now')""",
+                         (pid, status, author.strip() or None, comment.strip() or None, verdict, price, median))
+            feedback.record(conn, "pricing", pid, status, author.strip() or None, comment.strip() or None)
+            if comment.strip():
+                conn.execute("INSERT INTO comments(entity_type, entity_id, author, text) VALUES('pricing',?,?,?)", (pid, author.strip() or "пользователь", comment.strip()))
+    back = request.headers.get("referer") or "/pricing"
+    return RedirectResponse(back if back.startswith("/") or "://" in back else "/pricing", status_code=303)
 
 
 @app.post("/pricing/recalc")
@@ -919,12 +948,16 @@ def export_pricing():
 
     with db.session() as conn:
         rows = pricing.review(conn)
+        decisions = {d["m22_product_id"]: d for d in db.rows(conn, "SELECT * FROM price_decisions")}
     wb = Workbook()
     ws = wb.active
     ws.title = "Пересмотр цен"
-    ws.append(["Вердикт", "Товар M22", "Сайт", "Категория", "Цена M22", "Медиана рынка", "Мин", "Макс", "Отклонение, %", "Предложений", "Продавцов", "Точных", "Почему"])
+    ws.append(["Вердикт", "Товар M22", "Сайт", "Категория", "Цена M22", "Медиана рынка", "Мин", "Макс", "Отклонение, %", "Предложений", "Продавцов", "Точных", "Почему",
+               "Решение", "Кто", "Когда", "Комментарий"])
     for r in rows:
-        ws.append([r["verdict_ru"], r["p"]["name"], r["p"]["site"], r["category"], r["p"]["price"], r["median"], r["pmin"], r["pmax"], r["gap"], r["n"], r["sellers"], r["strong"], r["why"]])
+        d = decisions.get(r["p"]["id"])
+        ws.append([r["verdict_ru"], r["p"]["name"], r["p"]["site"], r["category"], r["p"]["price"], r["median"], r["pmin"], r["pmax"], r["gap"], r["n"], r["sellers"], r["strong"], r["why"],
+                   PRICE_DECISION_NAMES.get(d["status"], d["status"]) if d else "", d["author"] if d else "", d["updated_at"] if d else "", d["comment"] if d else ""])
     path = config.EXPORT_DIR / "pricing.xlsx"
     path.parent.mkdir(parents=True, exist_ok=True)
     wb.save(path)

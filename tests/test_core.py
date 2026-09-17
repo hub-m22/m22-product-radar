@@ -44,6 +44,10 @@ def test_category_and_kind():
     assert normalize.classify_category("Кейс для радиогид систем Radiosync SGTR03 (на 60 устройств)", None, "Радиогиды и аудиогиды") == "charging_cases"
     assert normalize.classify_category("Комплект для синхронного перевода Radiosync SGTR02, на 25 персон") == "sync_translation"
     assert normalize.classify_category("Одноразовые стерео наушники Radiosync X22387B", None, "Радиогиды и аудиогиды") == "disposable_headphones"
+    assert normalize.model_key("Радиогид CP-F01 Бюджетный вариант, работающий в FM-диапазоне") == "F01"
+    assert normalize.model_key("Аудиогид СP-AG05 Высокая автономность") == "AG05"  # «С» кириллическая
+    assert normalize.model_key("Радиогид CP-TW-02 Система двусторонней связи") == "TW02"
+    assert normalize.model_key("Аудиогид SPBAUDIO A-5") == "SPBAUDIO-A-5"
     assert normalize.detect_kind("Передатчик для радиогид системы SGTR13") == "transmitter"
     assert normalize.detect_kind("Приёмник для радиогид системы Radiosync SGTR02") == "receiver"
     assert normalize.detect_kind("Радиогид система Radiosync SGTR02") == "system"

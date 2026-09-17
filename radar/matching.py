@@ -111,6 +111,10 @@ def match_one(cp: dict, m22_list: list[dict], m22_categories: set[str]) -> list[
                 elif cap and m.get("capacity") and cap != m["capacity"]:
                     conf = min(conf, 0.55)
                     mtype = "kit"
+                elif kind != "system" and cap and cap > 1 and not m.get("capacity"):
+                    conf = min(conf, 0.55)
+                    mtype = "kit"
+                    reasons.append(f"упаковка из {cap} шт. — цена за упаковку, с ценой одного изделия не сопоставима")
                 elif kind == "system" and m.get("capacity") and not cap:
                     conf = min(conf, 0.55)
                     mtype = "kit"
@@ -192,6 +196,8 @@ def match_one(cp: dict, m22_list: list[dict], m22_categories: set[str]) -> list[
             if kind == "system" and score < best_score - 0.15:
                 break
             mtype = "direct_analog" if score >= 0.6 else "functional"
+            if kind == "other":
+                mtype = "functional"  # тип изделия не распознан (кабель, радиоприёмник, датчик) — только «похожее», не аналог по цене
             if kind == "accessory" or kind == "headphones" or kind == "microphone":
                 mtype = "accessory" if score >= 0.55 else "functional"
             if kind == "system" and (cp.get("kind") == "kit" or m.get("kind") == "kit"):
@@ -219,11 +225,19 @@ def run_matching(conn: sqlite3.Connection) -> dict:
                         WHERE COALESCE(m.category_slug,'') != COALESCE(cp.category_slug,'') OR cp.is_active=0 OR m.is_active=0 OR m.in_scope=0)""")
     for cp in cps:
         matches = match_one(cp, m22_list, m22_categories)
+        # устаревшие автоматические пары: после переклассификации (например, «база для зарядки» перестала считаться передатчиком)
+        # правило больше не даёт эту пару — удаляем, иначе она продолжит участвовать в сравнении цен
+        keep = [mt["m22_product_id"] for mt in matches if mt["m22_product_id"] is not None]
+        not_in = f" AND m22_product_id NOT IN ({','.join('?' * len(keep))})" if keep else ""
+        conn.execute(f"DELETE FROM product_matches WHERE competitor_product_id=? AND review_status='auto' AND method='rule' AND m22_product_id IS NOT NULL{not_in}", (cp["id"], *keep))
         for mt in matches:
             needs_review = 1 if mt["confidence"] < 0.7 and mt["match_type"] in ("exact_model", "direct_analog", "kit", "identical") else 0  # аксессуары и функционально похожие — справочно, не на проверку
-            existing = db.row(conn, "SELECT id, review_status FROM product_matches WHERE competitor_product_id=? AND m22_product_id IS ?", (cp["id"], mt["m22_product_id"]))
+            existing = db.row(conn, "SELECT id, review_status, confidence FROM product_matches WHERE competitor_product_id=? AND m22_product_id IS ?", (cp["id"], mt["m22_product_id"]))
             if existing:
-                if existing["review_status"] == "auto":
+                # подтверждённое вручную сопоставление не трогаем, кроме одного случая: модель попала в таблицу идентичных —
+                # это усиление того же решения (пара подтверждена, теперь известно, что это одно изделие)
+                upgrade = existing["review_status"] == "confirmed" and mt["match_type"] == "identical" and mt["confidence"] > (existing["confidence"] or 0)
+                if existing["review_status"] == "auto" or upgrade:
                     conn.execute("UPDATE product_matches SET match_type=?, confidence=?, reasons_json=?, needs_review=?, updated_at=datetime('now') WHERE id=?",
                                  (mt["match_type"], mt["confidence"], db.j(mt["reasons"]), needs_review, existing["id"]))
                     updated += 1
@@ -245,7 +259,7 @@ def comparables_for(conn: sqlite3.Connection, m22_product_id: int, min_conf: flo
     """Сопоставимые предложения конкурентов с ценой (для сравнения с рынком)."""
     rows = db.rows(conn, """
         SELECT pm.match_type, pm.confidence, pm.reasons_json, cp.id AS competitor_product_id, cp.name, cp.price, cp.url, cp.capacity, cp.description, cp.specs_json, cp.image_url,
-               c.name AS competitor_name, c.id AS competitor_id, c.tier AS competitor_tier
+               c.name AS competitor_name, c.id AS competitor_id, c.tier AS competitor_tier, COALESCE(NULLIF(c.group_name,''), 'c' || c.id) AS seller_key, cp.model_key
         FROM product_matches pm JOIN competitor_products cp ON cp.id=pm.competitor_product_id JOIN competitors c ON c.id=cp.competitor_id
         WHERE pm.m22_product_id=? AND pm.review_status!='rejected' AND pm.confidence>=? AND cp.price IS NOT NULL AND cp.is_active=1
           AND cp.currency='RUB' AND pm.match_type IN ('exact_model','identical','direct_analog') AND COALESCE(cp.category_slug,'')!='rental' AND cp.price>=10

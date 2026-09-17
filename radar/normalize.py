@@ -94,6 +94,10 @@ def model_key(name: str, sku: str | None = None) -> str | None:
     m = re.search(r"\b(SGTR)\s?-?\s?(\d{2})\s?([A-Z])?\b", text)
     if m:
         return f"SGTR{m.group(2)}{m.group(3) or ''}"
+    # ConferencePro: «CP-F01», «CP-FMR01», «CP-AG05», «CP-TW-02» — код без префикса CP (как у остальных позиций этого продавца)
+    m = re.search(r"\b[CС]P-?([A-Z]{1,3})-?(\d{2,3})\b", text)
+    if m:
+        return f"{m.group(1)}{m.group(2)}"
     m = re.search(r"\b(UG)\s?-?\s?(\d{2})\b", text)
     if m:
         return f"UG{m.group(2)}"
@@ -110,7 +114,7 @@ def model_key(name: str, sku: str | None = None) -> str | None:
     if m and m.group(1) not in {"USB", "AUX", "LED", "IP", "ГГЦ", "МГЦ", "MHZ", "GHZ", "ДО", "НА", "ИЗ", "ОТ", "ДЛЯ", "ПО", "VHF", "UHF", "FM", "AM", "RF"}:
         return f"{m.group(1)}{m.group(2)}"
     # модели-слова после бренда (Reinvox DUO / PRO / AiR и т.п.)
-    m = re.search(r"\b(REINVOX|RETEKESS|OKAYO|SENNHEISER|WILLIAMS|LISTEN|MIPRO|TAKSTAR|CRYSTALSOUND|TOURTALK|AXITOUR)\s+([A-Z][A-Z0-9-]{1,12})\b", text)
+    m = re.search(r"\b(REINVOX|RETEKESS|OKAYO|SENNHEISER|WILLIAMS|LISTEN|MIPRO|TAKSTAR|CRYSTALSOUND|TOURTALK|AXITOUR|SPBAUDIO|SOOLAI)\s+([A-Z][A-Z0-9-]{1,12})\b", text)
     if m:
         return f"{m.group(1)}-{m.group(2)}"
     if sku and re.search(r"[A-Z]", clean_text(sku).upper()):
@@ -289,6 +293,9 @@ def detect_kind(name: str) -> str:
                         "аккумулятор", "батаре", "клипса", "крепление", "держатель", "лямка", "ремень", "лента", "стойка", "подставка", "ветрозащит", "поролон")) \
             or any(w in head for w in (" чехол", " шнурок", " ремешок", " накладк", " амбушюр", " клипса", " крепление", " антенна", " адаптер", " аккумулятор")):
         return "accessory"
+    # «База для зарядки передатчика», «Зарядное устройство для приёмников», «Кейс…», «Коробка для хранения…» — зарядка/хранение, не передатчик и не приёмник
+    if head.startswith(("база", "зарядная база", "зарядное устройство", "зарядн", "кейс", "сумк", "док", "футляр", "коробка", "бокс", "charging", "charger", "storage")):
+        return "case_charger"
     if head.startswith(("передатчик", "transmitter")) and not has_rx:
         return "transmitter"
     if head.startswith(("приёмник", "приемник", "receiver")) and not has_tx:
@@ -338,7 +345,7 @@ KIT_RX_RE = re.compile(
     r"|(?<![A-Za-z\d.,/-])(\d{1,3})\s*(?:pcs\s+)?receivers?\b"                                                    # «60 pcs receivers», «30 receivers»
     r"|(?:с|with)\s*(\d{1,3})(?:-?ю)?\s*при[её]мник",                                                       # «с 50-ю приёмниками»
     re.I)
-KIT_URL_RE = re.compile(r"(?<![A-Za-z\d-])(\d{1,3})-(?:pcs-)?receivers?\b|(?<![A-Za-z\d-])(\d{1,3})-priemnik", re.I)
+KIT_URL_RE = re.compile(r"(?<![A-Za-z\d-])(\d{1,3})-(?:pcs-)?receivers?\b|(?<![A-Za-z\d-])(\d{1,3})-priemnik|(?<![A-Za-z\d-])(\d{1,3})-(?:pieces|pcs)\b(?!-transmitter)", re.I)
 KIT_VARIANTS_RE = re.compile(r"\d{1,3}\s*/\s*\d{1,3}\s*(?:/\s*\d{1,3}\s*)*(?:при[её]мник|экскурсант|персон|чел)", re.I)  # «5/10/15/25 приёмников» — перечень вариантов
 KIT_SPEC_KEY_RE = re.compile(r"количеств\w*\s+при[её]мник", re.I)
 
