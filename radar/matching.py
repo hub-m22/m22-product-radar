@@ -251,6 +251,8 @@ def comparables_for(conn: sqlite3.Connection, m22_product_id: int, min_conf: flo
           AND cp.currency='RUB' AND pm.match_type IN ('exact_model','identical','direct_analog') AND COALESCE(cp.category_slug,'')!='rental' AND cp.price>=10
         ORDER BY pm.confidence DESC""", (m22_product_id, min_conf))
     for r in rows:
+        raw_specs = db.uj(r["specs_json"], {}) or {}
+        r["price_range"] = raw_specs.get("Цена по вариантам")  # магазин показывает «от–до» по вариантам, в базе — нижняя граница
         norm = specmod.normalize(r["name"], r.pop("description"), r.pop("specs_json"), r["price"], r["capacity"])
         r["specs"] = spec_summary(norm)
         r["norm"] = {k: v for k, v in norm.items() if k != "price"}

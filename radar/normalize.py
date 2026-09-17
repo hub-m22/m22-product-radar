@@ -331,14 +331,67 @@ CAPACITY_RE2 = re.compile(r"(?<![A-Za-z\d.,/-])(\d{1,3})\s*(?:персон|че�
 CAPACITY_RE3 = re.compile(r"(?<![A-Za-z\d-])1\s*[\+x×]\s*(\d{1,3})\b|(?<![A-Za-z\d.,/-])(\d{1,3})\s*(?:pcs|шт)\b", re.I)
 
 
-def detect_capacity(name: str, description: str | None = None) -> int | None:
-    """Вместимость комплекта — только из названия (описание перечисляет все варианты и вводит в заблуждение)."""
+KIT_RX_RE = re.compile(
+    r"(?<![A-Za-z\d.,/-])(\d{1,3})\s*(?:[xх×]|шт\.?)\s*(?:беспроводн\w*\s+)?(?:при[её]мник|receiver)"          # «10 x Приемников», «60 шт приемников»
+    r"|(?:включает(?: в комплект)?|в комплекте|комплект(?:ация)?:?)[^.;\n]{0,40}?1\s*(?:x|х|шт\.?)?\s*передатчик\w*\s*(?:и|\+|,)\s*(\d{1,3})\s*при[её]мник"  # «включает 1 передатчик и 10 приемников»
+    r"|(?<![A-Za-z\d.,/-])(\d{1,3})\s*передатчик\w*\s*(?:с|и|\+|-)\s*(\d{1,3})\s*при[её]мник"                  # «2 передатчика с 30 приемниками», «1 Передатчик-10 Приемников»
+    r"|(?<![A-Za-z\d.,/-])(\d{1,3})\s*(?:pcs\s+)?receivers?\b"                                                    # «60 pcs receivers», «30 receivers»
+    r"|(?:с|with)\s*(\d{1,3})(?:-?ю)?\s*при[её]мник",                                                       # «с 50-ю приёмниками»
+    re.I)
+KIT_URL_RE = re.compile(r"(?<![A-Za-z\d-])(\d{1,3})-(?:pcs-)?receivers?\b|(?<![A-Za-z\d-])(\d{1,3})-priemnik", re.I)
+KIT_VARIANTS_RE = re.compile(r"\d{1,3}\s*/\s*\d{1,3}\s*(?:/\s*\d{1,3}\s*)*(?:при[её]мник|экскурсант|персон|чел)", re.I)  # «5/10/15/25 приёмников» — перечень вариантов
+KIT_SPEC_KEY_RE = re.compile(r"количеств\w*\s+при[её]мник", re.I)
+
+
+def _kit_receivers(text: str) -> set[int]:
+    """Все явно названные количества приёмников в тексте (состав комплекта)."""
+    out: set[int] = set()
+    for m in KIT_RX_RE.finditer(text):
+        groups = [g for g in m.groups() if g]
+        if not groups:
+            continue
+        g = groups[-1]  # у «N передатчиков + M приёмников» берём M
+        if g.isdigit() and 0 < int(g) <= 200:
+            out.add(int(g))
+    return out
+
+
+def detect_capacity(name: str, description: str | None = None, specs: dict | str | None = None, url: str | None = None) -> int | None:
+    """Вместимость комплекта.
+
+    1) Из названия («на 10 персон», «1+10»).
+    2) Если в названии нет — из явного состава комплекта в описании/характеристиках/адресе страницы
+       («В комплекте: 1 x передатчик, 10 x приёмников», «Количество приёмников: 5 шт.», «…-30-receivers-…»).
+       Берём только если найдено ровно одно число: описание с перечнем вариантов («5/10/15/25 приёмников») или с
+       несколькими разными составами — это не состав данного товара, вместимость остаётся неизвестной.
+    """
     for rx in (CAPACITY_RE, CAPACITY_RE2, CAPACITY_RE3):
         m = rx.search(name)
         if m:
             g = next((x for x in m.groups() if x), None)
             if g and g.isdigit():
                 return int(g)
+    found: set[int] = set()
+    if description and not KIT_VARIANTS_RE.search(description):
+        found |= _kit_receivers(description)
+    if specs:
+        if isinstance(specs, str):
+            try:
+                specs = json.loads(specs)
+            except ValueError:
+                specs = {}
+        for k, v in (specs or {}).items():
+            if KIT_SPEC_KEY_RE.search(str(k)) and "максим" not in str(k).lower() and "поддерж" not in str(k).lower():
+                m = re.search(r"(\d{1,3})", str(v))
+                if m:
+                    found.add(int(m.group(1)))
+    if url:
+        for m in KIT_URL_RE.finditer(url):
+            g = next((x for x in m.groups() if x), None)
+            if g:
+                found.add(int(g))
+    if len(found) == 1:
+        return found.pop()
     return None
 
 

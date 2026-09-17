@@ -66,7 +66,7 @@ def upsert_competitor_product(conn: sqlite3.Connection, competitor_id: int, page
     name = normalize.clean_text(data["name"])
     category = data.get("category_slug") or normalize.classify_category(name, data.get("description"))
     kind = normalize.detect_kind(name)
-    capacity = normalize.detect_capacity(name, data.get("description"))
+    capacity = normalize.detect_capacity(name, data.get("description"), data.get("specs"), data.get("url"))
     brand = normalize.detect_brand(name, data.get("brand"))
     mkey = normalize.model_key(name, data.get("sku"))
     specs_json = db.j(data.get("specs") or {})
@@ -121,7 +121,7 @@ def renormalize(conn: sqlite3.Connection) -> dict:
         m = db.row(conn, "SELECT capacity, kind, category_slug FROM m22_products WHERE site='m22.ru' AND sku=? AND capacity IS NOT NULL", (v["sku"],))
         if m:
             conn.execute("UPDATE m22_products SET capacity=?, kind=?, category_slug=COALESCE(category_slug, ?) WHERE id=?", (m["capacity"], m["kind"], m["category_slug"], v["id"]))
-    for p in db.rows(conn, "SELECT id, name, description, NULL AS sku, brand, category_slug FROM competitor_products"):
+    for p in db.rows(conn, "SELECT id, name, description, NULL AS sku, brand, category_slug, specs_json, url FROM competitor_products"):
         cat = normalize.classify_category(p["name"], p["description"])
         if cat is None and p["category_slug"] not in (None, "rental"):
             # явно вне контура (кнопки вызова, проекторы, конференц-системы, коды моделей вне темы) — снимаем категорию; иначе оставляем прежнюю
@@ -130,7 +130,8 @@ def renormalize(conn: sqlite3.Connection) -> dict:
             keep = not ((hint is not None and hint[0] is None) or head.startswith(normalize.OUT_OF_SCOPE_HEADS))
             cat = p["category_slug"] if keep else None
         conn.execute("UPDATE competitor_products SET category_slug=?, kind=?, capacity=?, model_key=?, brand=COALESCE(brand, ?) WHERE id=?",
-                     (cat if cat is not None or p["category_slug"] != "rental" else "rental", normalize.detect_kind(p["name"]), normalize.detect_capacity(p["name"]),
+                     (cat if cat is not None or p["category_slug"] != "rental" else "rental", normalize.detect_kind(p["name"]),
+                      normalize.detect_capacity(p["name"], p["description"], p["specs_json"], p["url"]),
                       normalize.model_key(p["name"], p["sku"]), normalize.detect_brand(p["name"]), p["id"]))
         n += 1
     conn.commit()

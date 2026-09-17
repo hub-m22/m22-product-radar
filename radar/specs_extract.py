@@ -11,9 +11,13 @@ import re
 import sqlite3
 import time
 
-from . import db, http
+from . import db, http, normalize
 
+KIT_KEY_RX = re.compile(r"количеств\w*\s+при[её]мник", re.I)
+RELATED_CUT_RX = re.compile(r"мы предлагаем вам другие товары|похожие товары|с этим товаром (?:покупают|смотрят)|рекомендуем(?:ые)? товары|вам может понравиться|related products|you may also like|сопутствующие товары|недавно просмотренные", re.I)
+PRICE_RANGE_RX = re.compile(r"(\d[\d\s ]{2,9}(?:[.,]\d\d)?)\s*(?:₽|руб\.?)\s*[~–—-]\s*(\d[\d\s ]{2,9}(?:[.,]\d\d)?)\s*(?:₽|руб\.?)", re.I)
 LABELS = {
+    "Количество приёмников": re.compile(r"^(количество\s+при[её]мников(?:\s+в\s+комплекте)?|при[её]мников\s+в\s+комплекте|number\s+of\s+receivers)\s*[:：]?\s*(.*)$", re.I),
     "Дальность": re.compile(r"^(дальност\w*(?:\s+(?:передачи|приёма|приема|действия|сигнала|связи))?(?:\s+сигнала)?|радиус\s+действ\w*|расстояние\s+приёма|рабочая\s+дистанция|range)\s*[:：]?\s*(.*)$", re.I),
     "Каналов": re.compile(r"^((?:цифровых\s+|количество\s+|число\s+)?канал\w*|channels?)\s*[:：]?\s*(.*)$", re.I),
     "Диапазон частот": re.compile(r"^((?:рабочий\s+)?(?:диапазон|частот\w*)(?:\s+частот)?|frequency(?:\s+range)?)\s*[:：]?\s*(.*)$", re.I),
@@ -92,6 +96,19 @@ def extract_specs(page_html: str) -> dict[str, str]:
                 specs[key] += " ч"
             elif key == "Вес":
                 specs[key] += " г"
+    # состав комплекта («В комплекте: 1 x передатчик, 10 x приёмников») — только из описания самого товара (до блока
+    # «похожие/другие товары») и только если там ровно одно такое число
+    own = RELATED_CUT_RX.split(full, maxsplit=1)[0]
+    if not any(KIT_KEY_RX.search(k) for k in specs):
+        counts = normalize._kit_receivers(own)
+        if len(counts) == 1:
+            specs["Количество приёмников"] = f"{counts.pop()} шт."
+    # цена диапазоном («35 834,68 руб.~53 545,39 руб.») — магазин показывает «от–до» по вариантам, в базе хранится нижняя граница
+    m = PRICE_RANGE_RX.search(own)
+    if m:
+        lo, hi = (normalize.parse_price(m.group(1)), normalize.parse_price(m.group(2)))
+        if lo and hi and hi > lo:
+            specs["Цена по вариантам"] = f"от {lo:,.0f} до {hi:,.0f} ₽".replace(",", " ")
     return specs
 
 

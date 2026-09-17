@@ -49,6 +49,14 @@ def test_category_and_kind():
     assert normalize.detect_kind("Радиогид система Radiosync SGTR02") == "system"
     assert normalize.detect_capacity("Радиогид система Radiosync SGTR02, на 25 персон", "Комплект 5/10/15/25 экскурсантов") == 25
     assert normalize.detect_capacity("Радиогид система Radiosync SGTR02", "Комплект 5/10/15/25 экскурсантов") is None
+    # состав комплекта из описания / характеристик / адреса страницы (Микрофон78, официальный магазин Retekess)
+    assert normalize.detect_capacity("Система радиогид для экскурсий Retekess T130", "Радиогид Retekess T130 включает в комплект 1 передатчик и 10 приемников. В комплекте: 1 х Беспроводной передатчик T130. 10 x Беспроводных приемников T131.") == 10
+    assert normalize.detect_capacity("Беспроводная система гид Retekess T130S", "В комплекте: 1 х Передатчик Retekess T130S. 10 х Приемник Retekess T131S. 10 х Наушник") == 10
+    assert normalize.detect_capacity("Радиогид система Retekess T130-T131", None, {"Количество передатчиков": "1 шт.", "Количество приёмников": "5 шт.", "Максимальное количество поддерживаемых приёмников": "Не ограничено"}) == 5
+    assert normalize.detect_capacity("RETEKESS T130S T131S система", "2 шт передатчиков+60 шт приемников+один 32 порта", None, "https://retekess.com.ru/2-pcs-transmitters-60-pcs-receivers-one-32-ports-charging-bag") == 60
+    assert normalize.detect_capacity("RETEKESS T130P T131P аудиосистемы 2 передатчика с 30 приемниками и одной зарядной сумкой на 32 гнезда") == 30
+    # два разных состава в описании — вместимость неизвестна
+    assert normalize.detect_capacity("Retekess T130", "Комплект: 1 передатчик и 10 приемников. Также доступен комплект 1 передатчик и 20 приемников.") is None
 
 
 def test_clean_text_removes_tilda_fillers():
