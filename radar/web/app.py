@@ -62,6 +62,10 @@ app = FastAPI(title="M22 Product Radar", lifespan=lifespan)
 # ---------- вход по паролю (RADAR_PASSWORD в .env) ----------
 import hashlib
 import hmac
+import os
+import sys
+import threading
+import time
 import time as _time
 
 AUTH_COOKIE = "radar_auth"
@@ -1474,6 +1478,9 @@ def _lan_info() -> dict:
                 ips.append(ip)
     except OSError:
         pass
+    if _in_docker() or sys.platform != "win32":
+        # VPS / Docker: автозапуск и брандмауэр — на стороне Docker и nginx, проверять нечего
+        return {"host": host, "ips": ips, "port": config.PORT, "firewall": None, "task": None, "docker": _in_docker(), "bind_all": config.HOST in ("0.0.0.0", "")}
     fw = None
     try:
         out = subprocess.run(["netsh", "advfirewall", "firewall", "show", "rule", "name=M22 Product Radar 8022"], capture_output=True, text=True, timeout=10, encoding="cp866", errors="replace").stdout
@@ -1486,13 +1493,27 @@ def _lan_info() -> dict:
         task = out.returncode == 0
     except Exception:  # noqa: BLE001
         task = None
-    return {"host": host, "ips": ips, "port": config.PORT, "firewall": fw, "task": task, "bind_all": config.HOST in ("0.0.0.0", "")}
+    return {"host": host, "ips": ips, "port": config.PORT, "firewall": fw, "task": task, "docker": False, "bind_all": config.HOST in ("0.0.0.0", "")}
+
+
+def _in_docker() -> bool:
+    return os.getenv("RADAR_IN_DOCKER") == "1" or os.path.exists("/.dockerenv")
 
 
 def _restart_server(delay: int = 2) -> None:
-    """Перезапуск сервера отдельным процессом (scripts/restart_server.ps1): он не зависит от текущего процесса и запускает задачу планировщика."""
+    """Перезапуск сервера.
+
+    Windows: отдельным процессом (scripts/restart_server.ps1), он запускает задачу планировщика.
+    Docker / Linux: процесс завершается сам, контейнер поднимает Docker (restart: always) или systemd (Restart=).
+    """
     import subprocess
 
+    if _in_docker() or sys.platform != "win32":
+        def _exit():
+            time.sleep(delay)
+            os._exit(0)
+        threading.Thread(target=_exit, daemon=True).start()
+        return
     script = str(config.BASE_DIR / "scripts" / "restart_server.ps1")
     args = ["powershell", "-NoProfile", "-ExecutionPolicy", "Bypass", "-File", script, "-Delay", str(delay)]
     # CREATE_NO_WINDOW: без окна, но с консолью (с DETACHED_PROCESS powershell не стартует). Журнал — data/logs/restart.log
