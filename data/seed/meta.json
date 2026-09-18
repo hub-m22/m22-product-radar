@@ -1,0 +1,15 @@
+{
+ "dumped_at": "2026-09-18T15:18:47Z",
+ "radar_version": "0.1.95",
+ "counts": {
+  "competitors": 78,
+  "monitored_pages": 3337,
+  "search_queries": 565,
+  "settings": 5,
+  "site_categories": 170,
+  "sources": 37,
+  "price_decisions": 0
+ },
+ "load": "python -m radar seed load",
+ "note": "исходные данные; производные таблицы восстанавливаются collect + analyze"
+}

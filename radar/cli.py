@@ -6,7 +6,9 @@
   report          — сформировать еженедельный отчёт
   serve           — запустить веб-интерфейс (с планировщиком)
   backup          — резервная копия базы
-  import-competitors <json> | import-semantic <json>
+  import competitors <json> | import semantic <json>
+  seed dump | seed load — исходные данные (реестр конкурентов, страницы, запросы, настройки) в data/seed и обратно
+  full-update     — полное обновление (как кнопка «Обновить данные»)
 """
 from __future__ import annotations
 
@@ -87,6 +89,25 @@ def cmd_import(args):
             print(importers.import_semantic_map_json(conn, args.path))
 
 
+def cmd_seed(args):
+    """Исходные данные: seed dump — выгрузить в data/seed/*.json; seed load — загрузить на новой машине после init."""
+    from . import seeding
+
+    with db.session() as conn:
+        if args.action == "dump":
+            print({"dumped_to": str(args.dir or seeding.SEED_DIR), **seeding.dump(conn, args.dir)})
+        else:
+            print(seeding.load(conn, args.dir))
+
+
+def cmd_full_update(_):
+    """То же, что кнопка «Обновить данные» в разделе «Управление»: сайты M22, конкуренты, анализ, отчёт, резервная копия."""
+    from . import scheduler
+
+    with db.session() as conn:
+        print(scheduler.full_update(conn))
+
+
 def cmd_pipeline(args):
     """Полный цикл: сбор → анализ → отчёт."""
     cmd_collect(argparse.Namespace(source=args.source, max_groups=None))
@@ -115,6 +136,11 @@ def main(argv=None):
     i.add_argument("kind", choices=["competitors", "semantic"])
     i.add_argument("path")
     i.set_defaults(fn=cmd_import)
+    sd = sub.add_parser("seed", help="исходные данные: dump — выгрузить в data/seed, load — загрузить")
+    sd.add_argument("action", choices=["dump", "load"])
+    sd.add_argument("dir", nargs="?", default=None)
+    sd.set_defaults(fn=cmd_seed)
+    sub.add_parser("full-update", help="полное обновление: сайты M22, конкуренты, анализ, отчёт, резервная копия").set_defaults(fn=cmd_full_update)
     pl = sub.add_parser("pipeline")
     pl.add_argument("source", nargs="?", default="all")
     pl.set_defaults(fn=cmd_pipeline)

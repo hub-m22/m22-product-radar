@@ -4,7 +4,7 @@
 1. Установить Python 3.11+ (winget install Python.Python.3.12).
 2. `python -m pip install -r requirements.txt`
 3. `copy .env.example .env` — при необходимости изменить порт, пороги, расписание.
-4. `python -m radar init` → `python -m radar collect all` → `python -m radar analyze` → `python -m radar report`.
+4. `python -m radar init` → `python -m radar seed load` → `python -m radar full-update` (или по шагам: `collect all` → `analyze` → `report`).
 5. `scripts\run.bat` — веб-интерфейс на http://127.0.0.1:8022 с планировщиком внутри процесса.
 6. Автозапуск: Планировщик заданий Windows → «При входе в систему» → `scripts\run.bat`. Если сервер не должен работать постоянно — задача «Ежедневно 06:00» → `scripts\collect.bat`.
 
@@ -13,6 +13,18 @@
 2. `.env`: `RADAR_HOST=0.0.0.0`, `RADAR_PORT=8022`, `RADAR_PDF_FONT_PATH=/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf` (`apt install fonts-dejavu-core`).
 3. `sudo cp scripts/m22-radar.service /etc/systemd/system/ && sudo systemctl enable --now m22-radar`.
 4. Доступ снаружи — только через обратный прокси с авторизацией (nginx `auth_basic`); встроенной аутентификации нет.
+
+## Исходные данные (data/seed) — загрузка на новой машине
+В репозитории лежат введённые руками данные, без которых сбор работает вхолостую: `data/seed/competitors.json` (реестр конкурентов с уровнями, группами, юрлицом и финансами), `monitored_pages.json` (страницы мониторинга: адрес, вид, категория, парсер и его настройки, включена/выключена и причина выключения), `search_queries.json` (запросы и seed‑термины), `settings.json` (ответственные, профиль M22, таблица идентичных моделей), `site_categories.json`, `sources.json`, `price_decisions.json`.
+
+```bash
+python -m radar init          # чистая база + миграции + справочники
+python -m radar seed load     # загрузить data/seed/*.json (повторный запуск обновляет, не дублирует)
+python -m radar full-update   # сбор → анализ → отчёт
+```
+В Docker те же команды через `docker compose exec radar …`. На Windows перед запуском `set PYTHONUTF8=1`.
+
+Производные таблицы (товары конкурентов, история цен, сопоставления, сигналы, действия, гипотезы) в сиды не входят и восстанавливаются сбором и анализом. Обновить сиды после правок реестра на рабочей машине: `python -m radar seed dump`, затем закоммитить `data/seed/`.
 
 ## Резервные копии
 - `python -m radar backup` → `data/backups/radar_<дата>.sqlite3`; автоматически — при еженедельном отчёте.
@@ -37,7 +49,11 @@ git clone <репозиторий> /opt/m22-product-radar && cd /opt/m22-product
 bash scripts/vps_install.sh        # Docker + автозапуск Docker + контейнер (restart: always) + nginx
 nano .env                          # RADAR_PASSWORD=<пароль входа>, RADAR_SECRET уже сгенерирован
 docker compose up -d               # применить .env
+docker compose exec radar python -m radar seed load        # исходные данные из data/seed (реестр конкурентов, страницы, запросы, настройки)
+docker compose exec radar python -m radar full-update      # первый сбор + анализ + отчёт (20–40 минут)
 ```
+
+**Без шага `seed load` радар пустой**: база не лежит в git (`data/*.sqlite3*` в `.gitignore`), а сбор конкурентов, Яндекс Подсказки и Google Trends работают только по реестру конкурентов, страницам мониторинга и seed‑запросам. Они хранятся в репозитории в `data/seed/*.json` (см. раздел «Исходные данные» ниже).
 
 Как устроен автозапуск, три уровня:
 1. **Docker при загрузке сервера** — `systemctl enable docker` (делает скрипт установки).

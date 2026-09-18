@@ -193,3 +193,34 @@ def test_migrations_idempotent(tmp_path):
     assert db.migrate(c)
     assert db.migrate(c) == []
     c.close()
+
+
+def test_seed_dump_load_roundtrip(conn, tmp_path):
+    """Исходные данные: dump -> чистая база -> load даёт те же строки, включая настройки парсера и выключенные страницы."""
+    from radar import seeding
+
+    conn.execute("INSERT INTO competitors(name, website, tier, group_name, inn) VALUES('Тест', 'https://test.ru', 'A', 'Группа', '7700000001')")
+    cid = conn.execute("SELECT id FROM competitors WHERE website='https://test.ru'").fetchone()["id"]
+    conn.execute("INSERT INTO monitored_pages(competitor_id, url, kind, name, category_slug, parser, parser_config_json, is_active, last_error) VALUES(?,?,?,?,?,?,?,?,?)",
+                 (cid, "https://test.ru/cat", "catalog", "Каталог", "radiogid", "css", '{"items": ".item", "price": ".price"}', 0, "выключена вручную"))
+    conn.execute("INSERT INTO search_queries(query, category_slug, intent, is_seed) VALUES('радиогид тест', 'radiogid', 'commercial', 1)")
+    db.set_setting(conn, "model_aliases", '{"T130": "SGTR02"}')
+    db.set_setting(conn, "last_analysis_at", "2026-01-01T00:00:00Z")
+    conn.commit()
+    out = tmp_path / "seed"
+    counts = seeding.dump(conn, out)
+    assert counts["competitors"] == 1 and counts["monitored_pages"] == 1 and counts["search_queries"] == 1
+    assert "last_analysis_at" not in seeding._read(out / "settings.json")
+
+    fresh = db.connect(tmp_path / "fresh.sqlite3")
+    db.migrate(fresh)
+    res = seeding.load(fresh, out)
+    assert res["competitors"]["created"] == 1 and res["monitored_pages"]["created"] == 1
+    p = fresh.execute("SELECT * FROM monitored_pages WHERE url='https://test.ru/cat'").fetchone()
+    assert p["parser"] == "css" and p["parser_config_json"] == '{"items": ".item", "price": ".price"}' and p["is_active"] == 0 and p["last_error"] == "выключена вручную"
+    assert fresh.execute("SELECT inn, group_name FROM competitors WHERE website='https://test.ru'").fetchone()["inn"] == "7700000001"
+    assert db.get_setting(fresh, "model_aliases") == '{"T130": "SGTR02"}' and db.get_setting(fresh, "last_analysis_at") is None
+    # повторная загрузка обновляет, не дублирует
+    res2 = seeding.load(fresh, out)
+    assert res2["competitors"] == {"created": 0, "updated": 1} and fresh.execute("SELECT COUNT(*) FROM monitored_pages").fetchone()[0] == 1
+    fresh.close()

@@ -13,6 +13,7 @@ cd m22-product-radar
 python -m pip install -r requirements.txt
 copy .env.example .env          # Linux/macOS: cp .env.example .env
 python -m radar init            # база + миграции + справочники
+python -m radar seed load       # исходные данные из data/seed (конкуренты, страницы мониторинга, запросы, настройки)
 python -m radar collect all     # первый сбор: M22, RadioSync, конкуренты, подсказки, Google Trends (~15 мин)
 python -m radar analyze         # сопоставление, сигналы, рекомендации, гипотезы
 python -m radar report          # еженедельный отчёт
@@ -93,8 +94,8 @@ python -m radar serve           # веб-интерфейс: http://127.0.0.1:80
 
 1. Скопируйте папку проекта на сервер, установите Python 3.11+, выполните `pip install -r requirements.txt`.
 2. Создайте `.env` (см. `.env.example`); при доступе извне поставьте `RADAR_HOST=0.0.0.0` и задайте `RADAR_PASSWORD` (вход по общему паролю, cookie-сессия на `RADAR_SESSION_DAYS` дней, подпись `RADAR_SECRET`); для интернета дополнительно HTTPS через nginx (см. docs/DEPLOY.md). Порт в брандмауэре Windows открывает `scripts/open_firewall.bat`.
-3. `python -m radar init && python -m radar collect all && python -m radar analyze`.
-4. `python -m radar serve` под supervisor/systemd. Резервные копии: `python -m radar backup` (папка `data/backups`) — также создаются автоматически при еженедельном отчёте.
+3. `python -m radar init && python -m radar seed load` — чистая база плюс исходные данные из `data/seed/` (реестр конкурентов с юрлицом и финансами, страницы мониторинга, поисковые запросы, настройки, категории сайтов, источники). Без этого шага сбор конкурентов и спроса работает вхолостую: база в git не хранится. На Windows перед командами `set PYTHONUTF8=1`.
+4. `python -m radar full-update` — первый сбор, анализ, отчёт и резервная копия (20–40 минут). Затем `python -m radar serve` под supervisor/systemd или Docker (`docs/DEPLOY.md`). Правки реестра на рабочей машине переносятся командой `python -m radar seed dump` и коммитом `data/seed/`. Резервные копии: `python -m radar backup` (папка `data/backups`) — также создаются автоматически при еженедельном отчёте.
 
 ## Тесты
 
