@@ -946,6 +946,24 @@ def pricing_recalc():
     return RedirectResponse("/pricing", status_code=303)
 
 
+@app.get("/export/pricing-report.html")
+def export_pricing_report():
+    """Отчёт с рекомендованными ценами и ссылками. Файл открывается в Google Диске как Google Документ (Диск → Создать → Загрузить файл)."""
+    with db.session() as conn:
+        rows, seen = [], set()
+        for r in pricing.review(conn):
+            if r["verdict"] == "no_data" or (r["p"]["name"], r["p"]["price"]) in seen:
+                continue  # один товар на двух страницах (m22.ru и radiosync.ru) — в отчёте один раз
+            seen.add((r["p"]["name"], r["p"]["price"]))
+            rows.append(r)
+        decisions = {d["m22_product_id"]: d for d in db.rows(conn, "SELECT * FROM price_decisions")}
+    html_text = pricing.report_html(rows, decisions)
+    path = config.EXPORT_DIR / "pricing-report.html"
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text(html_text, encoding="utf-8")
+    return FileResponse(str(path), filename=f"M22-цены-рекомендации-{datetime.now().strftime('%Y-%m-%d')}.html", media_type="text/html")
+
+
 @app.get("/export/pricing.xlsx")
 def export_pricing():
     from openpyxl import Workbook
@@ -956,11 +974,11 @@ def export_pricing():
     wb = Workbook()
     ws = wb.active
     ws.title = "Пересмотр цен"
-    ws.append(["Вердикт", "Товар M22", "Сайт", "Категория", "Цена M22", "Медиана рынка", "Мин", "Макс", "Отклонение, %", "Предложений", "Продавцов", "Точных", "Почему",
+    ws.append(["Вердикт", "Товар M22", "Ссылка", "Сайт", "Категория", "Цена M22", "Рекомендованная цена", "Медиана рынка", "Мин", "Макс", "Отклонение, %", "Предложений", "Продавцов", "Точных", "Почему",
                "Решение", "Кто", "Когда", "Комментарий"])
     for r in rows:
         d = decisions.get(r["p"]["id"])
-        ws.append([r["verdict_ru"], r["p"]["name"], r["p"]["site"], r["category"], r["p"]["price"], r["median"], r["pmin"], r["pmax"], r["gap"], r["n"], r["sellers"], r["strong"], r["why"],
+        ws.append([r["verdict_ru"], r["p"]["name"], r["p"]["url"], r["p"]["site"], r["category"], r["p"]["price"], r.get("reco"), r["median"], r["pmin"], r["pmax"], r["gap"], r["n"], r["sellers"], r["strong"], r["why"],
                    PRICE_DECISION_NAMES.get(d["status"], d["status"]) if d else "", d["author"] if d else "", d["updated_at"] if d else "", d["comment"] if d else ""])
     path = config.EXPORT_DIR / "pricing.xlsx"
     path.parent.mkdir(parents=True, exist_ok=True)

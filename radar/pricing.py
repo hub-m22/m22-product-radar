@@ -73,10 +73,88 @@ def review(conn: sqlite3.Connection, categories: list[str] | None = None, only_w
             why += "; все предложения от одного продавца"
         row.update(verdict=verdict, verdict_ru=ru, gap=round(gap), median=med, pmin=min(prices), pmax=max(prices), strong_median=strong_med,
                    why=why.replace(",", " "), target_low=med * 0.95, target_high=med * 1.05)
+        row["reco"] = recommended_price(verdict, p["price"], med, approx)
         out.append(row)
     order = {"lower": 0, "raise": 1, "keep": 2, "no_data": 3}
     out.sort(key=lambda r: (order[r["verdict"]], -(abs(r["gap"] or 0))))
     return out
+
+
+def round_price(v: float) -> float:
+    """Красивая розничная цена: до 1 000 ₽ — шаг 10, до 10 000 — шаг 50, выше — шаг 100."""
+    step = 10 if v < 1000 else (50 if v < 10000 else 100)
+    return float(round(v / step) * step)
+
+
+RAISE_STEP_MAX = 0.25         # за один шаг цену не поднимаем больше чем на 25 %
+RAISE_STEP_MAX_APPROX = 0.15  # если вывод по аналогам, а не по идентичным моделям — не больше 15 %
+
+
+def recommended_price(verdict: str, price: float, median: float | None, approx: bool = False) -> float | None:
+    """Рекомендованная цена M22.
+
+    - снизить: к медиане рынка (покупатель сравнивает именно с ней);
+    - поднять: 95 % медианы — остаёмся чуть ниже рынка, но за один шаг не больше +25 % (по аналогам — +15 %) и не меньше текущей;
+    - держать: текущая цена; мало данных — рекомендации нет.
+    """
+    if not median:
+        return None
+    if verdict == "lower":
+        return round_price(median)
+    if verdict == "raise":
+        cap = price * (1 + (RAISE_STEP_MAX_APPROX if approx else RAISE_STEP_MAX))
+        return max(price, round_price(min(median * 0.95, cap)))
+    if verdict == "keep":
+        return price
+    return None
+
+
+def report_html(rows: list[dict], decisions: dict | None = None, title: str = "Рекомендации по ценам M22") -> str:
+    """Отчёт с рекомендованными ценами и ссылками — HTML, который Google Диск открывает как Google Документ."""
+    import html
+    from datetime import datetime
+
+    decisions = decisions or {}
+    order = [("lower", "Снизить или обосновать — дороже рынка"), ("raise", "Поднять — дешевле рынка"), ("keep", "Держать — в рынке")]
+    names = {"approved": "Согласовано", "accepted": "Принято в исполнение", "rejected": "Отклонено", "deferred": "Отложено"}
+
+    def money(v):
+        return "—" if v is None else f"{v:,.0f} ₽".replace(",", " ")
+
+    def esc(s):
+        return html.escape(str(s or ""))
+
+    s = summary(rows)
+    parts = [f"<html><head><meta charset='utf-8'><title>{esc(title)}</title></head><body style='font-family:Arial,sans-serif;font-size:11pt'>",
+             f"<h1>{esc(title)}</h1>",
+             f"<p>Дата: {datetime.now().strftime('%d.%m.%Y %H:%M')}. Товаров с выводом: снизить {s['lower']}, поднять {s['raise']}, держать {s['keep']}; мало данных — {s['no_data']}.</p>",
+             "<p>Как считается: по каждому товару M22 берутся только надёжные сопоставления (идентичные и точные модели, одинаковое фото, прямые аналоги с совместимыми характеристиками), "
+             "минимум 3 предложения от 2+ продавцов (сайты одной группы — один продавец). Медиана рынка — середина их цен. Порог отклонения 10 %. "
+             "Рекомендованная цена: «снизить» — к медиане рынка; «поднять» — 95 % медианы, чуть ниже рынка, но за один шаг не больше +25 % (по аналогам +15 %); «держать» — текущая. "
+             "Вердикты с пометкой «ориентировочно» построены по аналогам того же типа без идентичных моделей — перед изменением цены проверьте состав аналогов по ссылкам.</p>"]
+    for key, head in order:
+        sect = [r for r in rows if r["verdict"] == key]
+        if not sect:
+            continue
+        parts.append(f"<h2>{esc(head)} ({len(sect)})</h2>")
+        parts.append("<table border='1' cellspacing='0' cellpadding='4' style='border-collapse:collapse;font-size:10pt'>"
+                     "<tr><th>Товар M22</th><th>Сейчас</th><th>Медиана рынка</th><th>Рекомендовано</th><th>Изменение</th><th>Предл./продавцов</th><th>Решение</th></tr>")
+        for r in sect:
+            p = r["p"]
+            reco = r.get("reco")
+            delta = "" if reco is None or reco == p["price"] else f"{reco - p['price']:+,.0f} ₽ ({(reco - p['price']) / p['price'] * 100:+.0f} %)".replace(",", " ")
+            d = decisions.get(p["id"])
+            dtxt = f"{names.get(d['status'], d['status'])} · {d['author'] or ''} · {d['updated_at'][:10]}" if d else ""
+            parts.append(f"<tr><td><a href='{esc(p['url'])}'>{esc(p['name'])}</a><br><small>{esc(p['site'])}{' · ' + esc(p['model_key']) if p['model_key'] else ''}</small></td>"
+                         f"<td>{money(p['price'])}</td><td>{money(r['median'])}<br><small>{money(r['pmin'])} – {money(r['pmax'])}</small></td>"
+                         f"<td><b>{money(reco)}</b></td><td>{esc(delta)}</td><td>{r['n']} / {r['sellers']}</td><td>{esc(dtxt)}</td></tr>")
+            offers = "; ".join(f"<a href='{esc(c['url'])}'>{esc(c['competitor_name'][:30])}: {esc(c['name'][:60])}</a> — {money(c['price'])}"
+                               + (" (маркетплейс, цена динамическая)" if c.get("competitor_tier") == "M" else "") + (f" ({esc(c['price_range'])})" if c.get("price_range") else "")
+                               for c in r["comps"][:6])
+            parts.append(f"<tr><td colspan='7' style='background:#f7f7f7'><small><b>Почему:</b> {esc(r['why'])}{'; ' + esc(r['verdict_ru']) if 'ориентировочно' in r['verdict_ru'] else ''}.<br><b>Предложения:</b> {offers}</small></td></tr>")
+        parts.append("</table>")
+    parts.append("</body></html>")
+    return "\n".join(parts)
 
 
 def summary(rows: list[dict]) -> dict:
