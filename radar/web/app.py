@@ -153,10 +153,18 @@ def fmt_pct(v):
 
 
 def fmt_dt(v):
+    """Отметки времени в базе — UTC (datetime('now') в SQLite и ISO с «Z»); показываем по Москве."""
     if not v:
         return "—"
-    s = str(v).replace("T", " ").replace("Z", "")
-    return s[:16]
+    s = str(v).replace("T", " ").replace("Z", "")[:19]
+    try:
+        from zoneinfo import ZoneInfo
+
+        from datetime import timezone
+        dt = datetime.strptime(s[:19] if len(s) >= 19 else s[:16], "%Y-%m-%d %H:%M:%S" if len(s) >= 19 else "%Y-%m-%d %H:%M")
+        return dt.replace(tzinfo=timezone.utc).astimezone(ZoneInfo("Europe/Moscow")).strftime("%Y-%m-%d %H:%M")
+    except Exception:  # noqa: BLE001
+        return s[:16]
 
 
 templates.env.filters.update({"money": fmt_money, "rub": fmt_rub, "pct": fmt_pct, "dt": fmt_dt, "uj": lambda t, d=None: db.uj(t, d)})
@@ -236,7 +244,11 @@ def render(request: Request, name: str, **ctx) -> HTMLResponse:
         last_collect = db.row(conn, "SELECT MAX(finished_at) AS t FROM source_runs WHERE status IN ('ok','partial')")
         errors = db.row(conn, "SELECT COUNT(*) AS n FROM sources WHERE status='error'")["n"]
         owners = (db.get_setting(conn, "owners") or "").split(";")
+    running = [{"name": k, "title": JOB_TITLES.get(k, k), **v} for k, v in scheduler.JOB_STATE.items() if v.get("status") == "running"]
+    finished = sorted([{"name": k, "title": JOB_TITLES.get(k, k), **v} for k, v in scheduler.JOB_STATE.items() if v.get("status") in ("ok", "error") and v.get("finished_at")],
+                      key=lambda x: x["finished_at"], reverse=True)[:1]
     ctx.update({"request": request, "last_update": last_collect["t"] if last_collect else None, "source_errors": errors, "owners": [o for o in owners if o],
+                "jobs_running": running, "job_last": finished[0] if finished else None,
                 "now": datetime.now().strftime("%d.%m.%Y %H:%M"), "path": request.url.path,
                 # версия и метка статики — при каждом запросе, чтобы после обновления кода/файлов не требовался перезапуск и не мешал кэш браузера
                 "app_version": __import__("radar").get_version(), "asset_version": _asset_version(), "back": _back(request), "page_title": ctx.get("page_title") or _page_title(request.url.path, request.url.query)})
@@ -1063,6 +1075,7 @@ def site_audit_page(request: Request, priority: str = "", site: str = "", group:
 def site_audit_stock(request: Request, site: str = "", status: str = "", category: str = "core"):
     with db.session() as conn:
         d = site_audit.stock_report(conn)
+        fr = site_audit.freshness(conn)
     cats = []
     for c in d["cats"]:
         if category == "core" and not c["core"]:
@@ -1072,7 +1085,7 @@ def site_audit_stock(request: Request, site: str = "", status: str = "", categor
         rows = [r for r in c["rows"] if (not site or r["site"] == site) and (not status or r["status"] == status)]
         if rows:
             cats.append({**c, "rows": rows})
-    return render(request, "site_audit_stock.html", d=d, cats=cats, f={"site": site, "status": status, "category": category}, shown=sum(len(c["rows"]) for c in cats))
+    return render(request, "site_audit_stock.html", d=d, fr=fr, cats=cats, f={"site": site, "status": status, "category": category}, shown=sum(len(c["rows"]) for c in cats))
 
 
 @app.post("/site-audit/dismiss")
@@ -1591,6 +1604,21 @@ def admin_page(request: Request, msg: str = ""):
     return render(request, "admin.html", states=states, running=running, jobs=jobs, lan=_lan_info(), last_runs=last_runs, msg=msg, has_password=bool(config.PASSWORD),
                   backups=[{"name": b.name, "size_mb": round(b.stat().st_size / 1e6, 1), "mtime": datetime.fromtimestamp(b.stat().st_mtime).strftime("%Y-%m-%d %H:%M")} for b in backups],
                   schedule={"Сайты M22": f"ежедневно {config.M22_CRON_HOUR:02d}:00", "Конкуренты": f"ежедневно {config.COMPETITORS_CRON_HOUR:02d}:00", "Спрос": f"{config.TRENDS_CRON_DOW} 07:30", "Отчёт и копия": f"{config.REPORT_CRON_DOW} 08:30"})
+
+
+@app.post("/refresh/{name}")
+def refresh_from_page(request: Request, name: str):
+    """Кнопки «Обновить всё» (full_update) и «Обновить наши сайты» (m22) на любом экране: запуск в фоне и возврат на ту же страницу с подтверждением."""
+    if name not in JOB_TITLES:
+        raise HTTPException(400, "Неизвестная задача")
+    started = scheduler.run_now(name)
+    back = request.headers.get("referer") or "/"
+    if not (back.startswith("/") or "://" in back):
+        back = "/"
+    sep = "&" if "?" in back else "?"
+    back = re.sub(r"[?&]refresh=[a-z_]+", "", back)
+    sep = "&" if "?" in back else "?"
+    return RedirectResponse(f"{back}{sep}refresh={'started' if started else 'busy'}", status_code=303)
 
 
 @app.post("/admin/run/{name}")

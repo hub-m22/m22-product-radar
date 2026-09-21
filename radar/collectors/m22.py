@@ -141,6 +141,7 @@ def run(conn: sqlite3.Connection, limit: int | None = None) -> dict:
         if limit:
             urls = urls[:limit]
         log.info("m22.ru: %s страниц товаров в контуре", len(urls))
+        failed: list[str] = []
         for url in urls:
             try:
                 res = http.fetch(url, SOURCE_KEY, respect_robots=False)
@@ -156,13 +157,21 @@ def run(conn: sqlite3.Connection, limit: int | None = None) -> dict:
                 conn.commit()
             except http.FetchError as exc:
                 errors += 1
+                failed.append(url)
                 db.log_error(conn, SOURCE_KEY, url, str(exc))
                 conn.commit()
-        # Товары, не встреченные в этом запуске, помечаем как исчезнувшие
-        conn.execute(
-            "UPDATE m22_products SET is_active=0 WHERE site='m22.ru' AND is_active=1 AND (fetched_at IS NULL OR fetched_at < (SELECT started_at FROM source_runs WHERE id=?))",
-            (run_id,),
-        ) if seen > 10 else None
+        # Товары, которых больше нет в карте сайта, помечаем как исчезнувшие. Страницы, которые просто не открылись
+        # (тайм-аут сайта), исчезнувшими не считаются — иначе при сбое m22.ru карточки «пропадают» из наличия
+        if seen > 10:
+            keep = set(urls)
+            for p in db.rows(conn, "SELECT id, url FROM m22_products WHERE site='m22.ru' AND is_active=1 AND (fetched_at IS NULL OR fetched_at < (SELECT started_at FROM source_runs WHERE id=?))", (run_id,)):
+                base_url = p["url"].split("#")[0]
+                if base_url in keep or base_url in failed:
+                    continue  # есть в карте сайта или не открылась — оставляем активной
+                conn.execute("UPDATE m22_products SET is_active=0 WHERE id=?", (p["id"],))
+            # карточки, которые не открылись сегодня, но открывались раньше, — возвращаем в активные
+            if failed:
+                conn.execute(f"UPDATE m22_products SET is_active=1 WHERE site='m22.ru' AND is_active=0 AND url IN ({','.join('?' * len(failed))})", failed)
         status = "ok" if errors == 0 else ("partial" if seen else "error")
         db.finish_run(conn, run_id, status, seen, changed, errors, f"{seen} товаров, {changed} изменений, {errors} ошибок")
     except Exception as exc:  # noqa: BLE001

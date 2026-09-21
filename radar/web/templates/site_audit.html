@@ -3,7 +3,8 @@
 {% block content %}
 <div class="topbar"><div><h1>Наши сайты: m22.ru и radiosync.ru</h1>
 <div class="sub">Проверка собственных сайтов по данным последнего сбора ({{ d.last_fetch | dt }}): цены и наличие, расхождения между сайтами, дубли, неполные карточки, единообразие названий, опечатки, структура каталога. Всего карточек: {{ d.products }}. По умолчанию показаны только основные категории (радиогиды, аудиогиды, синхроперевод, наушники, микрофоны, кейсы, комплекты, аренда).</div></div>
-<div class="actions-row"><a class="btn sec small" href="/export/site_audit.xlsx">XLSX</a> <a class="btn sec small" href="/export/site_audit.csv">CSV</a></div></div>
+<div class="actions-row"><form method="post" action="/refresh/m22" class="inline"><button class="small" {% if jobs_running %}disabled title="уже идёт обновление"{% endif %} title="заново снять карточки m22.ru и radiosync.ru (5–10 минут) и пересчитать ошибки и наличие">⟳ Обновить наши сайты</button></form> <a class="btn sec small" href="/export/site_audit.xlsx">XLSX</a> <a class="btn sec small" href="/export/site_audit.csv">CSV</a></div></div>
+<div class="small muted" style="margin:-6px 0 10px">Данные сняты: m22.ru — <b>{{ d.fetch_by_site.get('m22.ru') | dt }}</b> ({{ d.count_by_site.get('m22.ru', 0) }} карточек{% if d.errors_by_site.get('m22.ru') %}, не открылось {{ d.errors_by_site.get('m22.ru') }}{% endif %}), radiosync.ru — <b>{{ d.fetch_by_site.get('radiosync.ru') | dt }}</b> ({{ d.count_by_site.get('radiosync.ru', 0) }} карточек{% if d.errors_by_site.get('radiosync.ru') %}, не открылось {{ d.errors_by_site.get('radiosync.ru') }}{% endif %}). Если дата старше суток или есть неоткрывшиеся карточки — нажмите «Обновить наши сайты».</div>
 
 {% include "_site_audit_tabs.html" %}
 <div class="kpis">

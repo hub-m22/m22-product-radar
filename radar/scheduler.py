@@ -104,6 +104,13 @@ def full_update(conn):
 
     r = {"m22": m22.run(conn), "radiosync": radiosync.run(conn), "competitors": competitor_generic.run(conn)}
     r["analysis"] = analyze(conn)
+    try:
+        from . import news
+
+        r["news"] = news.run(conn)
+    except Exception as exc:  # noqa: BLE001
+        log.exception("news in full_update")
+        r["news"] = {"error": str(exc)[:200]}
     rep = reports.build_weekly(conn, days=7)
     r["report_id"] = reports.save(conn, rep)
     r["backup"] = str(db.backup(conn, "update"))
@@ -154,8 +161,8 @@ def start():
 def run_now(name: str) -> bool:
     """Запуск задачи из интерфейса в фоне."""
     fn = {"m22": collect_m22, "competitors": collect_competitors, "demand": collect_demand, "analyze": analyze, "weekly_report": weekly_report, "full_update": full_update, "news": competitor_news}.get(name)
-    if fn is None:
-        return False
+    if fn is None or _lock.locked():
+        return False  # другой сбор ещё идёт — честно говорим «занято», а не делаем вид, что запустили
     threading.Thread(target=_run_job, args=[name, fn], daemon=True).start()
     return True
 

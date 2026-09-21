@@ -334,8 +334,10 @@ def check_competitor(conn: sqlite3.Connection, comp: dict, run_id: int) -> dict:
         if page["id"] in done:
             continue
         done.add(page["id"])
+        if failed >= 2 and ok == 0:
+            break  # сайт не отвечает (две страницы подряд не открылись) — не тратим по минуте на каждую следующую
         try:
-            res = http.fetch(page["url"], SOURCE_KEY, save=False, timeout=30)
+            res = http.fetch(page["url"], SOURCE_KEY, save=False, timeout=20)
         except http.RobotsDisallowed as exc:
             failed += 1
             conn.execute("UPDATE news_pages SET last_status='robots_disallowed', last_error=?, last_checked_at=datetime('now'), fail_count=fail_count+1, is_active=0 WHERE id=?", (str(exc)[:300], page["id"]))

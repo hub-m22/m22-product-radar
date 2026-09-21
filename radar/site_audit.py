@@ -490,7 +490,18 @@ def run(conn: sqlite3.Connection) -> dict:
     cat_order = {s: n for n, s in enumerate(CATEGORY_NAMES)}
     cats = sorted(by_cat.values(), key=lambda c: (c["slug"] not in CORE_CATEGORIES, cat_order.get(c["slug"], 99)))
     return {"items": items, "counts": counts, "total": len(active), "dismissed": len(items) - len(active), "by_site": by_site, "by_group": by_group, "cats": cats,
-            "products": len([p for p in prods if not p["parent_url"]]), "last_fetch": max((p["fetched_at"] or "" for p in prods), default=None)}
+            "products": len([p for p in prods if not p["parent_url"]]), "last_fetch": max((p["fetched_at"] or "" for p in prods), default=None), **freshness(conn)}
+
+
+def freshness(conn: sqlite3.Connection) -> dict:
+    """Когда сняты карточки каждого сайта, сколько их и сколько не открылось в последнем сборе — чтобы было видно, актуальны ли данные."""
+    fetch_by_site, count_by_site, errors_by_site = {}, {}, {}
+    for s in ("m22.ru", "radiosync.ru"):
+        r = db.row(conn, "SELECT MAX(fetched_at) t, COUNT(*) n FROM m22_products WHERE site=? AND is_active=1 AND parent_url IS NULL", (s,))
+        fetch_by_site[s], count_by_site[s] = (r["t"], r["n"]) if r else (None, 0)
+        last = db.row(conn, "SELECT started_at FROM source_runs WHERE source_key=? ORDER BY id DESC LIMIT 1", (s,))
+        errors_by_site[s] = db.row(conn, "SELECT COUNT(DISTINCT url) n FROM error_log WHERE source_key=? AND ts >= ?", (s, last["started_at"]))["n"] if last else 0
+    return {"fetch_by_site": fetch_by_site, "count_by_site": count_by_site, "errors_by_site": errors_by_site}
 
 
 def export_rows(conn: sqlite3.Connection) -> list[dict]:

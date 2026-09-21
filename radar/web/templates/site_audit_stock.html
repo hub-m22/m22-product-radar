@@ -2,7 +2,9 @@
 {% block title %}Наличие — Наши сайты — M22 Product Radar{% endblock %}
 {% block content %}
 <div class="topbar"><div><h1>Наши сайты: наличие</h1>
-<div class="sub">Что сейчас нельзя купить на m22.ru и radiosync.ru: нет в наличии, предзаказ, без цены. По категориям, с фото; у каждого товара — ссылка на сайт и статус двойника на втором сайте. Всего карточек: {{ d.products }}, из них недоступны: {{ d.total }}.</div></div></div>
+<div class="sub">Что сейчас нельзя купить на m22.ru и radiosync.ru: нет в наличии, предзаказ, без цены. По категориям, с фото; у каждого товара — ссылка на сайт и статус двойника на втором сайте. Всего карточек: {{ d.products }}, из них недоступны: {{ d.total }}.</div></div>
+<div class="actions-row"><form method="post" action="/refresh/m22" class="inline"><button class="small" {% if jobs_running %}disabled title="уже идёт обновление"{% endif %} title="заново снять карточки m22.ru и radiosync.ru (5–10 минут) и пересчитать наличие">⟳ Обновить наши сайты</button></form></div></div>
+<div class="small muted" style="margin:-6px 0 10px">Данные сняты: m22.ru — <b>{{ fr.fetch_by_site.get('m22.ru') | dt }}</b> ({{ fr.count_by_site.get('m22.ru', 0) }} карточек{% if fr.errors_by_site.get('m22.ru') %}, не открылось {{ fr.errors_by_site.get('m22.ru') }}{% endif %}), radiosync.ru — <b>{{ fr.fetch_by_site.get('radiosync.ru') | dt }}</b> ({{ fr.count_by_site.get('radiosync.ru', 0) }} карточек{% if fr.errors_by_site.get('radiosync.ru') %}, не открылось {{ fr.errors_by_site.get('radiosync.ru') }}{% endif %}). Если дата старше суток или есть неоткрывшиеся карточки — нажмите «Обновить наши сайты».</div>
 {% include "_site_audit_tabs.html" %}
 <div class="kpis">
   {% for st, n in d.by_status.most_common() %}<div class="kpi"><div class="kpi-v" style="color:{{ '#b91c1c' if st in ('нет в наличии','распродано') else ('#b45309' if st == 'без цены' else 'inherit') }}">{{ n }}</div><div class="kpi-l">{{ st }}</div></div>{% endfor %}

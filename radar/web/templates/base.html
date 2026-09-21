@@ -21,12 +21,18 @@
     </nav>
     <div class="meta">
       Последнее обновление данных:<br><b>{{ last_update | dt }}</b><br>
+      {% if jobs_running %}<span class="warn">⏳ Идёт: {{ jobs_running | map(attribute='title') | join(', ') }} (с {{ jobs_running[0].started_at[-5:] }})</span><br>
+      {% else %}<form method="post" action="/refresh/full_update" class="inline" onsubmit="return confirm('Обновить всё: сайты M22, конкуренты, анализ, новости конкурентов, отчёт и копия базы. Займёт 30–90 минут, страницы работают. Запустить?')"><button type="submit" class="small" style="margin:4px 0" title="сайты M22 → конкуренты → анализ → новости конкурентов → отчёт → резервная копия">⟳ Обновить всё</button></form>{% endif %}
       {% if source_errors %}<span class="warn">Источников с ошибками: {{ source_errors }}</span><br>{% endif %}
       <span>Сейчас: {{ now }}</span><br><a href="/logout" style="color:#9fb3c8">Выйти из радара</a><br>
       <button type="button" class="theme-toggle js-theme-toggle" title="Переключить светлую/тёмную тему"><span class="js-theme-icon">🌙</span> <span class="js-theme-label">Тёмная тема</span></button>
     </div>
   </aside>
   <main>
+    {% if request.query_params.get('refresh') == 'started' %}<div class="note no-print">✅ Обновление запущено {{ now[-5:] }}. Идёт в фоне; дата «Последнее обновление данных» слева и цифры на экране обновятся, когда сбор закончится — обновите страницу через несколько минут. Ход и итог — в разделе «Управление».</div>
+    {% elif request.query_params.get('refresh') == 'busy' %}<div class="note no-print">Обновление уже идёт — дождитесь окончания (слева показано, что именно выполняется).</div>
+    {% elif jobs_running %}<div class="note no-print">⏳ Сейчас выполняется: {{ jobs_running | map(attribute='title') | join(', ') }} (запущено {{ jobs_running[0].started_at[-5:] }}). Данные на экране — по состоянию на последнее завершённое обновление.</div>
+    {% elif job_last and job_last.status == 'error' %}<div class="note no-print" style="border-color:var(--high)">Последнее обновление «{{ job_last.title }}» завершилось ошибкой ({{ job_last.finished_at[-5:] }}): {{ job_last.error[:160] }}. Подробности — «Управление».</div>{% endif %}
     {% if back %}<div class="backbar no-print"><a href="{{ back.href }}" title="вернуться: {{ back.kind }}">← Назад: {{ back.label }}</a><span class="muted small"> · сейчас: {{ page_title }}</span></div>{% endif %}
     {% block content %}{% endblock %}
   </main>
