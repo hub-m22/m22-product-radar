@@ -63,6 +63,12 @@ PDF_FONT_PATH = os.getenv("RADAR_PDF_FONT_PATH", "C:/Windows/Fonts/arial.ttf")
 # Секреты (никогда не логируются и не показываются в интерфейсе)
 YANDEX_WORDSTAT_TOKEN = os.getenv("YANDEX_WORDSTAT_TOKEN", "").strip()
 ANTHROPIC_API_KEY = os.getenv("ANTHROPIC_API_KEY", "").strip()
+AI_MODEL = os.getenv("RADAR_AI_MODEL", "claude-haiku-4-5-20251001")  # дешёвая модель: ей передают только найденные изменения, не сайты целиком
+
+# «Новости конкурентов»: ежедневный обход сайтов уровней A и B
+NEWS_CRON_HOUR = int(os.getenv("RADAR_NEWS_CRON_HOUR", "7"))
+NEWS_MAX_PAGES = int(os.getenv("RADAR_NEWS_MAX_PAGES", "24"))        # страниц на конкурента за прогон (без карточек товаров — они в сборе конкурентов)
+NEWS_MIN_ADDED_CHARS = int(os.getenv("RADAR_NEWS_MIN_ADDED_CHARS", "60"))  # меньше добавленного текста — шум
 
 for _d in (RAW_DIR, EXPORT_DIR, BACKUP_DIR, IMPORT_DIR, LOG_DIR, DB_PATH.parent):
     _d.mkdir(parents=True, exist_ok=True)

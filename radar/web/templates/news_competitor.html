@@ -1,0 +1,30 @@
+{% extends "base.html" %}
+{% block title %}{{ d.comp.name }} — лента изменений — M22 Product Radar{% endblock %}
+{% block content %}
+<div class="topbar"><div><h1>{{ d.comp.name }} <span class="badge st">уровень {{ d.comp.tier }}</span></h1>
+<div class="sub">Хронология действий конкурента по данным ежедневной проверки сайта <a href="{{ d.comp.website }}" target="_blank" rel="noopener">{{ d.comp.website }}</a>. <a href="/competitors/{{ d.comp.id }}">Карточка конкурента →</a></div></div>
+<div class="actions-row"><a class="btn sec small" href="/news">← Все конкуренты</a></div></div>
+
+<div class="grid grid-2">
+<div class="card"><h3>Лента изменений</h3>
+{% if not d.events %}<div class="muted">Существенных изменений пока не зафиксировано.</div>{% endif %}
+{% for e in d.events %}
+<div class="sig {{ 'sev-high' if e.importance == 3 else ('sev-medium' if e.importance == 2 else 'sev-low') }}" style="margin-bottom:8px">
+  <div class="t"><b>{{ e.detected_at[:10] }}</b> — <span class="badge {{ 'st-new' if e.event_type in ('NEW_PRODUCT','NEW_CATEGORY','NEW_BRAND','NEW_SOLUTION') else 'st' }}">{{ EVENT_NAMES.get(e.event_type, e.event_type) }}</span> {{ e.title }}</div>
+  {% if e.summary %}<div class="w small">{{ e.summary }}</div>{% endif %}
+  {% if e.what_changed %}<div class="why"><b>Что изменилось:</b> {{ e.what_changed }}</div>{% endif %}
+  <div class="m">{% if e.url %}<a href="{{ e.url }}" target="_blank" rel="noopener">Открыть источник ↗</a>{% endif %}<span class="muted">{% if e.published_at %}опубликовано {{ e.published_at[:10] }} · {% endif %}обнаружено {{ e.detected_at | dt }}</span></div>
+</div>
+{% endfor %}
+</div>
+<div>
+<div class="card compact"><h3>Проверки сайта</h3>
+<table><thead><tr><th>Когда</th><th>Итог</th><th>Страниц</th><th>Событий</th></tr></thead><tbody>
+{% for r in d.runs %}<tr><td class="small">{{ (r.finished_at or r.started_at) | dt }}</td><td><span class="badge {{ 'sev-high' if r.status == 'CRAWL_ERROR' else ('sev-medium' if r.status == 'PARTIAL_CRAWL' else ('st-new' if r.status == 'CHANGES_FOUND' else 'st')) }}">{{ NEWS_STATUS.get(r.status, r.status or 'идёт') }}</span>{% if r.error %}<div class="small muted">{{ r.error[:120] }}</div>{% endif %}</td><td class="num small">{{ r.pages_ok }}/{{ r.pages_total }}</td><td class="num small">{{ r.events_found }}</td></tr>{% else %}<tr><td colspan="4" class="muted">проверок ещё не было</td></tr>{% endfor %}
+</tbody></table></div>
+<div class="card compact" style="margin-top:10px"><h3>Какие страницы проверяются ({{ d.pages|length }})</h3>
+<div class="small">{% for p in d.pages %}<div style="padding:2px 0;{% if not p.is_active %}opacity:.55{% endif %}"><span class="badge st">{{ p.kind }}</span> <a href="{{ p.url }}" target="_blank" rel="noopener">{{ (p.title or p.url)[:70] }}</a> <span class="muted">{% if p.last_status == 'ok' %}✓{% elif p.last_status %}{{ p.last_status }}{% endif %}{% if not p.is_active %} · выключена{% endif %}</span></div>{% endfor %}</div>
+<div class="small muted" style="margin-top:6px">Карточки товаров проверяет сбор конкурентов: оттуда берутся события «новый товар», «товар снят», «изменение цены».</div></div>
+</div>
+</div>
+{% endblock %}

@@ -9,6 +9,7 @@
   import competitors <json> | import semantic <json>
   seed dump | seed load — исходные данные (реестр конкурентов, страницы, запросы, настройки) в data/seed и обратно
   full-update     — полное обновление (как кнопка «Обновить данные»)
+  news [--competitor ID] — новости конкурентов: что изменилось на сайтах A и B
 """
 from __future__ import annotations
 
@@ -108,6 +109,14 @@ def cmd_full_update(_):
         print(scheduler.full_update(conn))
 
 
+def cmd_news(args):
+    """«Новости конкурентов»: обход сайтов A и B, снимки, сравнение, события, дайджест."""
+    from . import news
+
+    with db.session() as conn:
+        print(news.run(conn, competitor_id=args.competitor))
+
+
 def cmd_pipeline(args):
     """Полный цикл: сбор → анализ → отчёт."""
     cmd_collect(argparse.Namespace(source=args.source, max_groups=None))
@@ -141,6 +150,9 @@ def main(argv=None):
     sd.add_argument("dir", nargs="?", default=None)
     sd.set_defaults(fn=cmd_seed)
     sub.add_parser("full-update", help="полное обновление: сайты M22, конкуренты, анализ, отчёт, резервная копия").set_defaults(fn=cmd_full_update)
+    nw = sub.add_parser("news", help="новости конкурентов: проверить сайты A и B на изменения")
+    nw.add_argument("--competitor", type=int, default=None)
+    nw.set_defaults(fn=cmd_news)
     pl = sub.add_parser("pipeline")
     pl.add_argument("source", nargs="?", default="all")
     pl.set_defaults(fn=cmd_pipeline)

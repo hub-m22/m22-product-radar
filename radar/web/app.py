@@ -183,6 +183,7 @@ PAGE_TITLES = [  # префикс пути -> название экрана (с�
     ("/competitor-matrix", "Матрица конкурентов"), ("/compare", "Сравнение характеристик и цен"),
     ("/matrix/", "Карточка товара M22"), ("/matrix", "Матрица M22"),
     ("/pricing", "Цены"), ("/categories/", "Категория"), ("/categories", "Цены по категориям"),
+    ("/news/competitor/", "Лента изменений конкурента"), ("/news", "Новости конкурентов"),
     ("/market", "Ассортимент и рынок"), ("/signals/", "Событие рынка"), ("/signals", "Ассортимент и рынок"),
     ("/opportunities/", "Гипотеза"), ("/opportunities", "Гипотезы"), ("/actions/", "Действие"), ("/actions", "Действия"),
     ("/demand", "Поисковый спрос"), ("/sources", "Источники"), ("/reports/", "Отчёт"), ("/reports", "Отчёты"),
@@ -892,6 +893,47 @@ def sitecats_rescan(request: Request):
         site_categories.enrich_out_of_scope(conn)
     return RedirectResponse("/competitor-matrix?view=sitecats", status_code=303)
 
+# ---------------- Новости конкурентов ----------------
+@app.get("/news", response_class=HTMLResponse)
+def news_page(request: Request, days: int = 7, tier: str = "", competitor_id: str = "", event_type: str = "", category: str = "", unread: str = "", products_only: str = ""):
+    from .. import news as newsmod
+
+    f = {"days": days, "tier": tier, "competitor_id": competitor_id or None, "event_type": event_type, "category": category, "unread": unread, "products_only": products_only}
+    with db.session() as conn:
+        d = newsmod.overview(conn, f)
+        lists = _lists(conn)
+        running = (scheduler.JOB_STATE.get("news") or {}).get("status") == "running"
+    return render(request, "news.html", d=d, f=f, running=running, EVENT_NAMES=newsmod.EVENT_NAMES, NEWS_STATUS=newsmod.STATUS_NAMES, ai_enabled=__import__("radar.ai", fromlist=["enabled"]).enabled(), **lists)
+
+
+@app.get("/news/competitor/{cid}", response_class=HTMLResponse)
+def news_competitor_page(request: Request, cid: int):
+    from .. import news as newsmod
+
+    with db.session() as conn:
+        d = newsmod.competitor_feed(conn, cid)
+        if not d["comp"]:
+            raise HTTPException(404)
+        newsmod.mark_viewed(conn, cid)
+    return render(request, "news_competitor.html", d=d, EVENT_NAMES=newsmod.EVENT_NAMES, NEWS_STATUS=newsmod.STATUS_NAMES)
+
+
+@app.post("/news/seen/{cid}")
+def news_seen(request: Request, cid: int):
+    from .. import news as newsmod
+
+    with db.session() as conn:
+        newsmod.mark_viewed(conn, cid)
+    back = request.headers.get("referer") or "/news"
+    return RedirectResponse(back if back.startswith("/") or "://" in back else "/news", status_code=303)
+
+
+@app.post("/news/run")
+def news_run():
+    scheduler.run_now("news")
+    return RedirectResponse("/news?started=1", status_code=303)
+
+
 # ---------------- Пересмотр цен ----------------
 @app.get("/pricing", response_class=HTMLResponse)
 def pricing_page(request: Request, verdict: str = "", site: str = ""):
@@ -1480,7 +1522,7 @@ def settings_page(request: Request):
 
 
 # ---------------- Управление радаром (то, что раньше делали ярлыки на рабочем столе) ----------------
-JOB_TITLES = {"full_update": "Обновление данных", "m22": "Сбор сайтов M22", "competitors": "Сбор конкурентов", "demand": "Сбор спроса", "analyze": "Пересчёт анализа", "weekly_report": "Отчёт и резервная копия"}
+JOB_TITLES = {"full_update": "Обновление данных", "m22": "Сбор сайтов M22", "competitors": "Сбор конкурентов", "news": "Новости конкурентов", "demand": "Сбор спроса", "analyze": "Пересчёт анализа", "weekly_report": "Отчёт и резервная копия"}
 
 
 def _lan_info() -> dict:

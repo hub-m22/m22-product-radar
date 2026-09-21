@@ -224,3 +224,71 @@ def test_seed_dump_load_roundtrip(conn, tmp_path):
     res2 = seeding.load(fresh, out)
     assert res2["competitors"] == {"created": 0, "updated": 1} and fresh.execute("SELECT COUNT(*) FROM monitored_pages").fetchone()[0] == 1
     fresh.close()
+
+
+# ---------- новости конкурентов ----------
+HOME_V1 = """<html><head><title>Радиогиды</title></head><body><header><a href="/cart">Корзина</a></header><main>
+<h1>Радиогиды и аудиогиды</h1><ul><li><a href="/catalog/radiogid-x10">Радиогид X-10 на 10 персон</a></li><li><a href="/catalog/audiogid-a1">Аудиогид A-1</a></li></ul>
+<p>Товаров: 24</p><p>Сегодня 21.09.2026 10:15</p><a href="/news/">Новости</a><a href="/akcii/">Акции</a></main><footer>© 2026 cookie</footer></body></html>"""
+HOME_V2 = HOME_V1.replace("<p>Товаров: 24</p>", "<p>Товаров: 25</p>").replace("</ul>", '<li><a href="/catalog/radiogid-x20">Радиогид X-20 на 20 персон</a></li></ul>')
+
+
+def test_news_normalize_and_diff():
+    from radar import news
+
+    t1, i1, title = news.normalize_page(HOME_V1, "https://c.ru/")
+    assert title == "Радиогиды" and "Корзина" not in t1 and "cookie" not in t1 and "Товаров" not in t1
+    assert {i["t"] for i in i1} >= {"Радиогид X-10 на 10 персон", "Аудиогид A-1"}
+    # только счётчик изменился — хеш тот же, изменений нет
+    t1b, i1b, _ = news.normalize_page(HOME_V1.replace("Товаров: 24", "Товаров: 99").replace("10:15", "11:40"), "https://c.ru/")
+    assert news.content_hash(t1, i1) == news.content_hash(t1b, i1b)
+    t2, i2, _ = news.normalize_page(HOME_V2, "https://c.ru/")
+    d = news.diff_snapshots(t1, t2, i1, i2)
+    assert d and [i["t"] for i in d["items_added"]] == ["Радиогид X-20 на 20 персон"]
+    ev = news.heuristic_classify({"kind": "home", "url": "https://c.ru/", "title": "Радиогиды"}, d, "Конкурент")
+    assert ev and ev[0]["event_type"] == "NEW_PRODUCT" and "X-20" in ev[0]["product_name"]
+    assert news.page_kind("https://c.ru/akcii/") == "promo" and news.page_kind("https://c.ru/news/") == "news" and news.page_kind("https://c.ru/cart") is None
+
+
+def test_news_end_to_end(conn, monkeypatch):
+    from radar import news, http
+
+    conn.execute("INSERT INTO competitors(name, website, tier) VALUES('Конкурент', 'https://c.ru', 'A')")
+    cid = conn.execute("SELECT id FROM competitors").fetchone()["id"]
+    conn.commit()
+    state = {"html": HOME_V1}
+
+    class R:
+        def __init__(self, url, text):
+            self.url = url; self.final_url = url; self.text = text; self.status = 200
+
+    def fake_fetch(url, *a, **k):
+        if url.rstrip("/") == "https://c.ru":
+            return R(url, state["html"])
+        return R(url, "<html><body><main><p>Раздел без изменений и с достаточно длинным текстом для снимка страницы.</p></main></body></html>")
+    monkeypatch.setattr(http, "fetch", fake_fetch)
+    r1 = news.run(conn, competitor_id=cid)
+    assert r1["events"] == 0
+    run1 = conn.execute("SELECT status FROM news_runs ORDER BY id DESC LIMIT 1").fetchone()["status"]
+    assert run1 == "BASELINE"
+    assert conn.execute("SELECT COUNT(*) FROM news_pages WHERE competitor_id=?", (cid,)).fetchone()[0] >= 3  # главная + найденные разделы
+    state["html"] = HOME_V2
+    r2 = news.run(conn, competitor_id=cid)
+    assert r2["events"] == 1
+    e = conn.execute("SELECT * FROM news_events").fetchone()
+    assert e["event_type"] == "NEW_PRODUCT" and "X-20" in e["title"] and e["url"].endswith("/catalog/radiogid-x20")
+    assert conn.execute("SELECT status FROM news_runs ORDER BY id DESC LIMIT 1").fetchone()["status"] == "CHANGES_FOUND"
+    # повторный прогон без изменений — NO_CHANGES и без дублей
+    r3 = news.run(conn, competitor_id=cid)
+    assert r3["events"] == 0 and conn.execute("SELECT COUNT(*) FROM news_events").fetchone()[0] == 1
+    assert conn.execute("SELECT status FROM news_runs ORDER BY id DESC LIMIT 1").fetchone()["status"] == "NO_CHANGES"
+    ov = news.overview(conn)
+    assert ov["tiers"]["A"][0]["new"] == 1
+    news.mark_viewed(conn, cid)
+    assert news.overview(conn)["tiers"]["A"][0]["new"] == 0
+    # ошибка обхода — CRAWL_ERROR, а не «без изменений»
+    def bad_fetch(url, *a, **k):
+        raise http.FetchError("HTTP 503", status=503, url=url)
+    monkeypatch.setattr(http, "fetch", bad_fetch)
+    news.run(conn, competitor_id=cid)
+    assert conn.execute("SELECT status FROM news_runs ORDER BY id DESC LIMIT 1").fetchone()["status"] == "CRAWL_ERROR"

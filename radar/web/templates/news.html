@@ -1,0 +1,62 @@
+{% extends "base.html" %}
+{% block title %}Новости конкурентов — M22 Product Radar{% endblock %}
+{% block content %}
+{% macro event_card(e, show_comp=False) %}
+<div class="sig {{ 'sev-high' if e.importance == 3 else ('sev-medium' if e.importance == 2 else 'sev-low') }}" style="margin-bottom:8px">
+  <div class="t">{% if show_comp %}<a href="/news/competitor/{{ e.competitor_id }}">{{ e.competitor_name[:40] }}</a> · {% endif %}<span class="badge {{ 'st-new' if e.event_type in ('NEW_PRODUCT','NEW_CATEGORY','NEW_BRAND','NEW_SOLUTION') else 'st' }}">{{ EVENT_NAMES.get(e.event_type, e.event_type) }}</span> <span class="muted small">· {% if e.published_at %}опубликовано {{ e.published_at[:10] }}{% else %}обнаружено {{ e.detected_at[:10] }}{% endif %}</span>{% if not e.is_read %} <span class="badge sev-high">новое</span>{% endif %}</div>
+  <div class="w"><b>{{ e.title }}</b></div>
+  {% if e.summary %}<div class="w small">{{ e.summary }}</div>{% endif %}
+  {% if e.what_changed %}<div class="why"><b>Что изменилось:</b> {{ e.what_changed }}</div>{% endif %}
+  <div class="m">{% if e.url %}<a href="{{ e.url }}" target="_blank" rel="noopener">Открыть источник ↗</a>{% endif %}{% if e.category_slug %}<span>{{ CATEGORY_NAMES.get(e.category_slug, e.category_slug) }}</span>{% endif %}<span class="muted">{{ {'ai': 'вывод модели по найденному изменению', 'page_diff': 'сравнение страниц', 'products': 'сбор каталога', 'prices': 'история цен'}.get(e.source_kind, e.source_kind) }}</span></div>
+</div>
+{% endmacro %}
+{% macro tier_block(title, rows, sub) %}
+<h2 style="margin-top:18px">{{ title }} <span class="muted small">{{ sub }}</span></h2>
+{% if not rows %}<div class="muted small">Конкурентов этого уровня с сайтом нет.</div>{% endif %}
+<div class="card compact" style="margin-bottom:12px">
+{% for r in rows %}
+  <div style="display:flex;gap:10px;align-items:center;padding:5px 0;border-bottom:1px solid var(--line)">
+    <div style="min-width:280px"><a href="/news/competitor/{{ r.c.id }}"><b>{{ r.c.name[:48] }}</b></a></div>
+    <div style="min-width:150px">{% if r.new %}<span class="badge sev-high">🔴 {{ r.new }} нов.</span>{% elif r.events %}<span class="badge st-approved">✓ просмотрено · {{ r.events|length }}</span>{% elif r.status in ('NO_CHANGES','BASELINE') %}<span class="muted small">без изменений</span>{% elif r.status == 'CRAWL_ERROR' %}<span class="badge sev-high" title="{{ r.run.error or '' }}">не удалось проверить</span>{% elif r.status == 'PARTIAL_CRAWL' %}<span class="badge sev-medium">проверена часть страниц</span>{% else %}<span class="muted small">ещё не проверялся</span>{% endif %}</div>
+    <div class="small muted">{% if r.last_ok %}последняя успешная проверка {{ r.last_ok | dt }}{% else %}успешных проверок не было{% endif %}{% if r.run and r.run.status == 'BASELINE' %} · первый снимок сделан, изменения будут видны со следующей проверки{% endif %}{% if r.run %} · страниц {{ r.run.pages_ok }}/{{ r.run.pages_total }}{% endif %}</div>
+    {% if r.new %}<form method="post" action="/news/seen/{{ r.c.id }}" class="inline" style="margin-left:auto"><button class="small sec">✓ просмотрено</button></form>{% endif %}
+  </div>
+{% endfor %}
+</div>
+{% for r in rows if r.events %}
+  <div style="margin:6px 0 14px 0"><div class="small muted" style="margin-bottom:4px"><a href="/news/competitor/{{ r.c.id }}">{{ r.c.name }}</a> — {{ r.events|length }} событ.</div>
+  {% for e in r.events[:6] %}{{ event_card(e) }}{% endfor %}
+  {% if r.events|length > 6 %}<div class="small muted">ещё {{ r.events|length - 6 }} — <a href="/news/competitor/{{ r.c.id }}">в ленте конкурента</a></div>{% endif %}</div>
+{% endfor %}
+{% endmacro %}
+
+<div class="topbar"><div><h1>Новости конкурентов</h1>
+<div class="sub">Что нового произошло у конкурентов уровней A и B с прошлой проверки: новые товары и разделы, решения, кейсы, акции, новости, изменения цен. Показываем изменения бизнеса, а не сайты. Последняя проверка: <b>{{ d.last_check | dt if d.last_check else 'ещё не выполнялась' }}</b>{% if d.errors %} · <span style="color:var(--high)">не удалось проверить: {{ d.errors }}</span>{% endif %}.</div></div>
+<div class="actions-row no-print"><form method="post" action="/news/run" class="inline"><button class="small" {% if running %}disabled{% endif %}>{% if running %}Проверка идёт…{% else %}Проверить сейчас{% endif %}</button></form></div></div>
+
+<div class="kpis">
+  <div class="kpi"><div class="v" style="color:{{ 'var(--high)' if d.n24 else 'inherit' }}">{{ d.n24 }}</div><div class="l">изменений за последние 24 часа у {{ d.comp24 }} конкурентов</div></div>
+  <div class="kpi"><div class="v">{{ d.events|length }}</div><div class="l">событий за выбранный период ({{ f.days }} дн.)</div></div>
+  <div class="kpi"><div class="v">{{ d.checked }}</div><div class="l">конкурентов проверено{% if d.errors %}, с ошибкой {{ d.errors }}{% endif %}</div></div>
+  <div class="kpi"><div class="v small" style="font-size:13px">{{ 'модель + сравнение страниц' if ai_enabled else 'сравнение страниц (эвристика)' }}</div><div class="l">как классифицируются изменения{% if not ai_enabled %} · ключ AI не задан{% endif %}</div></div>
+</div>
+
+{% if request.query_params.get('started') %}<div class="note">Проверка запущена в фоне: 1–3 секунды на страницу, до 24 страниц на конкурента. Обновите страницу через несколько минут.</div>{% endif %}
+{% if d.digest %}<details {% if d.n24 %}open{% endif %} class="card compact" style="margin-bottom:10px"><summary>Дайджест за {{ d.digest.day }}</summary><pre style="white-space:pre-wrap;font-family:inherit;margin:8px 0 0">{{ d.digest.text }}</pre></details>{% endif %}
+{% if not d.n24 and d.last_check %}<div class="note">Сегодня новых существенных изменений не обнаружено.</div>{% endif %}
+
+<details class="card compact" style="margin-bottom:10px"><summary>Фильтры</summary>
+<form class="filters" method="get" style="margin-top:8px">
+  <label>Период<select name="days">{% for v, n in [(1,'сутки'),(3,'3 дня'),(7,'неделя'),(30,'месяц'),(90,'3 месяца')] %}<option value="{{ v }}" {% if f.days == v %}selected{% endif %}>{{ n }}</option>{% endfor %}</select></label>
+  <label>Уровень<select name="tier"><option value="">A и B</option><option value="A" {% if f.tier == 'A' %}selected{% endif %}>A</option><option value="B" {% if f.tier == 'B' %}selected{% endif %}>B</option></select></label>
+  <label>Конкурент<select name="competitor_id"><option value="">все</option>{% for c in competitors %}<option value="{{ c.id }}" {% if f.competitor_id and f.competitor_id|int == c.id %}selected{% endif %}>{{ c.name[:50] }}</option>{% endfor %}</select></label>
+  <label>Тип события<select name="event_type"><option value="">все</option>{% for k, v in EVENT_NAMES.items() %}<option value="{{ k }}" {% if f.event_type == k %}selected{% endif %}>{{ v }}</option>{% endfor %}</select></label>
+  <label>Товарная категория<select name="category"><option value="">все</option>{% for c in categories %}<option value="{{ c.slug }}" {% if f.category == c.slug %}selected{% endif %}>{{ c.name_ru }}</option>{% endfor %}</select></label>
+  <label class="pill-check"><input type="checkbox" name="unread" value="1" {% if f.unread %}checked{% endif %}> только новые</label>
+  <label class="pill-check"><input type="checkbox" name="products_only" value="1" {% if f.products_only %}checked{% endif %}> только новые продукты</label>
+  <button class="small">Применить</button> <a class="btn sec small" href="/news">Сбросить</a>
+</form></details>
+
+{% if not f.tier or f.tier == 'A' %}{{ tier_block('Категория A', d.tiers.A, 'приоритетные конкуренты') }}{% endif %}
+{% if not f.tier or f.tier == 'B' %}{{ tier_block('Категория B', d.tiers.B, 'второстепенные конкуренты') }}{% endif %}
+{% endblock %}

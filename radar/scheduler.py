@@ -110,6 +110,12 @@ def full_update(conn):
     return r
 
 
+def competitor_news(conn):
+    from . import news
+
+    return {"news": news.run(conn)}
+
+
 def weekly_report(conn):
     rep = reports.build_weekly(conn, days=7)
     rid = reports.save(conn, rep)
@@ -137,6 +143,7 @@ def start():
         log.info("scheduler: последний сбор старше 26 часов — догоняющий полный сбор через 3 минуты")
     _scheduler.add_job(_run_job, "cron", hour=config.M22_CRON_HOUR, minute=0, args=["m22", collect_m22], id="m22", replace_existing=True)
     _scheduler.add_job(_run_job, "cron", hour=config.COMPETITORS_CRON_HOUR, minute=0, args=["competitors", collect_competitors], id="competitors", replace_existing=True)
+    _scheduler.add_job(_run_job, "cron", hour=config.NEWS_CRON_HOUR, minute=0, args=["news", competitor_news], id="news", replace_existing=True)
     _scheduler.add_job(_run_job, "cron", day_of_week=config.TRENDS_CRON_DOW, hour=7, minute=30, args=["demand", collect_demand], id="demand", replace_existing=True)
     _scheduler.add_job(_run_job, "cron", day_of_week=config.REPORT_CRON_DOW, hour=8, minute=30, args=["weekly_report", weekly_report], id="weekly_report", replace_existing=True)
     _scheduler.start()
@@ -146,7 +153,7 @@ def start():
 
 def run_now(name: str) -> bool:
     """Запуск задачи из интерфейса в фоне."""
-    fn = {"m22": collect_m22, "competitors": collect_competitors, "demand": collect_demand, "analyze": analyze, "weekly_report": weekly_report, "full_update": full_update}.get(name)
+    fn = {"m22": collect_m22, "competitors": collect_competitors, "demand": collect_demand, "analyze": analyze, "weekly_report": weekly_report, "full_update": full_update, "news": competitor_news}.get(name)
     if fn is None:
         return False
     threading.Thread(target=_run_job, args=[name, fn], daemon=True).start()
