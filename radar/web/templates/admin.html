@@ -9,13 +9,13 @@
 
 <div class="grid grid-2">
   <div class="card"><h3>Обновить данные</h3>
-    <p class="small">Собирает сайты M22 и конкурентов, пересчитывает сопоставления, цены и события, формирует отчёт и резервную копию. Занимает 15–25 минут; радар при этом продолжает работать. По ночам это делается само (расписание ниже), кнопка нужна, если компьютер был выключен.</p>
+    <p class="small">Собирает сайты M22 и конкурентов, пересчитывает сопоставления, цены и события, формирует отчёт и резервную копию. Занимает 1,5–2,5 часа (конкуренты — около часа, новости конкурентов — ещё 25 минут); радар при этом продолжает работать, страницу можно закрыть. По ночам это делается само (расписание ниже), кнопка нужна, если компьютер был выключен.</p>
     <form method="post" action="/admin/run/full_update" class="inline"><button class="small" {% if running %}disabled{% endif %}>Обновить данные сейчас</button></form>
     <form method="post" action="/admin/run/analyze" class="inline"><button class="sec small" {% if running %}disabled{% endif %}>Только пересчитать анализ (1–3 мин)</button></form>
     <form method="post" action="/admin/run/demand" class="inline"><button class="sec small" {% if running %}disabled{% endif %}>Собрать поисковый спрос (долго)</button></form>
     <table style="margin-top:10px"><thead><tr><th>Задача</th><th>Состояние</th><th>Когда</th><th>Итог</th></tr></thead><tbody>
     {% for k, s in states.items() %}<tr><td>{{ s.title }}</td><td>{% if s.status == 'running' %}<span class="badge sev-medium">выполняется</span>{% elif s.status == 'ok' %}<span class="badge sev-low">готово</span>{% elif s.status == 'error' %}<span class="badge sev-high">ошибка</span>{% else %}<span class="muted small">не запускалась в этой сессии</span>{% endif %}</td>
-      <td class="small nowrap">{{ (s.finished_at or s.started_at) | dt }}</td><td class="small muted" style="max-width:360px;word-break:break-word">{{ (s.result or s.error or '')[:200] }}</td></tr>{% endfor %}
+      <td class="small nowrap">{{ s.finished_at or s.started_at or '—' }}</td><td class="small muted" style="max-width:360px;word-break:break-word">{{ (s.result or s.error or '')[:200] }}</td></tr>{% endfor %}
     </tbody></table>
     <h3 style="margin-top:14px">Расписание (само, пока компьютер включён)</h3>
     <dl class="kv">{% for k, v in schedule.items() %}<dt>{{ k }}</dt><dd>{{ v }}{% set j = jobs.get({'Сайты M22':'m22','Конкуренты':'competitors','Спрос':'demand','Отчёт и копия':'weekly_report'}[k]) %}{% if j and j.next_run %} · следующий запуск {{ j.next_run }}{% endif %}</dd>{% endfor %}</dl>
