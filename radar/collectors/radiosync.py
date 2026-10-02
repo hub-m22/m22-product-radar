@@ -125,6 +125,12 @@ def run(conn: sqlite3.Connection, limit: int | None = None) -> dict:
                 errors += 1
                 db.log_error(conn, SOURCE_KEY, url, str(exc))
                 conn.commit()
+        # страницы, которых больше нет в карте магазина (сайт перестроили), и их варианты — неактивны
+        if seen >= 10 and not limit:
+            placeholders = ",".join("?" * len(urls))
+            conn.execute(f"UPDATE m22_products SET is_active=0 WHERE site='radiosync.ru' AND is_active=1 AND url!=? AND url NOT IN ({placeholders}) AND COALESCE(parent_url,'') NOT IN ({placeholders})",
+                         [RENT_PAGE, *urls, *urls])
+            conn.commit()
         # Аренда
         try:
             res = http.fetch(RENT_PAGE, SOURCE_KEY, respect_robots=False)

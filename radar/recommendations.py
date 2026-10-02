@@ -108,21 +108,28 @@ def generate(conn: sqlite3.Connection) -> int:
                  action=f"Дописать в описания SGTR02/SGTR03/SGTR13/UG-10 и создать посадочные страницы под сценарии: {labels}. Каждый сценарий — с фото/кейсом и запросом в заголовке H1.",
                  priority="P2", basis=f"Сценарии упоминают ≥2 конкурентов, в описаниях M22 отсутствуют ({len(uc)} шт.).", expected_effect="Дополнительный поисковый трафик по запросам «радиогид для …» без изменения ассортимента.",
                  confidence=0.6, owner=OWNERS["marketing"], due_date=_due(14), sources_json=[{"name": s["source"], "url": s["source_url"]} for s in uc[:8]], signal_ids_json=[s["id"] for s in uc],
-                 dedupe_key="rec:usecases:" + ":".join(str(s["id"]) for s in uc[:8])):
+                 dedupe_key="rec:usecases"):
             n += 1
 
-    # 7. Снижение цены конкурента на сопоставимый товар ≥10%
+    # 7. Снижение цены конкурента на сопоставимый товар ≥10% — одно действие на товар M22 (все снижения в основании)
+    seen_cpc: set[int] = set()
     for s in sig("competitor_price_change"):
-        if not s["m22_product_id"] or "снизил" not in s["title"]:
+        if not s["m22_product_id"] or "снизил" not in s["title"] or s["m22_product_id"] in seen_cpc:
             continue
-        p = db.row(conn, "SELECT name, price FROM m22_products WHERE id=?", (s["m22_product_id"],))
+        seen_cpc.add(s["m22_product_id"])
+        p = db.row(conn, "SELECT name, price, model_key, kind FROM m22_products WHERE id=?", (s["m22_product_id"],))
         if not p:
             continue
+        # варианты одной модели (на 5 / 10 / 25 персон, оба сайта) — одно действие на модель и тип изделия
+        family = {r["id"] for r in db.rows(conn, "SELECT id FROM m22_products WHERE model_key=? AND kind=? AND is_active=1", (p["model_key"], p["kind"]))} if p["model_key"] else {s["m22_product_id"]}
+        seen_cpc |= family
+        same = [x for x in sig("competitor_price_change") if x["m22_product_id"] in family and "снизил" in x["title"]]
+        s = {**s, "what_happened": " | ".join(x["title"] for x in same[:6]) + (f" и ещё {len(same) - 6}" if len(same) > 6 else ""), "ids": [x["id"] for x in same]}
         if _emit(conn, title=f"Отреагировать на снижение цены конкурента: {p['name'][:50]}",
                  action=f"{s['recommended_action']} Если разница > 10% — подготовить ответ (акция на комплект, бонус наушниками) в течение недели.",
                  priority="P2" if s["severity"] == "high" else "P3", basis=s["what_happened"], expected_effect="Удержание доли в позиции, где конкурент давит ценой.",
-                 confidence=s["confidence"], owner=OWNERS["pricing"], due_date=_due(7), sources_json=[{"name": s["source"], "url": s["source_url"]}], signal_ids_json=[s["id"]],
-                 category_slug=s["category_slug"], m22_product_id=s["m22_product_id"], dedupe_key=f"rec:{s['dedupe_key']}"):
+                 confidence=s["confidence"], owner=OWNERS["pricing"], due_date=_due(7), sources_json=[{"name": x["source"], "url": x["source_url"]} for x in same[:6]], signal_ids_json=s["ids"],
+                 category_slug=s["category_slug"], m22_product_id=s["m22_product_id"], dedupe_key=f"rec:cpc:{(p['model_key'] + ':' + (p['kind'] or '')) if p['model_key'] else 'm22:' + str(s['m22_product_id'])}"):
             n += 1
 
     # Ошибки сбора — раздел «Источники»; в действия не попадают.

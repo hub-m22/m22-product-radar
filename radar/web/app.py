@@ -195,7 +195,7 @@ PAGE_TITLES = [  # префикс пути -> название экрана (с�
     ("/market", "Ассортимент и рынок"), ("/signals/", "Событие рынка"), ("/signals", "Ассортимент и рынок"),
     ("/opportunities/", "Гипотеза"), ("/opportunities", "Гипотезы"), ("/actions/", "Действие"), ("/actions", "Действия"),
     ("/demand", "Поисковый спрос"), ("/sources", "Источники"), ("/reports/", "Отчёт"), ("/reports", "Отчёты"),
-    ("/settings", "Настройки"), ("/admin", "Управление радаром"), ("/logic", "Логика радара"), ("/changelog", "Журнал версий"), ("/", "Главная"),
+    ("/settings", "Настройки"), ("/admin", "Управление радаром"), ("/logic", "Инструкция"), ("/changelog", "Журнал версий"), ("/", "Главная"),
 ]
 MARKET_TAB_TITLES = {"changes": "Ассортимент и рынок: изменения у конкурентов", "demand": "Ассортимент и рынок: сценарии и спрос"}
 # родительский экран, если пришли не из радара (прямая ссылка, закладка)
@@ -361,39 +361,72 @@ def index(request: Request):
 
 
 @app.get("/logic", response_class=HTMLResponse)
+@app.get("/guide", response_class=HTMLResponse)
 def logic_page(request: Request):
-    """Описание логики радара из docs/ЛОГИКА_РАДАРА.md (заголовки, абзацы, списки)."""
+    """Инструкция по меню из docs/ИНСТРУКЦИЯ.md: заголовки (с оглавлением), абзацы, списки, таблицы, жирный, ссылки."""
     import html as _html
     import re as _re
 
-    path = Path(__file__).resolve().parent.parent.parent / "docs" / "ЛОГИКА_РАДАРА.md"
-    out, in_list = [], False
-    try:
-        for line in path.read_text(encoding="utf-8").splitlines():
-            t = _html.escape(line.rstrip())
-            t = _re.sub(r"\*\*(.+?)\*\*", r"<b>\1</b>", t)
-            if t.startswith("# "):
-                out.append(f"<h1>{t[2:]}</h1>")
-            elif t.startswith("## "):
-                if in_list:
-                    out.append("</ul>")
-                    in_list = False
-                out.append(f"<h2>{t[3:]}</h2>")
-            elif _re.match(r"^(- |\d+\. )", t):
-                if not in_list:
-                    out.append("<ul>")
-                    in_list = True
-                out.append(f"<li>{_re.sub(r'^(- |\d+\. )', '', t)}</li>")
-            elif t.strip():
-                if in_list:
-                    out.append("</ul>")
-                    in_list = False
-                out.append(f"<p>{t}</p>")
+    path = Path(__file__).resolve().parent.parent.parent / "docs" / "ИНСТРУКЦИЯ.md"
+    out, toc, in_list, in_table, n = [], [], False, False, 0
+
+    def inline(t):
+        t = _html.escape(t)
+        t = _re.sub(r"\*\*(.+?)\*\*", r"<b>\1</b>", t)
+        t = _re.sub(r"`(.+?)`", r"<code>\1</code>", t)
+        return _re.sub(r"\[([^\]]+)\]\((/[^)]*)\)", r'<a href="\2">\1</a>', t)
+
+    def close():
+        nonlocal in_list, in_table
         if in_list:
             out.append("</ul>")
+            in_list = False
+        if in_table:
+            out.append("</tbody></table></div>")
+            in_table = False
+
+    try:
+        lines = path.read_text(encoding="utf-8").splitlines()
     except OSError:
-        out = ["<p>Файл описания не найден.</p>"]
-    return render(request, "logic.html", body="\n".join(out))
+        lines = ["# Инструкция", "Файл docs/ИНСТРУКЦИЯ.md не найден."]
+    for i, raw in enumerate(lines):
+        line = raw.rstrip()
+        if line.startswith("# "):
+            close()
+            out.append(f"<h1>{inline(line[2:])}</h1>")
+        elif line.startswith("## ") or line.startswith("### "):
+            close()
+            lvl = 2 if line.startswith("## ") else 3
+            n += 1
+            title = line[lvl + 1:]
+            if lvl == 2:
+                toc.append((n, title))
+            out.append(f'<h{lvl} id="s{n}">{inline(title)}</h{lvl}>')
+        elif line.startswith("|"):
+            cells = [c.strip() for c in line.strip("|").split("|")]
+            if all(_re.fullmatch(r":?-{2,}:?", c) for c in cells):
+                continue
+            if not in_table:
+                close()
+                out.append('<div class="tbl-wrap"><table class="nosort"><thead><tr>' + "".join(f"<th>{inline(c)}</th>" for c in cells) + "</tr></thead><tbody>")
+                in_table = True
+            else:
+                out.append("<tr>" + "".join(f"<td>{inline(c)}</td>" for c in cells) + "</tr>")
+        elif _re.match(r"^(- |\d+\. )", line):
+            if in_table:
+                close()
+            if not in_list:
+                out.append("<ul>")
+                in_list = True
+            out.append(f"<li>{inline(_re.sub(r'^(- |\d+\. )', '', line))}</li>")
+        elif line.strip():
+            close()
+            out.append(f"<p>{inline(line)}</p>")
+        else:
+            close()
+    close()
+    toc_html = '<div class="toc"><b>Содержание:</b> ' + " · ".join(f'<a href="#s{k}">{_html.escape(t)}</a>' for k, t in toc) + "</div>" if toc else ""
+    return render(request, "logic.html", body=toc_html + "\n".join(out))
 
 
 # ---------------- Рекомендации ----------------
